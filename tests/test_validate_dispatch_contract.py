@@ -39,12 +39,16 @@ NO_REPORT_CHECK_AFTER: none
 
 VALID_BINDING = """
 TASK_ID: write-1
-EXPECTED_WORKTREE: D:\\repo\\.worktrees\\write-1
+REPOSITORY_ROOT: D:\\repo
+WORKTREE_ROOT: D:\\repo\\.worktrees
+EXECUTION_WORKTREE: D:\\repo\\.worktrees\\write-1
 TASK_PROJECT_ID: local-write-1
-TASK_PROJECT_PATH: D:\\repo\\.worktrees\\write-1
+TASK_PROJECT_PATH: D:\\repo
 TASK_ENVIRONMENT: local
-ACTUAL_THREAD_CWD: D:\\repo\\.worktrees\\write-1
+ACTUAL_THREAD_CWD: D:\\repo
 ACTUAL_THREAD_PROJECT_ID: local-write-1
+COMMAND_WORKDIR_POLICY: exact_execution_worktree
+ROOT_WRITE_POLICY: forbidden
 BINDING_STATUS: verified
 """
 
@@ -86,8 +90,8 @@ class ContractValidationTests(unittest.TestCase):
 
     def test_binding_accepts_equivalent_windows_extended_path(self) -> None:
         equivalent = VALID_BINDING.replace(
-            "TASK_PROJECT_PATH: D:\\repo\\.worktrees\\write-1",
-            "TASK_PROJECT_PATH: \\\\?\\D:\\repo\\.worktrees\\write-1\\",
+            "TASK_PROJECT_PATH: D:\\repo",
+            "TASK_PROJECT_PATH: \\\\?\\D:\\repo\\",
         )
         self.assertEqual(self.validate("binding", equivalent), [])
 
@@ -95,7 +99,7 @@ class ContractValidationTests(unittest.TestCase):
         invalid = (
             VALID_BINDING.replace("local-write-1", "projectless")
             .replace(
-                "ACTUAL_THREAD_CWD: D:\\repo\\.worktrees\\write-1",
+                "ACTUAL_THREAD_CWD: D:\\repo",
                 "ACTUAL_THREAD_CWD: C:\\Users\\person\\Documents\\Codex\\write-1",
             )
             .replace("TASK_ENVIRONMENT: local", "TASK_ENVIRONMENT: worktree")
@@ -103,14 +107,14 @@ class ContractValidationTests(unittest.TestCase):
         errors = "\n".join(self.validate("binding", invalid))
         self.assertIn("TASK_PROJECT_ID must identify", errors)
         self.assertIn("ACTUAL_THREAD_PROJECT_ID must be non-null", errors)
-        self.assertIn("ACTUAL_THREAD_CWD must equal", errors)
+        self.assertIn("ACTUAL_THREAD_CWD must equal REPOSITORY_ROOT", errors)
         self.assertIn("TASK_ENVIRONMENT must be local", errors)
 
     def test_binding_rejects_root_project_path_and_mismatched_project_id(self) -> None:
         invalid = (
             VALID_BINDING.replace(
-                "TASK_PROJECT_PATH: D:\\repo\\.worktrees\\write-1",
                 "TASK_PROJECT_PATH: D:\\repo",
+                "TASK_PROJECT_PATH: D:\\other",
             )
             .replace(
                 "ACTUAL_THREAD_PROJECT_ID: local-write-1",
@@ -118,8 +122,28 @@ class ContractValidationTests(unittest.TestCase):
             )
         )
         errors = "\n".join(self.validate("binding", invalid))
-        self.assertIn("TASK_PROJECT_PATH must equal", errors)
+        self.assertIn("TASK_PROJECT_PATH must equal REPOSITORY_ROOT", errors)
         self.assertIn("ACTUAL_THREAD_PROJECT_ID must equal", errors)
+
+    def test_binding_rejects_execution_tree_outside_declared_root(self) -> None:
+        invalid = VALID_BINDING.replace(
+            "EXECUTION_WORKTREE: D:\\repo\\.worktrees\\write-1",
+            "EXECUTION_WORKTREE: D:\\outside\\write-1",
+        )
+        errors = "\n".join(self.validate("binding", invalid))
+        self.assertIn("EXECUTION_WORKTREE must be below WORKTREE_ROOT", errors)
+
+    def test_binding_requires_exact_workdir_and_forbidden_root_writes(self) -> None:
+        invalid = (
+            VALID_BINDING.replace(
+                "COMMAND_WORKDIR_POLICY: exact_execution_worktree",
+                "COMMAND_WORKDIR_POLICY: prompt_path_only",
+            )
+            .replace("ROOT_WRITE_POLICY: forbidden", "ROOT_WRITE_POLICY: allowed")
+        )
+        errors = "\n".join(self.validate("binding", invalid))
+        self.assertIn("COMMAND_WORKDIR_POLICY must be exact_execution_worktree", errors)
+        self.assertIn("ROOT_WRITE_POLICY must be forbidden", errors)
 
     def test_write_rejects_implicit_model_short_sha_and_external_tree(self) -> None:
         invalid = (

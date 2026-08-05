@@ -9,7 +9,7 @@ The skill keeps generic collaboration mechanics outside application repositories
 - Deterministic routing between the controller, user-visible tasks, and short read-only internal helpers.
 - Event-driven parallel readiness audits and same-wave dispatch of independent work.
 - Repository-local worktree isolation with one writable owner per task boundary.
-- Fail-closed execution-directory binding that rejects projectless tasks, replacement App worktrees, and prompt-only path claims.
+- Fail-closed repository hosting and repo-local execution-worktree binding that rejects projectless tasks without requiring every linked worktree to become an App project.
 - Explicit write-task model binding and configurable review-task model policy.
 - Milestone handoffs, one-shot missing-report checkpoints, and direct task messaging.
 - Frozen-candidate read-only review, controller-owned acceptance, and safe recovery.
@@ -24,24 +24,17 @@ The skill keeps generic collaboration mechanics outside application repositories
 | Review task | Review a frozen candidate without writing | App default unless the repository or user overrides it |
 | Internal helper | Short current-turn read-only retrieval or comparison | Inherited; never an execution fallback |
 
-## Install
+## Install into a repository
 
-Copy the installable skill directory into the user's Codex skills directory.
-
-PowerShell:
-
-```powershell
-Copy-Item -Recurse .\skill\repo-agent-orchestration "$env:USERPROFILE\.codex\skills\repo-agent-orchestration"
-```
-
-macOS or Linux:
+Install the Skill into the target repository. This is the default and recommended mode:
 
 ```bash
-cp -R ./skill/repo-agent-orchestration \
-  ~/.codex/skills/repo-agent-orchestration
+python scripts/install_repository.py --repo /absolute/path/to/repository
 ```
 
-Do not install the repository root as a skill. The installable package is only `skill/repo-agent-orchestration/`.
+The installer copies the Skill to `.agents/skills/repo-agent-orchestration` and idempotently manages one marked orchestration-profile block in the repository-root `AGENTS.md`. If `AGENTS.md` does not exist, it creates a minimal one. If it exists, all content outside the marked block remains unchanged.
+
+User-global installation remains possible as a compatibility choice, but it is not the default.
 
 ## Configure a target repository
 
@@ -52,6 +45,7 @@ MAIN_BRANCH: main
 ROOT_WORKTREE_POLICY: observe_integrate_validate
 WORKTREE_ROOT: <absolute repo-local worktree root>
 BRANCH_PREFIX: codex/
+TASK_HOST_POLICY: repository_project_local
 CONTROLLER_MODEL_POLICY: app_current_task
 WRITE_TASK_MODEL: <explicit model>/<reasoning>
 REVIEW_TASK_MODEL: app_default
@@ -91,6 +85,7 @@ The test suite uses only the Python standard library.
 
 ```text
 skill/repo-agent-orchestration/  Installable Codex skill
+scripts/                         Repository-local installer
 examples/                        Repository configuration examples
 tests/                           Contract and structure tests
 .github/workflows/               CI
@@ -100,7 +95,7 @@ tests/                           Contract and structure tests
 
 This project coordinates authorized work; it does not grant new authority. Merge, push, deployment, publication, production data, credential, and permission changes remain behind repository and user gates.
 
-A path named in a task prompt is not an execution binding. Repository work must actually run with its cwd bound to the intended existing repository-local worktree. If the task API cannot provide that binding, the controller reports a capability blocker instead of dispatching through a user-global directory.
+A path named in a task prompt is not an execution binding. In `repository_project_local` mode, the user-visible task is hosted by the current repository's saved project with a repository-root cwd; all repository commands and file operations are separately bound to the existing repo-local execution worktree. The root must remain clean. This avoids user-global projectless tasks without registering every linked worktree as its own App project.
 
 ## License
 

@@ -50,13 +50,15 @@ class SkillStructureTests(unittest.TestCase):
         self.assertIsNotNone(match)
         self.assertTrue(match.group(1).startswith("<"))
 
-    def test_skill_rejects_prompt_only_and_projectless_binding(self) -> None:
+    def test_skill_uses_repository_host_and_execution_worktree(self) -> None:
         skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
         contracts = (SKILL / "references" / "contracts.md").read_text(
             encoding="utf-8"
         )
-        self.assertIn("A path written into the prompt is not cwd binding", skill)
+        self.assertIn("Separate task hosting from task execution", skill)
         self.assertIn("Reject `projectless`", contracts)
+        self.assertIn("TASK_HOST_POLICY: repository_project_local", contracts)
+        self.assertIn("COMMAND_WORKDIR_POLICY: exact_execution_worktree", contracts)
         self.assertIn("--kind binding", contracts)
 
 

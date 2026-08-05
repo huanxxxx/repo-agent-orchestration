@@ -4,7 +4,7 @@ Add an equivalent section to the target repository's root `AGENTS.md`. Replace e
 
 ## Agent Orchestration Profile
 
-- Use the user-global `$repo-agent-orchestration` skill for implementation, formal review, parallel dispatch, milestone handoffs, missing-report checks, recovery, integration, and closure.
+- Use the repository-local `$repo-agent-orchestration` skill for implementation, formal review, parallel dispatch, milestone handoffs, missing-report checks, recovery, integration, and closure.
 - If the skill or a required visible-task, existing-path, or model-binding capability is unavailable, stop and report. Do not fall back to controller or internal-helper implementation.
 
 ```text
@@ -12,6 +12,7 @@ MAIN_BRANCH: main
 ROOT_WORKTREE_POLICY: observe_integrate_validate
 WORKTREE_ROOT: <absolute-repository-path>/.worktrees
 BRANCH_PREFIX: codex/
+TASK_HOST_POLICY: repository_project_local
 CONTROLLER_MODEL_POLICY: app_current_task
 WRITE_TASK_MODEL: <execution-model>/<reasoning>
 REVIEW_TASK_MODEL: app_default

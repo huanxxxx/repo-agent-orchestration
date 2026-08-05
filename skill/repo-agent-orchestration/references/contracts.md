@@ -11,6 +11,7 @@ MAIN_BRANCH: <branch>
 ROOT_WORKTREE_POLICY: <root worktree role>
 WORKTREE_ROOT: <repo-local directory>
 BRANCH_PREFIX: <repository branch prefix>
+TASK_HOST_POLICY: repository_project_local
 CONTROLLER_MODEL_POLICY: app_current_task
 WRITE_TASK_MODEL: <explicit execution model and reasoning>
 REVIEW_TASK_MODEL: app_default
@@ -44,32 +45,38 @@ Create and verify the worktree before creating the user-visible task. Never use 
 
 Before dispatch, resolve and verify the repository and worktree root; main head and dirty state; full base SHA; unoccupied branch and target; absence of path substitution; and the final path, branch, head, and base shown by the Git worktree registry. Create only immediately ready worktrees. A task session does not create or own an implicit platform-managed tree.
 
-Preflight the actual task-creation interface and project registry. The creation route must guarantee the existing `WORKTREE` as the task cwd before the task can write. An absolute path in the prompt, shell `-C`, or later file-tool path does not satisfy this requirement.
+Preflight the actual task-creation interface and project registry. Distinguish the task host from its Git execution worktree. An absolute path in the prompt alone does not satisfy execution binding.
 
 When the interface offers project `local`, project `worktree`, or `projectless`:
 
-1. Require a saved project whose resolved path exactly equals `WORKTREE`.
-2. Create against that project with environment `local` and an initial read-only coordinate-check prompt.
+1. Require the current repository's saved project id and resolved repository-root path.
+2. For `TASK_HOST_POLICY: repository_project_local`, create against that repository project with environment `local` and an initial read-only route-check prompt.
 3. Reject `projectless`, because it runs under a user-global directory.
-4. Reject project environment `worktree`, because it creates an App-managed tree rather than binding the existing tree.
-5. Reject repository-root `local` when `WORKTREE` is a linked task tree.
-6. If no exact saved project exists and the interface cannot bind an existing cwd directly, stop with `CAPABILITY_BLOCKED_EXISTING_WORKTREE_BINDING`.
+4. Do not use project environment `worktree` when repository policy requires an existing repo-local tree; that route creates a different App-managed tree.
+5. Treat the repository-root cwd as the task host only. Bind all repository commands and file operations to the separate existing `WORKTREE` using exact command working directories and absolute file paths.
+6. If the repository project cannot be bound locally, stop with `CAPABILITY_BLOCKED_REPOSITORY_PROJECT_HOST`.
 7. Treat a pending creation result as the single in-flight task; do not retry and create duplicates.
 
 After creation and before any write authorization, validate this binding receipt:
 
 ```text
 TASK_ID: <actual task id>
-EXPECTED_WORKTREE: <same absolute existing worktree>
+REPOSITORY_ROOT: <absolute repository root>
+WORKTREE_ROOT: <absolute repository-local worktree root>
+EXECUTION_WORKTREE: <same absolute existing task worktree>
 TASK_PROJECT_ID: <non-null saved project id>
-TASK_PROJECT_PATH: <resolved saved project path>
+TASK_PROJECT_PATH: <resolved repository-root saved project path>
 TASK_ENVIRONMENT: local
-ACTUAL_THREAD_CWD: <cwd returned or read from the task>
+ACTUAL_THREAD_CWD: <repository-root cwd returned or read from the task>
 ACTUAL_THREAD_PROJECT_ID: <project id returned or read from the task>
+COMMAND_WORKDIR_POLICY: exact_execution_worktree
+ROOT_WRITE_POLICY: forbidden
 BINDING_STATUS: verified
 ```
 
-All three paths must resolve to the same existing worktree; both project ids must be non-null and equal. Run the validator with `--kind binding`. Until it passes, the task may only report coordinates and must not edit, test with persistent outputs, stage, commit, or start a milestone. A mismatch is a blocker, not a reason to tell a foreign-cwd task to use absolute paths.
+`TASK_PROJECT_PATH` and `ACTUAL_THREAD_CWD` must resolve to `REPOSITORY_ROOT`; both project ids must be non-null and equal. `EXECUTION_WORKTREE` must resolve below `WORKTREE_ROOT`, and `WORKTREE_ROOT` must resolve below `REPOSITORY_ROOT`. Run the validator with `--kind binding`. Until it passes, the task may only report coordinates and must not edit, test with persistent outputs, stage, commit, or start a milestone.
+
+After the receipt passes, every shell call must set `workdir=EXECUTION_WORKTREE` or use an equivalent exact cwd parameter. Every file read or write must use an absolute path below `EXECUTION_WORKTREE`. At baseline, every milestone, and final handoff, verify both `git -C REPOSITORY_ROOT status --short` remains clean and the execution worktree still has the contracted branch/head/owner. A host-root mutation or missing exact workdir is a blocker, even when the intended relative path also exists in the execution worktree.
 
 The write owner must modify and stage only `OWNED_PATHS`; never use broad staging such as `git add .` or `git add -A`. Run `REQUIRED_TESTS`, relevant type or static checks, and a whitespace/diff check. Report focused evidence at its actual scope. Do not merge, push, deploy, publish, or change external data unless separately authorized.
 
@@ -92,7 +99,7 @@ NO_REPORT_CHECK_AFTER: <ISO-8601|current_turn|none>
 
 Do not create a new worktree or branch for review, and do not modify files, the index, or commits. Freeze the implementation owner until review ends. Return findings to that owner in the same implementation worktree by default; a reviewer may write only with explicit repair authority and a separate writable boundary. When `MODEL_POLICY: app_default`, deliberately omit the model override; the user does not need to select a model for each review. If the product does not echo the runtime model, report `EFFECTIVE_MODEL=unverified` rather than claiming inheritance.
 
-Formal review uses the same exact-cwd binding gate and binding receipt. A projectless review or a review created in a new App-managed tree is not a review of the frozen candidate, even if its prompt names the candidate path.
+Formal review uses the same repository-host and execution-worktree receipt. Bind the task to the repository project locally, then perform every read with an exact cwd or absolute path to the frozen implementation worktree. A projectless review or a review created in a new App-managed tree is not a review of the frozen candidate.
 
 ## Milestone report
 

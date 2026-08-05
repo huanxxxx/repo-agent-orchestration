@@ -39,10 +39,11 @@ Treat any worktree created outside the declared repository-local root as an orph
 
 1. Revoke further write authority and send a stop instruction once; do not rely on the task to reinterpret its prompt.
 2. Record the task id, actual cwd, project id, intended worktree, last successful write, dirty paths, in-flight commands, and recovery value.
-3. Do not let a task running from a user-global or repository-root cwd continue by addressing the intended worktree through absolute paths.
-4. Detect duplicate task ids before restoring any owner. Multiple sessions that touched one writable worktree make every overlapping path mixed ownership until proven otherwise.
-5. Preserve dirty evidence and stop. Do not reset, overwrite, combine, stage, commit, or remove the task directory merely to restore routing cleanliness.
-6. Re-dispatch only after an exact saved-project or direct existing-cwd binding passes the binding receipt. If unavailable, keep the implementation blocked.
+3. Never let a user-global or projectless task continue by addressing a repository through absolute paths.
+4. A repository-root cwd is valid only as a verified `repository_project_local` host. Confirm the non-null repository project id, clean root, exact registered execution worktree, and exact-workdir policy before continuing.
+5. Detect duplicate task ids before restoring any owner. Multiple sessions that touched one writable worktree make every overlapping path mixed ownership until proven otherwise.
+6. Preserve dirty evidence and stop. Do not reset, overwrite, combine, stage, commit, or remove the task directory merely to restore routing cleanliness.
+7. Re-dispatch only after a repository-host/execution-worktree or direct-existing-cwd receipt passes. If unavailable, keep the implementation blocked.
 
 ## Completion and cleanup
 

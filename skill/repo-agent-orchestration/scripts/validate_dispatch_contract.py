@@ -14,12 +14,16 @@ from pathlib import Path, PurePosixPath, PureWindowsPath
 REQUIRED = {
     "binding": (
         "TASK_ID",
-        "EXPECTED_WORKTREE",
+        "REPOSITORY_ROOT",
+        "WORKTREE_ROOT",
+        "EXECUTION_WORKTREE",
         "TASK_PROJECT_ID",
         "TASK_PROJECT_PATH",
         "TASK_ENVIRONMENT",
         "ACTUAL_THREAD_CWD",
         "ACTUAL_THREAD_PROJECT_ID",
+        "COMMAND_WORKDIR_POLICY",
+        "ROOT_WRITE_POLICY",
         "BINDING_STATUS",
     ),
     "write": (
@@ -200,13 +204,17 @@ def validate(kind: str, fields: dict[str, str]) -> list[str]:
             errors.append(f"empty field: {name}")
 
     if kind == "binding":
-        expected = fields.get("EXPECTED_WORKTREE", "")
+        repository_root = fields.get("REPOSITORY_ROOT", "")
+        worktree_root = fields.get("WORKTREE_ROOT", "")
+        execution_worktree = fields.get("EXECUTION_WORKTREE", "")
         project_path = fields.get("TASK_PROJECT_PATH", "")
         actual_cwd = fields.get("ACTUAL_THREAD_CWD", "")
         project_id = fields.get("TASK_PROJECT_ID", "")
         actual_project_id = fields.get("ACTUAL_THREAD_PROJECT_ID", "")
         for field_name, value in (
-            ("EXPECTED_WORKTREE", expected),
+            ("REPOSITORY_ROOT", repository_root),
+            ("WORKTREE_ROOT", worktree_root),
+            ("EXECUTION_WORKTREE", execution_worktree),
             ("TASK_PROJECT_PATH", project_path),
             ("ACTUAL_THREAD_CWD", actual_cwd),
         ):
@@ -214,10 +222,14 @@ def validate(kind: str, fields: dict[str, str]) -> list[str]:
                 errors.append(f"{field_name} must be absolute")
             if value and has_placeholder(value):
                 errors.append(f"{field_name} must not contain placeholders")
-        if expected and project_path and normalized_path(expected) != normalized_path(project_path):
-            errors.append("TASK_PROJECT_PATH must equal EXPECTED_WORKTREE")
-        if expected and actual_cwd and normalized_path(expected) != normalized_path(actual_cwd):
-            errors.append("ACTUAL_THREAD_CWD must equal EXPECTED_WORKTREE")
+        if repository_root and project_path and normalized_path(repository_root) != normalized_path(project_path):
+            errors.append("TASK_PROJECT_PATH must equal REPOSITORY_ROOT")
+        if repository_root and actual_cwd and normalized_path(repository_root) != normalized_path(actual_cwd):
+            errors.append("ACTUAL_THREAD_CWD must equal REPOSITORY_ROOT")
+        if repository_root and worktree_root and not is_descendant_path(worktree_root, repository_root):
+            errors.append("WORKTREE_ROOT must be below REPOSITORY_ROOT")
+        if worktree_root and execution_worktree and not is_descendant_path(execution_worktree, worktree_root):
+            errors.append("EXECUTION_WORKTREE must be below WORKTREE_ROOT")
         forbidden_ids = {"null", "none", "projectless", "<none>"}
         if project_id.casefold() in forbidden_ids:
             errors.append("TASK_PROJECT_ID must identify the exact saved worktree project")
@@ -226,7 +238,11 @@ def validate(kind: str, fields: dict[str, str]) -> list[str]:
         if project_id and actual_project_id and project_id != actual_project_id:
             errors.append("ACTUAL_THREAD_PROJECT_ID must equal TASK_PROJECT_ID")
         if fields.get("TASK_ENVIRONMENT") != "local":
-            errors.append("TASK_ENVIRONMENT must be local for an existing worktree")
+            errors.append("TASK_ENVIRONMENT must be local for repository_project_local")
+        if fields.get("COMMAND_WORKDIR_POLICY") != "exact_execution_worktree":
+            errors.append("COMMAND_WORKDIR_POLICY must be exact_execution_worktree")
+        if fields.get("ROOT_WRITE_POLICY") != "forbidden":
+            errors.append("ROOT_WRITE_POLICY must be forbidden")
         if fields.get("BINDING_STATUS") != "verified":
             errors.append("BINDING_STATUS must be verified")
 
