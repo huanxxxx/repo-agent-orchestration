@@ -3,10 +3,13 @@
 ## Silent task
 
 1. Confirm that the expected milestone and checkpoint are still valid.
-2. Query the target once with a clear purpose.
-3. If no new fact appears, stop querying and preserve task ownership.
-4. Do not create recurring heartbeats to imitate a one-time check.
-5. If a true one-shot wakeup is unavailable, report that proactive checking cannot be guaranteed.
+2. Inspect the task state once and distinguish an active in-progress turn from a completed or idle turn.
+3. If it is in progress, do not interrupt it or send a duplicate continuation. Stop after the one status check.
+4. If the turn completed without a delivered task message, read its latest final once to preserve evidence. Treat that as recovery evidence, not proof that ordinary delivery worked.
+5. Rebuild ownership: a completed turn returns ownership to the controller regardless of any stale `owner=task` text. Send a continuation only after validating the recovered report and only if the same task actually owns the next stage.
+6. If no new fact appears, stop querying and preserve the worktree and task evidence.
+7. Do not create recurring heartbeats to imitate a one-time check.
+8. If a true one-shot wakeup is unavailable, report that proactive checking cannot be guaranteed.
 
 ## Controller takeover
 

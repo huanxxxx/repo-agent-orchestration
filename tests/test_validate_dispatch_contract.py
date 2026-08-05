@@ -34,7 +34,7 @@ REQUIRED_TESTS: python -m unittest
 INTEGRATION_TARGET: main
 MODEL_POLICY: repo_write_default:execution-model/medium
 EXPECTED_NEXT_MILESTONE: tests_complete
-NO_REPORT_CHECK_AFTER: none
+NO_REPORT_CHECK_AFTER: current_turn
 """
 
 VALID_BINDING = """
@@ -74,6 +74,8 @@ SUMMARY: implementation and verification complete
 EVIDENCE: commit=0123456789abcdef0123456789abcdef01234567; tests=PASS
 RISKS_OR_LIMITS: none
 PENDING_ITEMS: none
+REPORT_DELIVERY: task_message:controller-thread-1
+TURN_STATE: ending
 BLOCKER_OR_NEXT: owner=controller; action=verify_and_close; check_after=none
 """
 
@@ -217,12 +219,80 @@ class ContractValidationTests(unittest.TestCase):
     def test_valid_final_update(self) -> None:
         self.assertEqual(self.validate("update", VALID_FINAL), [])
 
+    def test_write_and_review_require_a_missing_report_checkpoint(self) -> None:
+        for kind, packet in (("write", VALID_WRITE), ("review", VALID_REVIEW)):
+            with self.subTest(kind=kind):
+                invalid = packet.replace(
+                    "NO_REPORT_CHECK_AFTER: current_turn",
+                    "NO_REPORT_CHECK_AFTER: none",
+                )
+                errors = "\n".join(self.validate(kind, invalid))
+                self.assertIn("NO_REPORT_CHECK_AFTER must be current_turn", errors)
+
+    def test_update_requires_direct_task_message_delivery(self) -> None:
+        invalid = VALID_FINAL.replace(
+            "REPORT_DELIVERY: task_message:controller-thread-1",
+            "REPORT_DELIVERY: local_final_only",
+        )
+        errors = "\n".join(self.validate("update", invalid))
+        self.assertIn("REPORT_DELIVERY must be task_message", errors)
+
+    def test_report_delivery_failure_is_valid_only_as_a_blocked_ending_turn(self) -> None:
+        blocked = """
+TASK_ID: write-1
+MILESTONE: blocked
+SUMMARY: controller task-message capability unavailable
+EVIDENCE: send_message_to_thread returned unavailable
+REPORT_DELIVERY: blocked:task_message_unavailable
+TURN_STATE: ending
+BLOCKER_OR_NEXT: owner=controller; action=recover_at_due_checkpoint; check_after=none
+"""
+        self.assertEqual(self.validate("update", blocked), [])
+        invalid = blocked.replace("MILESTONE: blocked", "MILESTONE: tests_complete")
+        errors = "\n".join(self.validate("update", invalid))
+        self.assertIn("blocked REPORT_DELIVERY requires MILESTONE=blocked", errors)
+        self.assertIn("non-blocked milestone REPORT_DELIVERY", errors)
+
+    def test_update_rejects_invented_ready_milestone(self) -> None:
+        invalid = VALID_FINAL.replace(
+            "MILESTONE: final",
+            "MILESTONE: READY_FOR_INDEPENDENT_READ_ONLY_REVIEW",
+        )
+        errors = "\n".join(self.validate("update", invalid))
+        self.assertIn("MILESTONE must be one of the declared milestone values", errors)
+
+    def test_ending_turn_cannot_leave_owner_with_task(self) -> None:
+        invalid = VALID_FINAL.replace(
+            "BLOCKER_OR_NEXT: owner=controller;",
+            "BLOCKER_OR_NEXT: owner=task;",
+        )
+        errors = "\n".join(self.validate("update", invalid))
+        self.assertIn("final milestone must hand ownership to controller", errors)
+        self.assertIn("TURN_STATE=ending requires owner=controller", errors)
+
+    def test_continuing_task_requires_task_owner_and_checkpoint(self) -> None:
+        continuing = """
+TASK_ID: write-1
+MILESTONE: tests_complete
+SUMMARY: focused tests passed and full validation continues
+EVIDENCE: python -m unittest=PASS
+REPORT_DELIVERY: task_message:controller-thread-1
+TURN_STATE: continuing
+BLOCKER_OR_NEXT: owner=task; action=run_full_validation; check_after=current_turn
+"""
+        self.assertEqual(self.validate("update", continuing), [])
+        invalid = continuing.replace("check_after=current_turn", "check_after=none")
+        errors = "\n".join(self.validate("update", invalid))
+        self.assertIn("owner=task requires a non-none check_after", errors)
+
     def test_final_requires_evidence_risks_pending_and_controller_owner(self) -> None:
         invalid = """
 TASK_ID: write-1
 MILESTONE: final
 SUMMARY: done
 EVIDENCE: none
+REPORT_DELIVERY: local_final_only
+TURN_STATE: ending
 BLOCKER_OR_NEXT: owner=task; action=none; check_after=daily
 """
         errors = "\n".join(self.validate("update", invalid))
@@ -231,6 +301,7 @@ BLOCKER_OR_NEXT: owner=task; action=none; check_after=daily
         self.assertIn("final milestone missing field: PENDING_ITEMS", errors)
         self.assertIn("check_after must be", errors)
         self.assertIn("must hand ownership to controller", errors)
+        self.assertIn("REPORT_DELIVERY must be task_message", errors)
 
 
 if __name__ == "__main__":

@@ -75,7 +75,7 @@ REQUIRED_TESTS: python scripts/run_local_demo.py
 INTEGRATION_TARGET: main
 MODEL_POLICY: repo_write_default:gpt-5.6-luna/max
 EXPECTED_NEXT_MILESTONE: tests_complete
-NO_REPORT_CHECK_AFTER: none
+NO_REPORT_CHECK_AFTER: current_turn
 """
 
 
@@ -149,6 +149,8 @@ SUMMARY: local demo complete
 EVIDENCE: commit={head}; local_demo=PASS
 RISKS_OR_LIMITS: no Codex task API or runtime-model verification
 PENDING_ITEMS: none
+REPORT_DELIVERY: task_message:demo-controller-thread
+TURN_STATE: ending
 BLOCKER_OR_NEXT: owner=controller; action=verify_and_close; check_after=none
 """
         escaped = worktree_root / "child" / ".." / ".." / "outside"

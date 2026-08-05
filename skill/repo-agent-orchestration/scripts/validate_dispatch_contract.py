@@ -64,6 +64,8 @@ REQUIRED = {
         "MILESTONE",
         "SUMMARY",
         "EVIDENCE",
+        "REPORT_DELIVERY",
+        "TURN_STATE",
         "BLOCKER_OR_NEXT",
     ),
 }
@@ -76,6 +78,8 @@ ISO_8601_RE = re.compile(
 MODEL_POLICY_RE = re.compile(
     r"^(?:repo_write_default|repo_review_default|user_explicit):[^<>\s]+/[^<>/\s]+$"
 )
+TASK_MESSAGE_DELIVERY_RE = re.compile(r"^task_message:[^<>\s]+$")
+BLOCKED_DELIVERY_RE = re.compile(r"^blocked:[^<>\s].*$")
 MILESTONES = {
     "baseline_confirmed",
     "plan_frozen",
@@ -309,6 +313,11 @@ def validate(kind: str, fields: dict[str, str]) -> list[str]:
         checkpoint = fields.get("NO_REPORT_CHECK_AFTER", "")
         if checkpoint:
             errors.extend(validate_checkpoint(checkpoint, "NO_REPORT_CHECK_AFTER"))
+            if checkpoint == "none":
+                errors.append(
+                    "NO_REPORT_CHECK_AFTER must be current_turn or a supported "
+                    "one-shot ISO-8601 checkpoint"
+                )
 
     if kind == "update":
         milestone = fields.get("MILESTONE", "")
@@ -323,6 +332,25 @@ def validate(kind: str, fields: dict[str, str]) -> list[str]:
                     errors.append(f"final milestone missing field: {field_name}")
                 elif not fields[field_name]:
                     errors.append(f"final milestone empty field: {field_name}")
+        delivery = fields.get("REPORT_DELIVERY", "")
+        delivery_is_task_message = bool(
+            delivery and TASK_MESSAGE_DELIVERY_RE.fullmatch(delivery)
+        )
+        delivery_is_blocked = bool(delivery and BLOCKED_DELIVERY_RE.fullmatch(delivery))
+        if delivery and not delivery_is_task_message and not delivery_is_blocked:
+            errors.append(
+                "REPORT_DELIVERY must be task_message:<controller-thread-id> "
+                "or blocked:<reason>"
+            )
+        if delivery_is_blocked and milestone != "blocked":
+            errors.append("blocked REPORT_DELIVERY requires MILESTONE=blocked")
+        if milestone and milestone != "blocked" and not delivery_is_task_message:
+            errors.append(
+                "non-blocked milestone REPORT_DELIVERY must use task_message:<controller-thread-id>"
+            )
+        turn_state = fields.get("TURN_STATE", "")
+        if turn_state and turn_state not in {"continuing", "ending"}:
+            errors.append("TURN_STATE must be continuing or ending")
         handoff = fields.get("BLOCKER_OR_NEXT", "")
         owner_match = re.search(r"\bowner\s*=\s*(controller|task)\b", handoff)
         action_match = re.search(r"\baction\s*=\s*([^;]+)", handoff)
@@ -342,6 +370,21 @@ def validate(kind: str, fields: dict[str, str]) -> list[str]:
         if milestone in {"blocked", "final"} and owner_match:
             if owner_match.group(1) != "controller":
                 errors.append(f"{milestone} milestone must hand ownership to controller")
+        if milestone in {"blocked", "final"} and turn_state and turn_state != "ending":
+            errors.append(f"{milestone} milestone must use TURN_STATE=ending")
+        if owner_match and turn_state:
+            expected_owner = "task" if turn_state == "continuing" else "controller"
+            if owner_match.group(1) != expected_owner:
+                errors.append(
+                    f"TURN_STATE={turn_state} requires owner={expected_owner}"
+                )
+        if (
+            owner_match
+            and owner_match.group(1) == "task"
+            and check_match
+            and check_match.group(1).strip() == "none"
+        ):
+            errors.append("owner=task requires a non-none check_after checkpoint")
 
     return errors
 

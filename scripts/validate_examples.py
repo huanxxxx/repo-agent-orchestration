@@ -23,6 +23,17 @@ CASES = {
         "binding",
         ("EXECUTION_WORKTREE must be below WORKTREE_ROOT",),
     ),
+    "invalid-local-final-only.txt": (
+        "update",
+        ("REPORT_DELIVERY must be task_message",),
+    ),
+    "invalid-ended-owner-task.txt": (
+        "update",
+        (
+            "final milestone must hand ownership to controller",
+            "TURN_STATE=ending requires owner=controller",
+        ),
+    ),
 }
 
 

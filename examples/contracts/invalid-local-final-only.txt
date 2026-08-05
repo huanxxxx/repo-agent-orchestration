@@ -4,6 +4,6 @@ SUMMARY: implementation and verification complete
 EVIDENCE: commit=0123456789abcdef0123456789abcdef01234567; tests=PASS
 RISKS_OR_LIMITS: local repository evidence only
 PENDING_ITEMS: none
-REPORT_DELIVERY: task_message:controller-thread-1
+REPORT_DELIVERY: local_final_only
 TURN_STATE: ending
 BLOCKER_OR_NEXT: owner=controller; action=verify_and_close; check_after=none

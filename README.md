@@ -19,6 +19,8 @@ Multi-agent coding fails when:
 - a worker silently falls back to an unintended model;
 - a reviewer modifies the candidate it is supposed to review;
 - an agent reports PASS and nobody verifies the real diff;
+- a worker finishes in its own task but never delivers the final milestone to the controller;
+- a completed turn says `owner=task` even though it cannot restart itself;
 - merge, push, deploy, or production access becomes implicit.
 
 This Skill turns those failure modes into explicit contracts and fail-closed gates.
@@ -108,7 +110,7 @@ See [examples/AGENTS.profile.md](examples/AGENTS.profile.md) for a neutral profi
 python scripts/run_local_demo.py
 ```
 
-The demo creates a temporary Git repository, two independent writer branches and worktrees, valid binding/write/review/final contracts, and one deliberately invalid `projectless` binding with an escaping `..` path. It passes only when both writers are registered separately, the repository root stays clean, valid contracts pass, and the invalid binding is rejected.
+The demo creates a temporary Git repository, two independent writer branches and worktrees, valid binding/write/review/final contracts, and one deliberately invalid `projectless` binding with an escaping `..` path. It passes only when both writers are registered separately, the repository root stays clean, valid contracts pass, and the invalid binding is rejected. The final contract also proves the report declares direct controller delivery and returns ownership when the turn ends.
 
 Evidence boundary: this deterministic demo exercises local Git isolation and the contract gate. It does not create Codex tasks, verify task-message delivery, or prove an effective runtime model. Use [the Codex Desktop runbook](examples/demo/CODEX_DESKTOP_RUNBOOK.md) for a reproducible product-facing demonstration and record those external receipts separately.
 
@@ -127,7 +129,9 @@ Individual examples live in [examples/contracts](examples/contracts):
 - valid read-only review;
 - valid final milestone;
 - invalid projectless task;
-- invalid worktree path escape.
+- invalid worktree path escape;
+- invalid local-final-only report;
+- invalid completed turn that leaves ownership with the task.
 
 You can also invoke the validator directly:
 
@@ -162,6 +166,8 @@ OpenAI's desktop worktree feature uses Codex-managed worktrees and is documented
 - Every repository command must use the exact execution-worktree cwd.
 - Review is read-only against a frozen candidate.
 - Worker or reviewer PASS remains evidence, not controller acceptance.
+- A child task's local final is not a delivered controller report; milestones declare task-message delivery and literal turn state.
+- Every dispatched stage has a non-`none` missing-report checkpoint; completed turns return ownership to the controller.
 - Merge, push, deployment, publication, production data, credentials, and permissions remain separate gates.
 
 ## Run tests

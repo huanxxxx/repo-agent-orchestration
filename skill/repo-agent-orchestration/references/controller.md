@@ -67,6 +67,8 @@ Repository policy or an explicit user instruction may narrow these routes. Do no
 - Preflight the task API and saved-project registry. For repository-local worktrees, require the selected project to resolve to the repository root, create the task in that project's local environment, and keep the exact execution worktree as a separate coordinate.
 - Use a read-only bootstrap prompt for every new task. Verify the repository host and execution worktree receipt before sending execution authorization; archive or stop a mismatched task without letting it write.
 - Process milestone reports and actually deliver decisions through the task-message capability; do not make the user relay routine coordination.
+- Treat only a report received through the task-message capability as delivered. A worker's local final, title, status, or `owner=task` text is not a receipt. Record the expected milestone and non-`none` checkpoint for every dispatched stage.
+- Before continuing a task, distinguish `inProgress` from a completed turn. Never send a redundant continuation to an in-progress task or assume a completed turn can restart itself.
 - Verify evidence, integrate in order, and rerun acceptance.
 - Update repository-owned shared status at integration points.
 - Mark `PASS_VERIFIED` only after all acceptance, evidence, blocker, reply, correction, and in-flight-operation checks clear; then archive the task immediately.
@@ -74,6 +76,16 @@ Repository policy or an explicit user instruction may narrow these routes. Do no
 - Retain recoverable worktrees until their separate cleanup gate clears.
 
 Do not delegate final authorization, integration acceptance, or product-state claims.
+
+## Report delivery and turn ownership gate
+
+For every worker or reviewer report:
+
+1. Require the canonical milestone schema, `REPORT_DELIVERY: task_message:<controller-thread-id>`, and `TURN_STATE`.
+2. Accept the report only when it arrives through the task-message capability. Do not scrape a child final as the ordinary success path.
+3. Interpret `owner=task` only with `TURN_STATE=continuing` while that same turn is still in progress. A task final always ends the turn and therefore returns `owner=controller`.
+4. When the next stage still belongs to the same task, validate the report, decide, then send one explicit continuation. Ownership transfers only after that call succeeds.
+5. If the expected report is absent at its checkpoint, inspect status once. If the turn is in progress, do not interrupt it. If the turn completed, read its latest final once to preserve evidence, then send a continuation only when the reported state actually requires one.
 
 ## Repository host and execution-worktree gate
 
