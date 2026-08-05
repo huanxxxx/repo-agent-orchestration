@@ -1,0 +1,22 @@
+# Repository orchestration profile example
+
+Add an equivalent section to the target repository's root `AGENTS.md`. Replace every placeholder with repository facts.
+
+## Agent Orchestration Profile
+
+- Use the user-global `$repo-agent-orchestration` skill for implementation, formal review, parallel dispatch, milestone handoffs, missing-report checks, recovery, integration, and closure.
+- If the skill or a required visible-task, existing-path, or model-binding capability is unavailable, stop and report. Do not fall back to controller or internal-helper implementation.
+
+```text
+MAIN_BRANCH: main
+ROOT_WORKTREE_POLICY: observe_integrate_validate
+WORKTREE_ROOT: <absolute-repository-path>/.worktrees
+BRANCH_PREFIX: codex/
+CONTROLLER_MODEL_POLICY: app_current_task
+WRITE_TASK_MODEL: <execution-model>/<reasoning>
+REVIEW_TASK_MODEL: app_default
+SHARED_INTEGRATION_PATHS: <repository-specific shared paths>
+EXTERNAL_GATES: merge main; push; deploy; publish; production data; credentials; permissions
+```
+
+`WRITE_TASK_MODEL` must be submitted through actual task creation or continuation parameters. `REVIEW_TASK_MODEL: app_default` means deliberately omitting a model override; it does not guarantee inheritance of a controller model manually changed away from the App default.
