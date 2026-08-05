@@ -60,6 +60,16 @@ class SkillStructureTests(unittest.TestCase):
         self.assertIn("TASK_HOST_POLICY: repository_project_local", contracts)
         self.assertIn("COMMAND_WORKDIR_POLICY: exact_execution_worktree", contracts)
         self.assertIn("--kind binding", contracts)
+        self.assertIn("dot segments lexically", contracts)
+        self.assertIn("not filesystem evidence", contracts)
+
+    def test_readme_documents_demo_compatibility_and_evidence_limits(self) -> None:
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertIn("## Run the local end-to-end demo", readme)
+        self.assertIn("## Compatibility and evidence limits", readme)
+        self.assertIn("Primary tested surface", readme)
+        self.assertIn("does not create Codex tasks", readme)
+        self.assertNotIn("saves 80%", readme.casefold())
 
 
 if __name__ == "__main__":

@@ -1,0 +1,12 @@
+TASK_ID: write-backend
+REPOSITORY_ROOT: D:\repo
+WORKTREE_ROOT: D:\repo\.worktrees
+EXECUTION_WORKTREE: D:\repo\.worktrees\child\..\..\outside
+TASK_PROJECT_ID: saved-repository-project
+TASK_PROJECT_PATH: D:\repo
+TASK_ENVIRONMENT: local
+ACTUAL_THREAD_CWD: D:\repo
+ACTUAL_THREAD_PROJECT_ID: saved-repository-project
+COMMAND_WORKDIR_POLICY: exact_execution_worktree
+ROOT_WRITE_POLICY: forbidden
+BINDING_STATUS: verified

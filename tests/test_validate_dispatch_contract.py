@@ -133,6 +133,56 @@ class ContractValidationTests(unittest.TestCase):
         errors = "\n".join(self.validate("binding", invalid))
         self.assertIn("EXECUTION_WORKTREE must be below WORKTREE_ROOT", errors)
 
+    def test_binding_rejects_windows_parent_traversal_outside_worktree_root(self) -> None:
+        for escaped in (
+            "D:\\repo\\.worktrees\\..\\outside",
+            "D:\\repo\\.worktrees\\child\\..\\..\\outside",
+        ):
+            with self.subTest(escaped=escaped):
+                invalid = VALID_BINDING.replace(
+                    "EXECUTION_WORKTREE: D:\\repo\\.worktrees\\write-1",
+                    f"EXECUTION_WORKTREE: {escaped}",
+                )
+                errors = "\n".join(self.validate("binding", invalid))
+                self.assertIn(
+                    "EXECUTION_WORKTREE must be below WORKTREE_ROOT", errors
+                )
+
+    def test_binding_rejects_extended_windows_parent_traversal(self) -> None:
+        invalid = VALID_BINDING.replace(
+            "EXECUTION_WORKTREE: D:\\repo\\.worktrees\\write-1",
+            "EXECUTION_WORKTREE: \\\\?\\D:\\repo\\.worktrees\\..\\outside",
+        )
+        errors = "\n".join(self.validate("binding", invalid))
+        self.assertIn("EXECUTION_WORKTREE must be below WORKTREE_ROOT", errors)
+
+    def test_binding_rejects_worktree_root_parent_traversal_outside_repository(self) -> None:
+        invalid = VALID_BINDING.replace(
+            "WORKTREE_ROOT: D:\\repo\\.worktrees",
+            "WORKTREE_ROOT: D:\\repo\\child\\..\\..\\outside",
+        )
+        errors = "\n".join(self.validate("binding", invalid))
+        self.assertIn("WORKTREE_ROOT must be below REPOSITORY_ROOT", errors)
+
+    def test_binding_rejects_posix_parent_traversal_for_nonexistent_paths(self) -> None:
+        posix = (
+            VALID_BINDING.replace("D:\\repo\\.worktrees", "/repo/.worktrees")
+            .replace("D:\\repo", "/repo")
+            .replace(
+                "EXECUTION_WORKTREE: /repo/.worktrees\\write-1",
+                "EXECUTION_WORKTREE: /repo/.worktrees/child/../../outside",
+            )
+        )
+        errors = "\n".join(self.validate("binding", posix))
+        self.assertIn("EXECUTION_WORKTREE must be below WORKTREE_ROOT", errors)
+
+    def test_binding_accepts_parent_segments_that_normalize_inside_root(self) -> None:
+        normalized_inside = VALID_BINDING.replace(
+            "EXECUTION_WORKTREE: D:\\repo\\.worktrees\\write-1",
+            "EXECUTION_WORKTREE: D:\\repo\\.worktrees\\child\\..\\write-1",
+        )
+        self.assertEqual(self.validate("binding", normalized_inside), [])
+
     def test_binding_requires_exact_workdir_and_forbidden_root_writes(self) -> None:
         invalid = (
             VALID_BINDING.replace(

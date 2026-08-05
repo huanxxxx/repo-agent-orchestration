@@ -50,6 +50,10 @@ class RepositoryInstallerTests(unittest.TestCase):
         self.assertIn("TASK_HOST_POLICY: repository_project_local", agents)
         self.assertIn(f"WORKTREE_ROOT: {repo / '.worktrees'}", agents)
         self.assertIn("WRITE_TASK_MODEL: gpt-5.6-luna/max", agents)
+        self.assertIn(
+            "Use the repository-local `$repo-agent-orchestration` Skill", agents
+        )
+        self.assertIn("do not silently fall back", agents)
 
     def test_preserves_existing_agents_content_and_updates_only_managed_block(self) -> None:
         temporary, repo = self.make_repo()
@@ -66,6 +70,9 @@ class RepositoryInstallerTests(unittest.TestCase):
         self.assertEqual(second.count(INSTALLER.BEGIN_MARKER), 1)
         self.assertEqual(second.count(INSTALLER.END_MARKER), 1)
         self.assertIn("WRITE_TASK_MODEL: executor/medium", second)
+        self.assertIn(
+            "Use the repository-local `$repo-agent-orchestration` Skill", second
+        )
         self.assertNotEqual(first, second)
         third = INSTALLER.install_repository(repo, self.settings(repo, "executor/medium"))
         self.assertFalse(third["agents_changed"])
@@ -122,6 +129,37 @@ class RepositoryInstallerTests(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "inside the target repository"):
             INSTALLER.install_repository(repo, settings)
+
+    def test_package_files_excludes_python_cache_artifacts(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory)
+            (source / "scripts").mkdir()
+            (source / "scripts" / "tool.py").write_text("pass\n", encoding="utf-8")
+            (source / "scripts" / "__pycache__").mkdir()
+            (source / "scripts" / "__pycache__" / "tool.cpython-313.pyc").write_bytes(
+                b"cache"
+            )
+            (source / "loose.pyc").write_bytes(b"cache")
+
+            files = INSTALLER.package_files(source)
+
+            self.assertEqual(files, [Path("scripts/tool.py")])
+
+    def test_text_package_payload_is_stable_across_checkout_line_endings(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "contract.md"
+            source.write_bytes(b"first\r\nsecond\rthird\n")
+
+            self.assertEqual(
+                INSTALLER.package_payload(source), b"first\nsecond\nthird\n"
+            )
+
+    def test_binary_package_payload_is_byte_exact(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "asset.bin"
+            source.write_bytes(b"first\r\nsecond")
+
+            self.assertEqual(INSTALLER.package_payload(source), b"first\r\nsecond")
 
 
 if __name__ == "__main__":

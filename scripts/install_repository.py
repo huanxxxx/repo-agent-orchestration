@@ -20,6 +20,7 @@ END_MARKER = "<!-- repo-agent-orchestration:end -->"
 DEFAULT_EXTERNAL_GATES = (
     "merge main; push; deploy; publish; production data; credentials; permissions"
 )
+TEXT_PACKAGE_SUFFIXES = {".md", ".py", ".txt", ".yaml", ".yml", ".toml", ".json"}
 
 
 @dataclass(frozen=True)
@@ -117,7 +118,28 @@ def render_block(
     if include_keys is not None:
         values = tuple((key, value) for key, value in values if key in include_keys)
     body = newline.join(f"{key}: {value}" for key, value in values)
-    return newline.join((BEGIN_MARKER, "## Agent Orchestration Profile", "", "```text", body, "```", END_MARKER))
+    activation = (
+        "- Use the repository-local `$repo-agent-orchestration` Skill for implementation, "
+        "formal review, parallel dispatch, handoffs, recovery, integration, and closure."
+    )
+    failure = (
+        "- If the Skill or a required task, path, message, or model-binding capability is "
+        "unavailable, stop and report; do not silently fall back to another execution route."
+    )
+    return newline.join(
+        (
+            BEGIN_MARKER,
+            "## Agent Orchestration Profile",
+            "",
+            activation,
+            failure,
+            "",
+            "```text",
+            body,
+            "```",
+            END_MARKER,
+        )
+    )
 
 
 def update_agents_content(existing: str | None, settings: Settings, newline: str) -> str:
@@ -183,8 +205,18 @@ def package_files(source: Path) -> list[Path]:
         if path.is_symlink():
             raise ValueError(f"Skill package contains a symlink: {path}")
         if path.is_file():
-            files.append(path.relative_to(source))
+            relative = path.relative_to(source)
+            if "__pycache__" in relative.parts or relative.suffix.casefold() == ".pyc":
+                continue
+            files.append(relative)
     return files
+
+
+def package_payload(path: Path) -> bytes:
+    payload = path.read_bytes()
+    if path.suffix.casefold() in TEXT_PACKAGE_SUFFIXES:
+        return payload.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+    return payload
 
 
 def install_repository(repo_value: Path, settings: Settings, dry_run: bool = False) -> dict[str, object]:
@@ -224,14 +256,15 @@ def install_repository(repo_value: Path, settings: Settings, dry_run: bool = Fal
     for relative in files:
         source_file = source / relative
         target_file = destination / relative
+        payload = package_payload(source_file)
         if target_file.exists():
             if not target_file.is_file() or target_file.is_symlink():
                 raise ValueError(f"Skill target is not a regular file: {target_file}")
-            if target_file.read_bytes() == source_file.read_bytes():
+            if target_file.read_bytes() == payload:
                 continue
         changed_skill_files += 1
         if not dry_run:
-            write_bytes_atomic(target_file, source_file.read_bytes())
+            write_bytes_atomic(target_file, payload)
 
     if agents_changed and not dry_run:
         encoding = "utf-8-sig" if has_bom else "utf-8"

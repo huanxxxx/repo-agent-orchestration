@@ -76,6 +76,8 @@ BINDING_STATUS: verified
 
 `TASK_PROJECT_PATH` and `ACTUAL_THREAD_CWD` must resolve to `REPOSITORY_ROOT`; both project ids must be non-null and equal. `EXECUTION_WORKTREE` must resolve below `WORKTREE_ROOT`, and `WORKTREE_ROOT` must resolve below `REPOSITORY_ROOT`. Run the validator with `--kind binding`. Until it passes, the task may only report coordinates and must not edit, test with persistent outputs, stage, commit, or start a milestone.
 
+The validator normalizes Windows, extended Windows, and POSIX dot segments lexically before comparing paths, so nonexistent planned paths can be checked and `..` escapes are rejected. This is a contract-shape gate, not filesystem evidence: separately verify through Git that the execution worktree exists, is registered, and has the contracted branch, head, base, and owner.
+
 After the receipt passes, every shell call must set `workdir=EXECUTION_WORKTREE` or use an equivalent exact cwd parameter. Every file read or write must use an absolute path below `EXECUTION_WORKTREE`. At baseline, every milestone, and final handoff, verify both `git -C REPOSITORY_ROOT status --short` remains clean and the execution worktree still has the contracted branch/head/owner. A host-root mutation or missing exact workdir is a blocker, even when the intended relative path also exists in the execution worktree.
 
 The write owner must modify and stage only `OWNED_PATHS`; never use broad staging such as `git add .` or `git add -A`. Run `REQUIRED_TESTS`, relevant type or static checks, and a whitespace/diff check. Report focused evidence at its actual scope. Do not merge, push, deploy, publish, or change external data unless separately authorized.

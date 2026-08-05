@@ -5,7 +5,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import ntpath
 import os
+import posixpath
 import re
 import sys
 from pathlib import Path, PurePosixPath, PureWindowsPath
@@ -112,13 +114,32 @@ def is_absolute_path(value: str) -> bool:
     return PureWindowsPath(value).is_absolute() or PurePosixPath(value).is_absolute()
 
 
+def canonical_path(value: str) -> tuple[str, PureWindowsPath | PurePosixPath] | None:
+    windows = PureWindowsPath(value)
+    if windows.is_absolute():
+        normalized = value
+        folded = normalized.casefold()
+        if folded.startswith("\\\\?\\unc\\"):
+            normalized = "\\\\" + normalized[8:]
+        elif folded.startswith("\\\\?\\"):
+            normalized = normalized[4:]
+        return "windows", PureWindowsPath(ntpath.normpath(normalized))
+
+    posix = PurePosixPath(value)
+    if posix.is_absolute():
+        return "posix", PurePosixPath(posixpath.normpath(value))
+    return None
+
+
 def is_descendant_path(child: str, root: str) -> bool:
-    if PureWindowsPath(root).is_absolute():
-        root_path = PureWindowsPath(root)
-        child_path = PureWindowsPath(child)
-    else:
-        root_path = PurePosixPath(root)
-        child_path = PurePosixPath(child)
+    root_canonical = canonical_path(root)
+    child_canonical = canonical_path(child)
+    if root_canonical is None or child_canonical is None:
+        return False
+    root_kind, root_path = root_canonical
+    child_kind, child_path = child_canonical
+    if root_kind != child_kind:
+        return False
     try:
         relative = child_path.relative_to(root_path)
     except ValueError:
@@ -127,14 +148,12 @@ def is_descendant_path(child: str, root: str) -> bool:
 
 
 def normalized_path(value: str) -> str:
-    if PureWindowsPath(value).is_absolute():
-        normalized = str(PureWindowsPath(value))
-        if normalized.startswith("\\\\?\\UNC\\"):
-            normalized = "\\\\" + normalized[8:]
-        elif normalized.startswith("\\\\?\\"):
-            normalized = normalized[4:]
-        return normalized.rstrip("\\").casefold()
-    return str(PurePosixPath(value)).rstrip("/")
+    canonical = canonical_path(value)
+    if canonical is None:
+        return value
+    kind, path = canonical
+    normalized = str(path)
+    return normalized.casefold() if kind == "windows" else normalized
 
 
 def validate_checkpoint(value: str, field_name: str) -> list[str]:
