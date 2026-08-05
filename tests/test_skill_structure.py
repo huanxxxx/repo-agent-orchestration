@@ -50,6 +50,15 @@ class SkillStructureTests(unittest.TestCase):
         self.assertIsNotNone(match)
         self.assertTrue(match.group(1).startswith("<"))
 
+    def test_skill_rejects_prompt_only_and_projectless_binding(self) -> None:
+        skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+        contracts = (SKILL / "references" / "contracts.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("A path written into the prompt is not cwd binding", skill)
+        self.assertIn("Reject `projectless`", contracts)
+        self.assertIn("--kind binding", contracts)
+
 
 if __name__ == "__main__":
     unittest.main()

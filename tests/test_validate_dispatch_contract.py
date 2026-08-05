@@ -37,6 +37,17 @@ EXPECTED_NEXT_MILESTONE: tests_complete
 NO_REPORT_CHECK_AFTER: none
 """
 
+VALID_BINDING = """
+TASK_ID: write-1
+EXPECTED_WORKTREE: D:\\repo\\.worktrees\\write-1
+TASK_PROJECT_ID: local-write-1
+TASK_PROJECT_PATH: D:\\repo\\.worktrees\\write-1
+TASK_ENVIRONMENT: local
+ACTUAL_THREAD_CWD: D:\\repo\\.worktrees\\write-1
+ACTUAL_THREAD_PROJECT_ID: local-write-1
+BINDING_STATUS: verified
+"""
+
 VALID_REVIEW = """
 REVIEW_TASK_ID: review-1
 TARGET_WORKTREE: D:\\repo\\.worktrees\\write-1
@@ -69,6 +80,46 @@ class ContractValidationTests(unittest.TestCase):
 
     def test_valid_write(self) -> None:
         self.assertEqual(self.validate("write", VALID_WRITE), [])
+
+    def test_valid_existing_worktree_binding(self) -> None:
+        self.assertEqual(self.validate("binding", VALID_BINDING), [])
+
+    def test_binding_accepts_equivalent_windows_extended_path(self) -> None:
+        equivalent = VALID_BINDING.replace(
+            "TASK_PROJECT_PATH: D:\\repo\\.worktrees\\write-1",
+            "TASK_PROJECT_PATH: \\\\?\\D:\\repo\\.worktrees\\write-1\\",
+        )
+        self.assertEqual(self.validate("binding", equivalent), [])
+
+    def test_binding_rejects_projectless_foreign_cwd_and_app_worktree(self) -> None:
+        invalid = (
+            VALID_BINDING.replace("local-write-1", "projectless")
+            .replace(
+                "ACTUAL_THREAD_CWD: D:\\repo\\.worktrees\\write-1",
+                "ACTUAL_THREAD_CWD: C:\\Users\\person\\Documents\\Codex\\write-1",
+            )
+            .replace("TASK_ENVIRONMENT: local", "TASK_ENVIRONMENT: worktree")
+        )
+        errors = "\n".join(self.validate("binding", invalid))
+        self.assertIn("TASK_PROJECT_ID must identify", errors)
+        self.assertIn("ACTUAL_THREAD_PROJECT_ID must be non-null", errors)
+        self.assertIn("ACTUAL_THREAD_CWD must equal", errors)
+        self.assertIn("TASK_ENVIRONMENT must be local", errors)
+
+    def test_binding_rejects_root_project_path_and_mismatched_project_id(self) -> None:
+        invalid = (
+            VALID_BINDING.replace(
+                "TASK_PROJECT_PATH: D:\\repo\\.worktrees\\write-1",
+                "TASK_PROJECT_PATH: D:\\repo",
+            )
+            .replace(
+                "ACTUAL_THREAD_PROJECT_ID: local-write-1",
+                "ACTUAL_THREAD_PROJECT_ID: local-other",
+            )
+        )
+        errors = "\n".join(self.validate("binding", invalid))
+        self.assertIn("TASK_PROJECT_PATH must equal", errors)
+        self.assertIn("ACTUAL_THREAD_PROJECT_ID must equal", errors)
 
     def test_write_rejects_implicit_model_short_sha_and_external_tree(self) -> None:
         invalid = (

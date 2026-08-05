@@ -9,6 +9,7 @@ The skill keeps generic collaboration mechanics outside application repositories
 - Deterministic routing between the controller, user-visible tasks, and short read-only internal helpers.
 - Event-driven parallel readiness audits and same-wave dispatch of independent work.
 - Repository-local worktree isolation with one writable owner per task boundary.
+- Fail-closed execution-directory binding that rejects projectless tasks, replacement App worktrees, and prompt-only path claims.
 - Explicit write-task model binding and configurable review-task model policy.
 - Milestone handoffs, one-shot missing-report checkpoints, and direct task messaging.
 - Frozen-candidate read-only review, controller-owned acceptance, and safe recovery.
@@ -69,7 +70,14 @@ python skill/repo-agent-orchestration/scripts/validate_dispatch_contract.py \
   --kind write path/to/write-contract.txt
 ```
 
-Supported kinds are `write`, `review`, and `update`.
+Before granting a task write or formal-review authority, validate the actual task binding too:
+
+```bash
+python skill/repo-agent-orchestration/scripts/validate_dispatch_contract.py \
+  --kind binding path/to/binding-receipt.txt
+```
+
+Supported kinds are `binding`, `write`, `review`, and `update`.
 
 ## Run tests
 
@@ -91,6 +99,8 @@ tests/                           Contract and structure tests
 ## Scope and safety
 
 This project coordinates authorized work; it does not grant new authority. Merge, push, deployment, publication, production data, credential, and permission changes remain behind repository and user gates.
+
+A path named in a task prompt is not an execution binding. Repository work must actually run with its cwd bound to the intended existing repository-local worktree. If the task API cannot provide that binding, the controller reports a capability blocker instead of dispatching through a user-global directory.
 
 ## License
 

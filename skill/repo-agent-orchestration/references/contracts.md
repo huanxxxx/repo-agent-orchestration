@@ -44,6 +44,33 @@ Create and verify the worktree before creating the user-visible task. Never use 
 
 Before dispatch, resolve and verify the repository and worktree root; main head and dirty state; full base SHA; unoccupied branch and target; absence of path substitution; and the final path, branch, head, and base shown by the Git worktree registry. Create only immediately ready worktrees. A task session does not create or own an implicit platform-managed tree.
 
+Preflight the actual task-creation interface and project registry. The creation route must guarantee the existing `WORKTREE` as the task cwd before the task can write. An absolute path in the prompt, shell `-C`, or later file-tool path does not satisfy this requirement.
+
+When the interface offers project `local`, project `worktree`, or `projectless`:
+
+1. Require a saved project whose resolved path exactly equals `WORKTREE`.
+2. Create against that project with environment `local` and an initial read-only coordinate-check prompt.
+3. Reject `projectless`, because it runs under a user-global directory.
+4. Reject project environment `worktree`, because it creates an App-managed tree rather than binding the existing tree.
+5. Reject repository-root `local` when `WORKTREE` is a linked task tree.
+6. If no exact saved project exists and the interface cannot bind an existing cwd directly, stop with `CAPABILITY_BLOCKED_EXISTING_WORKTREE_BINDING`.
+7. Treat a pending creation result as the single in-flight task; do not retry and create duplicates.
+
+After creation and before any write authorization, validate this binding receipt:
+
+```text
+TASK_ID: <actual task id>
+EXPECTED_WORKTREE: <same absolute existing worktree>
+TASK_PROJECT_ID: <non-null saved project id>
+TASK_PROJECT_PATH: <resolved saved project path>
+TASK_ENVIRONMENT: local
+ACTUAL_THREAD_CWD: <cwd returned or read from the task>
+ACTUAL_THREAD_PROJECT_ID: <project id returned or read from the task>
+BINDING_STATUS: verified
+```
+
+All three paths must resolve to the same existing worktree; both project ids must be non-null and equal. Run the validator with `--kind binding`. Until it passes, the task may only report coordinates and must not edit, test with persistent outputs, stage, commit, or start a milestone. A mismatch is a blocker, not a reason to tell a foreign-cwd task to use absolute paths.
+
 The write owner must modify and stage only `OWNED_PATHS`; never use broad staging such as `git add .` or `git add -A`. Run `REQUIRED_TESTS`, relevant type or static checks, and a whitespace/diff check. Report focused evidence at its actual scope. Do not merge, push, deploy, publish, or change external data unless separately authorized.
 
 ## Read-only review task
@@ -64,6 +91,8 @@ NO_REPORT_CHECK_AFTER: <ISO-8601|current_turn|none>
 ```
 
 Do not create a new worktree or branch for review, and do not modify files, the index, or commits. Freeze the implementation owner until review ends. Return findings to that owner in the same implementation worktree by default; a reviewer may write only with explicit repair authority and a separate writable boundary. When `MODEL_POLICY: app_default`, deliberately omit the model override; the user does not need to select a model for each review. If the product does not echo the runtime model, report `EFFECTIVE_MODEL=unverified` rather than claiming inheritance.
+
+Formal review uses the same exact-cwd binding gate and binding receipt. A projectless review or a review created in a new App-managed tree is not a review of the frozen candidate, even if its prompt names the candidate path.
 
 ## Milestone report
 

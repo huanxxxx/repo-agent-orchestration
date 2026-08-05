@@ -35,6 +35,15 @@ Stop before overwriting. Identify the exact paths, owner, base, branch, head, tr
 
 Treat any worktree created outside the declared repository-local root as an orphan candidate. Do not use it as an activity source or continue writing. Identify its task or session, resolved path, branch, head, base, dirty state, untracked files, and recovery value. Remove it only through the Git worktree flow after its session is cancelled or archived, it is clean, and it has no recovery value. Never force-delete it merely because its path is wrong.
 
+## Foreign-cwd or projectless task
+
+1. Revoke further write authority and send a stop instruction once; do not rely on the task to reinterpret its prompt.
+2. Record the task id, actual cwd, project id, intended worktree, last successful write, dirty paths, in-flight commands, and recovery value.
+3. Do not let a task running from a user-global or repository-root cwd continue by addressing the intended worktree through absolute paths.
+4. Detect duplicate task ids before restoring any owner. Multiple sessions that touched one writable worktree make every overlapping path mixed ownership until proven otherwise.
+5. Preserve dirty evidence and stop. Do not reset, overwrite, combine, stage, commit, or remove the task directory merely to restore routing cleanliness.
+6. Re-dispatch only after an exact saved-project or direct existing-cwd binding passes the binding receipt. If unavailable, keep the implementation blocked.
+
 ## Completion and cleanup
 
 Mark a user-visible task `PASS_VERIFIED` only after final evidence and controller verification show that acceptance is complete and no blocker, reply, correction, or in-flight operation remains. Archive it immediately after that gate; do not leave it merely labelled “ready to archive.” Keep blocked or correctable tasks active.

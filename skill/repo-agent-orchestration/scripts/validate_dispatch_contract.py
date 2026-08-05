@@ -12,6 +12,16 @@ from pathlib import Path, PurePosixPath, PureWindowsPath
 
 
 REQUIRED = {
+    "binding": (
+        "TASK_ID",
+        "EXPECTED_WORKTREE",
+        "TASK_PROJECT_ID",
+        "TASK_PROJECT_PATH",
+        "TASK_ENVIRONMENT",
+        "ACTUAL_THREAD_CWD",
+        "ACTUAL_THREAD_PROJECT_ID",
+        "BINDING_STATUS",
+    ),
     "write": (
         "TASK_ID",
         "WORKTREE_POLICY",
@@ -112,6 +122,17 @@ def is_descendant_path(child: str, root: str) -> bool:
     return bool(relative.parts)
 
 
+def normalized_path(value: str) -> str:
+    if PureWindowsPath(value).is_absolute():
+        normalized = str(PureWindowsPath(value))
+        if normalized.startswith("\\\\?\\UNC\\"):
+            normalized = "\\\\" + normalized[8:]
+        elif normalized.startswith("\\\\?\\"):
+            normalized = normalized[4:]
+        return normalized.rstrip("\\").casefold()
+    return str(PurePosixPath(value)).rstrip("/")
+
+
 def validate_checkpoint(value: str, field_name: str) -> list[str]:
     if value in {"current_turn", "none"} or ISO_8601_RE.fullmatch(value):
         return []
@@ -177,6 +198,37 @@ def validate(kind: str, fields: dict[str, str]) -> list[str]:
             errors.append(f"missing field: {name}")
         elif not fields[name]:
             errors.append(f"empty field: {name}")
+
+    if kind == "binding":
+        expected = fields.get("EXPECTED_WORKTREE", "")
+        project_path = fields.get("TASK_PROJECT_PATH", "")
+        actual_cwd = fields.get("ACTUAL_THREAD_CWD", "")
+        project_id = fields.get("TASK_PROJECT_ID", "")
+        actual_project_id = fields.get("ACTUAL_THREAD_PROJECT_ID", "")
+        for field_name, value in (
+            ("EXPECTED_WORKTREE", expected),
+            ("TASK_PROJECT_PATH", project_path),
+            ("ACTUAL_THREAD_CWD", actual_cwd),
+        ):
+            if value and not is_absolute_path(value):
+                errors.append(f"{field_name} must be absolute")
+            if value and has_placeholder(value):
+                errors.append(f"{field_name} must not contain placeholders")
+        if expected and project_path and normalized_path(expected) != normalized_path(project_path):
+            errors.append("TASK_PROJECT_PATH must equal EXPECTED_WORKTREE")
+        if expected and actual_cwd and normalized_path(expected) != normalized_path(actual_cwd):
+            errors.append("ACTUAL_THREAD_CWD must equal EXPECTED_WORKTREE")
+        forbidden_ids = {"null", "none", "projectless", "<none>"}
+        if project_id.casefold() in forbidden_ids:
+            errors.append("TASK_PROJECT_ID must identify the exact saved worktree project")
+        if actual_project_id.casefold() in forbidden_ids:
+            errors.append("ACTUAL_THREAD_PROJECT_ID must be non-null")
+        if project_id and actual_project_id and project_id != actual_project_id:
+            errors.append("ACTUAL_THREAD_PROJECT_ID must equal TASK_PROJECT_ID")
+        if fields.get("TASK_ENVIRONMENT") != "local":
+            errors.append("TASK_ENVIRONMENT must be local for an existing worktree")
+        if fields.get("BINDING_STATUS") != "verified":
+            errors.append("BINDING_STATUS must be verified")
 
     if kind == "write" and fields.get("WORKTREE_POLICY") != "repo_local_only":
         errors.append("WORKTREE_POLICY must be repo_local_only")

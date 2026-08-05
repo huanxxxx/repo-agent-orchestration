@@ -64,6 +64,8 @@ Repository policy or an explicit user instruction may narrow these routes. Do no
 
 - Preserve the mainline and authorization ceiling.
 - Create worktrees, dispatch tasks, and save task ids.
+- Preflight the task API and saved-project registry. Require the selected project's resolved path to equal the intended existing worktree, create it in that project's local environment, and verify the returned task cwd and project id before granting write authority.
+- Use a read-only bootstrap prompt for every new task. Do not send the execution authorization until the binding receipt passes; archive or stop a mismatched task without letting it write.
 - Process milestone reports and actually deliver decisions through the task-message capability; do not make the user relay routine coordination.
 - Verify evidence, integrate in order, and rerun acceptance.
 - Update repository-owned shared status at integration points.
@@ -72,3 +74,14 @@ Repository policy or an explicit user instruction may narrow these routes. Do no
 - Retain recoverable worktrees until their separate cleanup gate clears.
 
 Do not delegate final authorization, integration acceptance, or product-state claims.
+
+## Hard task-directory gate
+
+The task execution directory is an authority boundary, not a prompt convention.
+
+- Reject `projectless` for repository execution or review, even when the prompt contains an absolute repository path.
+- Reject an App-managed `worktree` environment when policy requires an already-created repository-local worktree; it creates a different tree.
+- Reject `local` against the repository root when the target is a linked worktree.
+- Permit `local` only when the selected saved project's resolved path is exactly the intended existing worktree, or when a future task API directly binds that exact existing cwd.
+- If the worktree is not available as an exact saved project and no direct existing-cwd binding exists, report `CAPABILITY_BLOCKED_EXISTING_WORKTREE_BINDING` and do not create a task.
+- Treat pending creation as one in-flight task. Wait for that result; never issue duplicate creation calls as a retry.
