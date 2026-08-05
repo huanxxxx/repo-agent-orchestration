@@ -232,7 +232,7 @@ def validate(kind: str, fields: dict[str, str]) -> list[str]:
             errors.append("EXECUTION_WORKTREE must be below WORKTREE_ROOT")
         forbidden_ids = {"null", "none", "projectless", "<none>"}
         if project_id.casefold() in forbidden_ids:
-            errors.append("TASK_PROJECT_ID must identify the exact saved worktree project")
+            errors.append("TASK_PROJECT_ID must identify the current saved repository project")
         if actual_project_id.casefold() in forbidden_ids:
             errors.append("ACTUAL_THREAD_PROJECT_ID must be non-null")
         if project_id and actual_project_id and project_id != actual_project_id:
