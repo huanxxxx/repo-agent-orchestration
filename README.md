@@ -142,6 +142,7 @@ Individual examples live in [examples/contracts](examples/contracts):
 - invalid projectless task;
 - invalid worktree path escape;
 - invalid local-final-only report;
+- invalid controller-bound report model override;
 - invalid obsolete ownership fields;
 - invalid obsolete waiting fields.
 
@@ -179,6 +180,7 @@ OpenAI's desktop worktree feature uses Codex-managed worktrees and is documented
 - Review selects the lightest safe target: root, frozen candidate, or detached snapshot.
 - Worker or reviewer PASS remains evidence, not controller acceptance.
 - A child task's local final is not a delivered controller report; blocked and final reports use direct task-message delivery.
+- Controller-bound reports preserve the controller's task settings: workers omit `model` and `thinking`, which otherwise override the destination task.
 - The controller yields after dispatch and resumes only on a real event. The Skill does not pretend an immediate snapshot can detect later silence.
 - Merge, push, deployment, publication, production data, credentials, and permissions remain separate gates.
 

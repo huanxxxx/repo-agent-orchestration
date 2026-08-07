@@ -5,6 +5,7 @@ EVIDENCE: tests=PASS
 RISKS_OR_LIMITS: none
 PENDING_ITEMS: none
 DELIVERY: task_message:controller-task-1
+TARGET_SETTINGS: preserve
 NEXT: controller verifies the candidate
 TURN_STATE: ending
 BLOCKER_OR_NEXT: owner=controller; action=verify; check_after=none

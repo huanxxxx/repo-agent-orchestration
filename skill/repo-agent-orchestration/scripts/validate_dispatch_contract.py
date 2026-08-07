@@ -53,6 +53,7 @@ REQUIRED = {
         "SUMMARY",
         "EVIDENCE",
         "DELIVERY",
+        "TARGET_SETTINGS",
         "NEXT",
     ),
 }
@@ -314,6 +315,10 @@ def validate(kind: str, fields: dict[str, str]) -> list[str]:
             errors.append("blocked DELIVERY requires STATUS=blocked")
         if status and status != "blocked" and not direct:
             errors.append("progress and final DELIVERY must use task_message:<controller-task-id>")
+        if fields.get("TARGET_SETTINGS", "").casefold() != "preserve":
+            errors.append(
+                "TARGET_SETTINGS must be preserve; controller-bound reports must omit model and thinking overrides"
+            )
         if status == "final":
             if fields.get("EVIDENCE", "").casefold() == "none":
                 errors.append("final EVIDENCE must include commands or artifacts")

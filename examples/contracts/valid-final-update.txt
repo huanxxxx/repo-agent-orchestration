@@ -5,4 +5,5 @@ EVIDENCE: commit=0123456789abcdef0123456789abcdef01234567; tests=PASS
 RISKS_OR_LIMITS: local evidence only
 PENDING_ITEMS: controller verification and integration
 DELIVERY: task_message:controller-task-1
+TARGET_SETTINGS: preserve
 NEXT: controller verifies the candidate

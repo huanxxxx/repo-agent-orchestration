@@ -16,7 +16,7 @@ Use this runbook only on a disposable demonstration repository. It exercises the
 3. Create two repository-local Git worktrees and two visible write tasks. Bind `WRITE_TASK_MODEL` through real task parameters.
 4. Give each task conditional authority in its initial instruction: run the fast route gate first and continue in the same turn when it passes. Each command must use its exact execution path.
 5. Freeze one candidate and create a visible read-only review task against that exact worktree and commit. Also exercise either a short `root_readonly` review or an on-demand `detached_snapshot` review.
-6. Require blocked and final reports to use `DELIVERY: task_message:<controller-task-id>`. Confirm the task-message call succeeds before the child emits its local final.
+6. Require blocked and final reports to use `DELIVERY: task_message:<controller-task-id>` and `TARGET_SETTINGS: preserve`. Confirm the task-message call omits `model` and `thinking` and succeeds before the child emits its local final.
 7. Have the controller verify the real diff, staged paths, tests, findings, and evidence limits before integration.
 8. Create one read-only route-check task with `projectless` or an escaping execution path. Confirm rejection and that no write authority is sent.
 
@@ -25,7 +25,7 @@ Use this runbook only on a disposable demonstration repository. It exercises the
 - Task IDs and submitted model policies; record the effective model as unverified unless the product echoes it.
 - Repository root, worktree paths, branches, base/full candidate SHAs, and clean-state checks.
 - Route validator output for accepted and rejected starts, including proof that a passing task continued without a second authorization turn.
-- Direct task-message delivery result, test commands/results, reviewer findings, and controller acceptance.
+- Direct task-message delivery result, proof that controller-bound reports omitted model/thinking overrides, test commands/results, reviewer findings, and controller acceptance.
 - A statement that local evidence does not authorize push, deployment, production access, credentials, or permissions.
 
 This repository does not claim that this UI runbook is automated. Run `python scripts/run_local_demo.py` for the deterministic local Git/contract portion.

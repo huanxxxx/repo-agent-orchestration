@@ -1,0 +1,9 @@
+TASK_ID: write-ledger-core
+STATUS: final
+SUMMARY: report call tries to copy the worker model onto the controller
+EVIDENCE: tests=PASS; commit=0123456789abcdef0123456789abcdef01234567
+RISKS_OR_LIMITS: destination controller settings would be mutated
+PENDING_ITEMS: resend without model or thinking overrides
+DELIVERY: task_message:controller-task-1
+TARGET_SETTINGS: override:gpt-5.6-luna/max
+NEXT: controller verifies the candidate

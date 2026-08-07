@@ -5,4 +5,5 @@ EVIDENCE: tests=PASS
 RISKS_OR_LIMITS: none
 PENDING_ITEMS: none
 DELIVERY: local_final_only
+TARGET_SETTINGS: preserve
 NEXT: controller verifies the candidate

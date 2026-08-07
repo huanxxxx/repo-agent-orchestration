@@ -95,6 +95,19 @@ class SkillStructureTests(unittest.TestCase):
         self.assertNotIn("TURN_STATE:", contracts)
         self.assertNotIn("owner=<controller|task>", contracts)
 
+    def test_controller_reports_preserve_destination_model_settings(self) -> None:
+        skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+        contracts = (SKILL / "references" / "contracts.md").read_text(
+            encoding="utf-8"
+        )
+        controller = (SKILL / "references" / "controller.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("must omit `model` and `thinking`", skill)
+        self.assertIn("TARGET_SETTINGS: preserve", contracts)
+        self.assertIn("destination-thread overrides", contracts)
+        self.assertIn("controller-model drift", controller)
+
     def test_readme_documents_demo_compatibility_and_evidence_limits(self) -> None:
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         self.assertIn("## Run the local end-to-end demo", readme)

@@ -39,7 +39,9 @@ Use the repository write model through real creation parameters. Omit a model ov
 
 ## Receive reports and yield
 
-Only direct task-message delivery is an ordinary report. `progress` keeps the current task turn; record the new fact but do not send a continuation to an already-running task. `blocked` and `final` return control to the controller. A child local final may be read once for recovery, but is not normal delivery.
+Only direct task-message delivery is an ordinary report. Require `TARGET_SETTINGS: preserve`: the worker must omit `model` and `thinking` because task-message overrides apply to the destination controller. `progress` keeps the current task turn; record the new fact but do not send a continuation to an already-running task. `blocked` and `final` return control to the controller. A child local final may be read once for recovery, but is not normal delivery.
+
+Record the controller model and reasoning effort before dispatch. On a report-triggered wake, compare the current turn settings with that baseline. If they changed without an explicit user selection, stop routing and report controller-model drift before accepting or integrating evidence.
 
 After successful creation or continuation, end the controller turn. Resume only on:
 

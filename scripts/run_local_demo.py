@@ -138,6 +138,7 @@ EVIDENCE: commit={head}; local_demo=PASS
 RISKS_OR_LIMITS: no Codex task API or runtime-model verification
 PENDING_ITEMS: none
 DELIVERY: task_message:demo-controller-thread
+TARGET_SETTINGS: preserve
 NEXT: controller verifies and closes
 """
         escaped = worktree_root / "child" / ".." / ".." / "outside"

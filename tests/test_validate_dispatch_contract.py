@@ -64,6 +64,7 @@ EVIDENCE: tests=PASS; commit=abc
 RISKS_OR_LIMITS: local evidence only
 PENDING_ITEMS: controller verification
 DELIVERY: task_message:controller-1
+TARGET_SETTINGS: preserve
 NEXT: controller verifies the candidate
 """
 
@@ -172,9 +173,20 @@ STATUS: blocked
 SUMMARY: task-message capability unavailable
 EVIDENCE: delivery call failed
 DELIVERY: blocked:task_message_unavailable
+TARGET_SETTINGS: preserve
 NEXT: recover on the next real controller wake
 """
         self.assertEqual(self.validate("update", blocked), [])
+
+    def test_report_rejects_controller_model_override(self) -> None:
+        invalid = VALID_FINAL.replace(
+            "TARGET_SETTINGS: preserve",
+            "TARGET_SETTINGS: override:gpt-5.6-luna/max",
+        )
+        self.assertIn(
+            "TARGET_SETTINGS must be preserve; controller-bound reports must omit model and thinking overrides",
+            self.validate("update", invalid),
+        )
 
     def test_obsolete_ceremony_fields_are_rejected(self) -> None:
         write = VALID_WRITE + "\nCONTROLLER_AFTER_DISPATCH: event_driven_yield\nNO_REPORT_CHECK_AFTER: current_turn_once\n"

@@ -35,7 +35,7 @@ REQUIRED_TESTS: <commands or checks>
 MODEL_POLICY: repo_write_default:<model>/<reasoning>|user_explicit:<model>/<reasoning>
 ```
 
-Create and verify the worktree only when the task is ready. Submit the model through the real task API. The initial task instruction grants execution conditionally: run the fast route gate first, continue in the same turn when it passes, and report `blocked` without writing when it fails.
+Create and verify the worktree only when the task is ready. Submit the model through the real task API only while creating or continuing this write task. The initial task instruction grants execution conditionally: run the fast route gate first, continue in the same turn when it passes, and report `blocked` without writing when it fails.
 
 ## Read-only review dispatch
 
@@ -86,9 +86,16 @@ EVIDENCE: <commands, commit, paths, findings, or none>
 RISKS_OR_LIMITS: <required for final>
 PENDING_ITEMS: <required for final>
 DELIVERY: task_message:<controller-task-id>|blocked:<reason>
+TARGET_SETTINGS: preserve
 NEXT: <next action>
 ```
 
 `progress` is optional and means the same task turn continues. `blocked` and `final` end the task turn and return control to the controller. Do not duplicate this with separate owner or turn-state fields.
 
-Validate the report, send it through the task-message capability, and confirm delivery before the task emits its local final. If delivery fails, emit a local `blocked` report with `DELIVERY: blocked:<reason>`; recover it on the next real controller wake. Do not claim that an immediate snapshot is a future missing-report check.
+`TARGET_SETTINGS: preserve` is mandatory. When sending the report to the controller, omit both `model` and `thinking` from the task-message call. These are destination-thread overrides, not sender metadata; attaching the worker model to a controller-bound report changes the controller model. Model overrides are allowed only when the controller creates or continues the task whose policy authorizes that model.
+
+```text
+send_message_to_thread({threadId: <controller-task-id>, prompt: <validated-report>})
+```
+
+Validate the report, send it through the task-message capability without target-setting overrides, and confirm delivery before the task emits its local final. If delivery fails, emit a local `blocked` report with `DELIVERY: blocked:<reason>` and `TARGET_SETTINGS: preserve`; recover it on the next real controller wake. Do not claim that an immediate snapshot is a future missing-report check.

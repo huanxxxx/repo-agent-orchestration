@@ -27,6 +27,10 @@ CASES = {
         "update",
         ("DELIVERY must be task_message",),
     ),
+    "invalid-controller-model-override.txt": (
+        "update",
+        ("TARGET_SETTINGS must be preserve",),
+    ),
     "invalid-obsolete-report-fields.txt": (
         "update",
         ("obsolete protocol fields must be removed",),
