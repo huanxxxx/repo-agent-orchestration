@@ -141,6 +141,7 @@ Individual examples live in [examples/contracts](examples/contracts):
 - valid final milestone;
 - invalid projectless task;
 - invalid worktree path escape;
+- invalid App-managed worktree environment;
 - invalid local-final-only report;
 - invalid controller-bound report model override;
 - invalid obsolete ownership fields;
@@ -181,6 +182,8 @@ OpenAI's desktop worktree feature uses Codex-managed worktrees and is documented
 - Worker or reviewer PASS remains evidence, not controller acceptance.
 - A child task's local final is not a delivered controller report; blocked and final reports use direct task-message delivery.
 - Controller-bound reports preserve the controller's task settings: workers omit `model` and `thinking`, which otherwise override the destination task.
+- Visible repository tasks explicitly use App environment `local`; isolation comes from the repository-local execution worktree, never an App-managed worktree.
+- Accepted child tasks are archived explicitly by the controller; a child `final` is delivery, not archival.
 - The controller yields after dispatch and resumes only on a real event. The Skill does not pretend an immediate snapshot can detect later silence.
 - Merge, push, deployment, publication, production data, credentials, and permissions remain separate gates.
 

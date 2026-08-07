@@ -55,8 +55,19 @@ class SkillStructureTests(unittest.TestCase):
         contracts = (SKILL / "references" / "contracts.md").read_text(
             encoding="utf-8"
         )
+        controller = (SKILL / "references" / "controller.md").read_text(
+            encoding="utf-8"
+        )
+        validator = (SKILL / "scripts" / "validate_dispatch_contract.py").read_text(
+            encoding="utf-8"
+        )
         self.assertIn("Reject projectless", skill)
         self.assertIn("TASK_HOST_POLICY: repository_project_local", contracts)
+        self.assertIn('environment: {type: "local"}', contracts)
+        self.assertIn("TASK_ENVIRONMENT: local", contracts)
+        self.assertIn("App-managed worktree tasks are forbidden", validator)
+        self.assertIn("TASK_ARCHIVE_POLICY: controller_after_acceptance", contracts)
+        self.assertIn("set_thread_archived", controller)
         self.assertIn("TASK_MODE: write|review_root|review_worktree", contracts)
         self.assertIn("continue in the same turn", contracts)
         self.assertNotIn("BINDING_STATUS", contracts)

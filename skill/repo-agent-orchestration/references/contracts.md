@@ -23,6 +23,8 @@ Repository configuration is read once by the controller. Do not copy invariant w
 
 ```text
 TASK_ID: <id or pending>
+TASK_ENVIRONMENT: local
+TASK_ARCHIVE_POLICY: controller_after_acceptance
 WORKTREE_ROOT: <absolute repository-local root>
 WORKTREE: <absolute existing worktree>
 BRANCH: <task branch>
@@ -35,12 +37,14 @@ REQUIRED_TESTS: <commands or checks>
 MODEL_POLICY: repo_write_default:<model>/<reasoning>|user_explicit:<model>/<reasoning>
 ```
 
-Create and verify the worktree only when the task is ready. Submit the model through the real task API only while creating or continuing this write task. The initial task instruction grants execution conditionally: run the fast route gate first, continue in the same turn when it passes, and report `blocked` without writing when it fails.
+Create and verify the worktree only when the task is ready. Create the visible task with `target: {type: "project", projectId: <saved-project-id>, environment: {type: "local"}}`; never use or omit into the Git-project default of `worktree`. If a same-task fork is genuinely required, use `environment: {type: "same-directory"}`, never `worktree`. Submit the model through the real task API only while creating or continuing this write task. The initial task instruction grants execution conditionally: run the fast route gate first, continue in the same turn when it passes, and report `blocked` without writing when it fails.
 
 ## Read-only review dispatch
 
 ```text
 REVIEW_TASK_ID: <id or pending>
+TASK_ENVIRONMENT: local
+TASK_ARCHIVE_POLICY: controller_after_acceptance
 TARGET_MODE: root_readonly|existing_worktree|detached_snapshot
 TARGET_PATH: <absolute path>
 TARGET_COMMIT_OR_RANGE: <full sha or exact range>
@@ -63,6 +67,7 @@ Run this at the start of the task and continue in the same turn when it passes:
 ```text
 TASK_ID: <actual id>
 TASK_MODE: write|review_root|review_worktree
+TASK_ENVIRONMENT: local
 REPOSITORY_ROOT: <absolute root>
 WORKTREE_ROOT: <absolute repository-local worktree root>
 EXECUTION_PATH: <absolute root or worktree>
@@ -71,7 +76,7 @@ ACTUAL_THREAD_CWD: <actual task cwd>
 ACTUAL_THREAD_PROJECT_ID: <actual project id>
 ```
 
-The actual cwd must equal `REPOSITORY_ROOT`, and both project ids must be non-null and equal. `write` and `review_worktree` execution paths must be strict descendants of `WORKTREE_ROOT`; `review_root` must equal `REPOSITORY_ROOT`.
+The submitted task environment must be exactly `local`, the actual cwd must equal `REPOSITORY_ROOT`, and both project ids must be non-null and equal. `write` and `review_worktree` execution paths must be strict descendants of `WORKTREE_ROOT`; `review_root` must equal `REPOSITORY_ROOT`.
 
 Run the validator CLI on the packet immediately before dispatch and again for the task's fast route gate. The CLI fails closed unless each required path exists and the selected worktree is registered at the contracted branch/commit. A path remembered by a task or chat is only a hint: after cleanup or restore, validate it again before treating it as a baseline. Record the repository-root status before the task starts and verify that the task did not change it; unrelated pre-existing root changes do not by themselves block an isolated task.
 

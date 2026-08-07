@@ -18,6 +18,7 @@ REQUIRED = {
     "binding": (
         "TASK_ID",
         "TASK_MODE",
+        "TASK_ENVIRONMENT",
         "REPOSITORY_ROOT",
         "WORKTREE_ROOT",
         "EXECUTION_PATH",
@@ -27,6 +28,8 @@ REQUIRED = {
     ),
     "write": (
         "TASK_ID",
+        "TASK_ENVIRONMENT",
+        "TASK_ARCHIVE_POLICY",
         "WORKTREE_ROOT",
         "WORKTREE",
         "BRANCH",
@@ -40,6 +43,8 @@ REQUIRED = {
     ),
     "review": (
         "REVIEW_TASK_ID",
+        "TASK_ENVIRONMENT",
+        "TASK_ARCHIVE_POLICY",
         "TARGET_MODE",
         "TARGET_PATH",
         "TARGET_COMMIT_OR_RANGE",
@@ -338,6 +343,17 @@ def validate(kind: str, fields: dict[str, str]) -> list[str]:
         add_obsolete_errors(errors, fields, OBSOLETE_DISPATCH_FIELDS)
     if kind == "update":
         add_obsolete_errors(errors, fields, OBSOLETE_REPORT_FIELDS)
+
+    if kind in {"binding", "write", "review"}:
+        if fields.get("TASK_ENVIRONMENT", "").casefold() != "local":
+            errors.append(
+                "TASK_ENVIRONMENT must be local; App-managed worktree tasks are forbidden"
+            )
+    if kind in {"write", "review"}:
+        if fields.get("TASK_ARCHIVE_POLICY", "").casefold() != "controller_after_acceptance":
+            errors.append(
+                "TASK_ARCHIVE_POLICY must be controller_after_acceptance"
+            )
 
     if kind == "binding":
         repository_root = fields.get("REPOSITORY_ROOT", "")

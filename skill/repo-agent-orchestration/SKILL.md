@@ -32,7 +32,7 @@ Read [references/controller.md](references/controller.md) when acting as control
 
 1. Dispatch work when it is authorized, dependency-closed, independently acceptable, and has no overlapping writer. Record only the reason when one of these conditions blocks or serializes it.
 2. Give each writer one task boundary, branch, repository-local worktree, and exclusive write scope. Create the worktree only when the task is ready.
-3. Reject projectless or foreign-project tasks. Host a task in the saved repository project and keep its execution path explicit.
+3. Reject projectless or foreign-project tasks. Host every user-visible task in the saved repository project with an explicit App environment of `local`; never request an App-managed worktree. Keep the repository-local worktree only as the task's explicit execution path.
 4. Bind write-task models through real task creation or continuation parameters only when the destination is that write task. Prompt text alone is not model binding. For declared `app_default` review policy, omit the override deliberately.
 5. Put conditional execution authority in the initial task: first perform the fast route gate; if it passes, continue the work in the same turn. If it fails, write nothing and report `blocked`. Do not require a binding-only turn followed by a second authorization turn.
 6. Require every repository command to use the exact execution path. Compare the repository-root status with its recorded baseline; do not require an unrelated user-owned root to be clean.
@@ -44,5 +44,7 @@ Run `scripts/validate_dispatch_contract.py` on dispatch, route, and report packe
 ## Accept, integrate, and recover
 
 Treat worker or reviewer PASS as evidence. Verify the actual diff or reviewed commit, required checks, evidence limits, and unresolved findings before integration. Keep merge, push, deployment, publication, production data, credentials, and permissions behind their own gates.
+
+After a task is accepted and has no correction or in-flight operation, archive its user-visible task through the App task API and confirm success. Do not confuse a child `final` with archival, and do not archive before acceptance.
 
 Read [references/recovery.md](references/recovery.md) only for a silent task, takeover, wrong route, dirty ownership, or cleanup. Retain a task or worktree only while it has recovery value.

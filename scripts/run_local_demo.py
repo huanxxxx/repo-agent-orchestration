@@ -45,6 +45,7 @@ def binding_packet(repository: Path, worktree_root: Path, execution_worktree: Pa
     return f"""
 TASK_ID: {task_id}
 TASK_MODE: write
+TASK_ENVIRONMENT: local
 REPOSITORY_ROOT: {repository}
 WORKTREE_ROOT: {worktree_root}
 EXECUTION_PATH: {execution_worktree}
@@ -58,6 +59,8 @@ def write_packet(worktree_root: Path, worktree: Path, branch: str, head: str) ->
     task_name = branch.removeprefix("codex/")
     return f"""
 TASK_ID: {task_name}
+TASK_ENVIRONMENT: local
+TASK_ARCHIVE_POLICY: controller_after_acceptance
 WORKTREE_ROOT: {worktree_root}
 WORKTREE: {worktree}
 BRANCH: {branch}
@@ -122,6 +125,8 @@ def run_demo() -> dict[str, object]:
         backend_branch, backend_path = workers["backend"]
         review = f"""
 REVIEW_TASK_ID: review-backend
+TASK_ENVIRONMENT: local
+TASK_ARCHIVE_POLICY: controller_after_acceptance
 TARGET_MODE: existing_worktree
 TARGET_PATH: {backend_path}
 TARGET_COMMIT_OR_RANGE: {head}

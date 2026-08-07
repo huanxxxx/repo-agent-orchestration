@@ -1,4 +1,6 @@
 REVIEW_TASK_ID: review-ledger-core
+TASK_ENVIRONMENT: local
+TASK_ARCHIVE_POLICY: controller_after_acceptance
 TARGET_MODE: existing_worktree
 TARGET_PATH: C:\Projects\ledger\.worktrees\ledger-core
 TARGET_COMMIT_OR_RANGE: 0123456789abcdef0123456789abcdef01234567

@@ -30,7 +30,7 @@ The reviewer does not create a tree. Never share a writable worktree between own
 ## Create once and continue once
 
 1. Preflight the saved repository project and task API.
-2. Create the task against that project with environment `local`; reject `projectless` and App-managed substitute trees.
+2. Create the task against that project with the explicit target object `target: {type: "project", projectId, environment: {type: "local"}}`; do not rely on the Git-project default, and reject `projectless` or App-managed substitute trees. If using a fork, require `environment: {type: "same-directory"}` and reject `worktree`.
 3. Include the dispatch packet and conditional execution authority in the initial instruction.
 4. The task performs the fast route gate first. A passing task continues implementation or review in the same turn; a failing task writes nothing and reports `blocked`.
 5. Do not require a binding-only turn, a controller receipt decision, and a second authorization message for a route that can be decided deterministically.
@@ -57,4 +57,4 @@ Do not call recursive waits, emit unchanged status, or use an immediate snapshot
 
 Verify the actual diff or reviewed commit, owned paths, required tests, evidence limits, unresolved findings, and root-baseline drift. Integrate only within authority and in dependency order. Keep external gates separate.
 
-Archive a task after acceptance is verified and no correction or in-flight operation remains. Remove a worktree separately, only when clean and without recovery value.
+Archive a task after acceptance is verified and no correction or in-flight operation remains. Call `set_thread_archived({threadId: <accepted-task-id>, archived: true})` and confirm success before declaring closure. A child `final` does not archive itself. Do not archive a task that still needs correction, input, or recovery. Remove a worktree separately, only when clean and without recovery value.

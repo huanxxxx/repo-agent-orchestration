@@ -1,5 +1,6 @@
 TASK_ID: write-ledger-core
 TASK_MODE: write
+TASK_ENVIRONMENT: local
 REPOSITORY_ROOT: C:\Projects\ledger
 WORKTREE_ROOT: C:\Projects\ledger\.worktrees
 EXECUTION_PATH: C:\Projects\ledger\.worktrees\ledger-core

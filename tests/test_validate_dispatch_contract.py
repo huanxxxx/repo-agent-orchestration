@@ -23,6 +23,7 @@ FULL_SHA = "0123456789abcdef0123456789abcdef01234567"
 VALID_BINDING = r"""
 TASK_ID: write-1
 TASK_MODE: write
+TASK_ENVIRONMENT: local
 REPOSITORY_ROOT: C:\repo
 WORKTREE_ROOT: C:\repo\.worktrees
 EXECUTION_PATH: C:\repo\.worktrees\write-1
@@ -33,6 +34,8 @@ ACTUAL_THREAD_PROJECT_ID: saved-project
 
 VALID_WRITE = rf"""
 TASK_ID: write-1
+TASK_ENVIRONMENT: local
+TASK_ARCHIVE_POLICY: controller_after_acceptance
 WORKTREE_ROOT: C:\repo\.worktrees
 WORKTREE: C:\repo\.worktrees\write-1
 BRANCH: codex/write-1
@@ -47,6 +50,8 @@ MODEL_POLICY: repo_write_default:gpt-5.6-luna/max
 
 VALID_REVIEW = rf"""
 REVIEW_TASK_ID: review-1
+TASK_ENVIRONMENT: local
+TASK_ARCHIVE_POLICY: controller_after_acceptance
 TARGET_MODE: existing_worktree
 TARGET_PATH: C:\repo\.worktrees\write-1
 TARGET_COMMIT_OR_RANGE: {FULL_SHA}
@@ -142,6 +147,33 @@ class ContractValidationTests(unittest.TestCase):
             "WORKTREE: C:\\repo\\.worktrees\\write-1", "WORKTREE: C:\\outside"
         )
         self.assertIn("WORKTREE must be below WORKTREE_ROOT", self.validate("write", invalid))
+
+    def test_dispatch_rejects_app_managed_worktree_environment(self) -> None:
+        for kind, packet in (
+            ("binding", VALID_BINDING),
+            ("write", VALID_WRITE),
+            ("review", VALID_REVIEW),
+        ):
+            with self.subTest(kind=kind):
+                invalid = packet.replace(
+                    "TASK_ENVIRONMENT: local", "TASK_ENVIRONMENT: worktree"
+                )
+                self.assertIn(
+                    "TASK_ENVIRONMENT must be local; App-managed worktree tasks are forbidden",
+                    self.validate(kind, invalid),
+                )
+
+    def test_dispatch_requires_controller_owned_archival(self) -> None:
+        for kind, packet in (("write", VALID_WRITE), ("review", VALID_REVIEW)):
+            with self.subTest(kind=kind):
+                invalid = packet.replace(
+                    "TASK_ARCHIVE_POLICY: controller_after_acceptance",
+                    "TASK_ARCHIVE_POLICY: child_on_final",
+                )
+                self.assertIn(
+                    "TASK_ARCHIVE_POLICY must be controller_after_acceptance",
+                    self.validate(kind, invalid),
+                )
 
     def test_review_supports_all_three_target_modes(self) -> None:
         for mode in ("root_readonly", "existing_worktree", "detached_snapshot"):

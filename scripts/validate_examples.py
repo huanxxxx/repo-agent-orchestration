@@ -23,6 +23,10 @@ CASES = {
         "binding",
         ("EXECUTION_PATH must be below WORKTREE_ROOT",),
     ),
+    "invalid-app-worktree-environment.txt": (
+        "write",
+        ("TASK_ENVIRONMENT must be local",),
+    ),
     "invalid-local-final-only.txt": (
         "update",
         ("DELIVERY must be task_message",),

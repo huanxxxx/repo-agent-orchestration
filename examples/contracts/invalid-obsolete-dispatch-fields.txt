@@ -1,4 +1,6 @@
 TASK_ID: write-ledger-core
+TASK_ENVIRONMENT: local
+TASK_ARCHIVE_POLICY: controller_after_acceptance
 WORKTREE_ROOT: C:\Projects\ledger\.worktrees
 WORKTREE: C:\Projects\ledger\.worktrees\ledger-core
 BRANCH: codex/ledger-core
