@@ -50,20 +50,19 @@ class SkillStructureTests(unittest.TestCase):
         self.assertIsNotNone(match)
         self.assertTrue(match.group(1).startswith("<"))
 
-    def test_skill_uses_repository_host_and_execution_worktree(self) -> None:
+    def test_skill_uses_repository_host_and_lightweight_route_gate(self) -> None:
         skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
         contracts = (SKILL / "references" / "contracts.md").read_text(
             encoding="utf-8"
         )
-        self.assertIn("Separate task hosting from task execution", skill)
-        self.assertIn("Reject `projectless`", contracts)
+        self.assertIn("Reject projectless", skill)
         self.assertIn("TASK_HOST_POLICY: repository_project_local", contracts)
-        self.assertIn("COMMAND_WORKDIR_POLICY: exact_execution_worktree", contracts)
-        self.assertIn("--kind binding", contracts)
-        self.assertIn("dot segments lexically", contracts)
-        self.assertIn("not filesystem evidence", contracts)
+        self.assertIn("TASK_MODE: write|review_root|review_worktree", contracts)
+        self.assertIn("continue in the same turn", contracts)
+        self.assertNotIn("BINDING_STATUS", contracts)
+        self.assertNotIn("COMMAND_WORKDIR_POLICY", contracts)
 
-    def test_controller_waiting_is_event_driven_and_single_snapshot(self) -> None:
+    def test_controller_waiting_is_event_driven_without_fake_checkpoint(self) -> None:
         skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
         controller = (SKILL / "references" / "controller.md").read_text(
             encoding="utf-8"
@@ -74,11 +73,27 @@ class SkillStructureTests(unittest.TestCase):
         validator = (SKILL / "scripts" / "validate_dispatch_contract.py").read_text(
             encoding="utf-8"
         )
-        self.assertIn("Do not keep the controller active to monitor progress", skill)
-        self.assertIn("wait_threads(timeoutMs=0) snapshot once", controller)
-        self.assertIn("CONTROLLER_AFTER_DISPATCH: event_driven_yield", contracts)
-        self.assertIn("current_turn_once", contracts)
-        self.assertIn("current_turn is ambiguous and forbidden", validator)
+        self.assertIn("end the controller turn", skill)
+        self.assertIn("Do not call recursive waits", controller)
+        self.assertNotIn("CONTROLLER_AFTER_DISPATCH", contracts)
+        self.assertNotIn("current_turn_once", contracts)
+        self.assertIn("OBSOLETE_DISPATCH_FIELDS", validator)
+
+    def test_review_routing_covers_root_candidate_and_snapshot(self) -> None:
+        contracts = (SKILL / "references" / "contracts.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("root_readonly", contracts)
+        self.assertIn("existing_worktree", contracts)
+        self.assertIn("detached_snapshot", contracts)
+
+    def test_reports_do_not_duplicate_turn_and_owner_state(self) -> None:
+        contracts = (SKILL / "references" / "contracts.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("STATUS: progress|blocked|final", contracts)
+        self.assertNotIn("TURN_STATE:", contracts)
+        self.assertNotIn("owner=<controller|task>", contracts)
 
     def test_readme_documents_demo_compatibility_and_evidence_limits(self) -> None:
         readme = (ROOT / "README.md").read_text(encoding="utf-8")

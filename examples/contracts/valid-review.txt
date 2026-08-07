@@ -1,13 +1,8 @@
-REVIEW_TASK_ID: review-backend
-TARGET_WORKTREE: D:\repo\.worktrees\write-backend
-TARGET_BRANCH: codex/write-backend
+REVIEW_TASK_ID: review-ledger-core
+TARGET_MODE: existing_worktree
+TARGET_PATH: C:\Projects\ledger\.worktrees\ledger-core
 TARGET_COMMIT_OR_RANGE: 0123456789abcdef0123456789abcdef01234567
 READ_ONLY: true
-REVIEW_SCOPE: frozen backend candidate and required tests
-ACCEPTANCE: report PASS or findings with evidence
-REQUIRED_CHECKS: inspect exact diff, tests, and unresolved risks
-REPORT_FORMAT: findings first, followed by evidence and evidence limits
+REVIEW_SCOPE: inspect the frozen ledger candidate
+ACCEPTANCE: report PASS or ordered findings with evidence
 MODEL_POLICY: app_default
-EXPECTED_NEXT_MILESTONE: final
-CONTROLLER_AFTER_DISPATCH: event_driven_yield
-NO_REPORT_CHECK_AFTER: current_turn_once

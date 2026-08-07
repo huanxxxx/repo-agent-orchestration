@@ -4,7 +4,7 @@
 
 **The controller plans and accepts. Explicitly routed workers execute. Independent agents review. Git worktrees keep every writer isolated.**
 
-Repo Agent Orchestration is a lightweight Codex Skill for coordinating multi-agent repository work through explicit role separation, model routing, task contracts, isolated Git worktrees, frozen-candidate review, and controller-owned acceptance.
+Repo Agent Orchestration is a lightweight Codex Skill for coordinating multi-agent repository work through explicit role separation, model routing, on-demand Git worktrees, independent review, direct reports, and controller-owned acceptance.
 
 Codex already knows how to use agents. This project focuses on the harder engineering questions: who may write, where they may write, which model is submitted for the task, how completion is proven, and who may integrate the result.
 
@@ -21,6 +21,7 @@ Multi-agent coding fails when:
 - an agent reports PASS and nobody verifies the real diff;
 - a worker finishes in its own task but never delivers the final milestone to the controller;
 - a completed turn says `owner=task` even though it cannot restart itself;
+- a safety handshake takes longer than the work it protects;
 - merge, push, deploy, or production access becomes implicit.
 
 This Skill turns those failure modes into explicit contracts and fail-closed gates.
@@ -62,7 +63,9 @@ The model names are repository configuration, not a promise that every Codex sur
                          controller acceptance gate
 ```
 
-Every writer owns one task boundary, one branch, one repository-local worktree, and one writable ownership boundary. A reviewer binds directly to a frozen implementation worktree and does not create a review worktree.
+Every writer owns one task boundary, one branch, one repository-local worktree, and one writable ownership boundary. Short read-only work needs no tree. Candidate review reuses the frozen implementation tree; long or historical review gets an on-demand detached snapshot only when a stable filesystem is useful.
+
+Task startup is one phase: the initial instruction performs a fast route gate and continues in the same turn when it passes. A route mismatch fails before the first write; there is no mandatory binding-only turn followed by a second authorization turn.
 
 ## Install into a repository
 
@@ -87,6 +90,14 @@ Preview without writing:
 python scripts/install_repository.py --repo /absolute/path/to/repository --dry-run
 ```
 
+Check whether an installed copy or managed profile has drifted without writing:
+
+```bash
+python scripts/install_repository.py --repo /absolute/path/to/repository --check
+```
+
+On upgrade, omitted CLI options preserve values already present in the managed `AGENTS.md` block. Defaults are used only when a value does not yet exist.
+
 The repository profile remains configurable:
 
 ```text
@@ -110,7 +121,7 @@ See [examples/AGENTS.profile.md](examples/AGENTS.profile.md) for a neutral profi
 python scripts/run_local_demo.py
 ```
 
-The demo creates a temporary Git repository, two independent writer branches and worktrees, valid binding/write/review/final contracts, and one deliberately invalid `projectless` binding with an escaping `..` path. It passes only when both writers are registered separately, the repository root stays clean, valid contracts pass, and the invalid binding is rejected. The final contract also proves the report declares direct controller delivery and returns ownership when the turn ends.
+The demo creates a temporary Git repository, two independent writer branches and worktrees, valid route/write/review/final contracts, and one deliberately invalid `projectless` route with an escaping `..` path. It passes only when both writers are registered separately, valid contracts pass, the invalid route is rejected, and the writers do not change the root baseline. The final contract also proves direct controller delivery.
 
 Evidence boundary: this deterministic demo exercises local Git isolation and the contract gate. It does not create Codex tasks, verify task-message delivery, or prove an effective runtime model. Use [the Codex Desktop runbook](examples/demo/CODEX_DESKTOP_RUNBOOK.md) for a reproducible product-facing demonstration and record those external receipts separately.
 
@@ -131,7 +142,8 @@ Individual examples live in [examples/contracts](examples/contracts):
 - invalid projectless task;
 - invalid worktree path escape;
 - invalid local-final-only report;
-- invalid completed turn that leaves ownership with the task.
+- invalid obsolete ownership fields;
+- invalid obsolete waiting fields.
 
 You can also invoke the validator directly:
 
@@ -163,11 +175,11 @@ OpenAI's desktop worktree feature uses Codex-managed worktrees and is documented
 - Projectless repository tasks are rejected.
 - Task hosting and Git execution coordinates are validated separately.
 - Windows, extended Windows, and POSIX paths are normalized lexically before containment checks; nonexistent paths are supported and `..` escapes fail closed.
-- Every repository command must use the exact execution-worktree cwd.
-- Review is read-only against a frozen candidate.
+- Every repository command must use the exact execution path.
+- Review selects the lightest safe target: root, frozen candidate, or detached snapshot.
 - Worker or reviewer PASS remains evidence, not controller acceptance.
-- A child task's local final is not a delivered controller report; milestones declare task-message delivery and literal turn state.
-- Every dispatched stage declares `event_driven_yield`; the controller takes at most one immediate nonblocking snapshot, ends its turn, and resumes only on task-message delivery or another valid event.
+- A child task's local final is not a delivered controller report; blocked and final reports use direct task-message delivery.
+- The controller yields after dispatch and resumes only on a real event. The Skill does not pretend an immediate snapshot can detect later silence.
 - Merge, push, deployment, publication, production data, credentials, and permissions remain separate gates.
 
 ## Run tests

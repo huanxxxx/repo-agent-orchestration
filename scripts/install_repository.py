@@ -179,6 +179,18 @@ def read_text_format(path: Path) -> tuple[str | None, str, bool]:
     return text, newline, has_bom
 
 
+def managed_profile_values(existing: str | None) -> dict[str, str]:
+    if not existing or BEGIN_MARKER not in existing or END_MARKER not in existing:
+        return {}
+    start = existing.index(BEGIN_MARKER) + len(BEGIN_MARKER)
+    end = existing.index(END_MARKER, start)
+    block = existing[start:end]
+    return {
+        match.group(1): match.group(2).strip()
+        for match in re.finditer(r"(?m)^([A-Z][A-Z0-9_]*)\s*:\s*(.+)$", block)
+    }
+
+
 def write_bytes_atomic(path: Path, content: bytes) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile(dir=path.parent, delete=False) as handle:
@@ -270,7 +282,7 @@ def install_repository(repo_value: Path, settings: Settings, dry_run: bool = Fal
         encoding = "utf-8-sig" if has_bom else "utf-8"
         write_bytes_atomic(agents_path, updated.encode(encoding))
 
-    return {
+    result = {
         "repository": str(repo),
         "skill_destination": str(destination),
         "skill_files": len(files),
@@ -279,6 +291,8 @@ def install_repository(repo_value: Path, settings: Settings, dry_run: bool = Fal
         "agents_changed": agents_changed,
         "dry_run": dry_run,
     }
+    result["up_to_date"] = not changed_skill_files and not agents_changed
+    return result
 
 
 def main() -> int:
@@ -286,29 +300,46 @@ def main() -> int:
     parser.add_argument("--repo", type=Path, required=True)
     parser.add_argument("--main-branch")
     parser.add_argument("--worktree-root", type=Path)
-    parser.add_argument("--branch-prefix", default="codex/")
-    parser.add_argument("--write-task-model", default="gpt-5.6-luna/max")
-    parser.add_argument("--review-task-model", default="app_default")
-    parser.add_argument("--shared-integration-paths", default="none")
-    parser.add_argument("--external-gates", default=DEFAULT_EXTERNAL_GATES)
+    parser.add_argument("--branch-prefix")
+    parser.add_argument("--write-task-model")
+    parser.add_argument("--review-task-model")
+    parser.add_argument("--shared-integration-paths")
+    parser.add_argument("--external-gates")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="write nothing and exit nonzero when the installed Skill or managed profile differs",
+    )
     args = parser.parse_args()
 
     repo = resolve_repository(args.repo)
-    worktree_root = (args.worktree_root or (repo / ".worktrees")).resolve()
+    existing, _, _ = read_text_format(repo / "AGENTS.md")
+    current = managed_profile_values(existing)
+    worktree_root = (
+        args.worktree_root
+        or Path(current.get("WORKTREE_ROOT", str(repo / ".worktrees")))
+    ).resolve()
     if not worktree_root.is_absolute():
         raise ValueError("worktree root must be absolute")
     settings = Settings(
-        main_branch=args.main_branch or detect_main_branch(repo),
+        main_branch=args.main_branch or current.get("MAIN_BRANCH") or detect_main_branch(repo),
         worktree_root=worktree_root,
-        branch_prefix=args.branch_prefix,
-        write_task_model=args.write_task_model,
-        review_task_model=args.review_task_model,
-        shared_integration_paths=args.shared_integration_paths,
-        external_gates=args.external_gates,
+        branch_prefix=args.branch_prefix or current.get("BRANCH_PREFIX", "codex/"),
+        task_host_policy=current.get("TASK_HOST_POLICY", "repository_project_local"),
+        controller_model_policy=current.get("CONTROLLER_MODEL_POLICY", "app_current_task"),
+        write_task_model=args.write_task_model
+        or current.get("WRITE_TASK_MODEL", "gpt-5.6-luna/max"),
+        review_task_model=args.review_task_model
+        or current.get("REVIEW_TASK_MODEL", "app_default"),
+        shared_integration_paths=args.shared_integration_paths
+        or current.get("SHARED_INTEGRATION_PATHS", "none"),
+        external_gates=args.external_gates
+        or current.get("EXTERNAL_GATES", DEFAULT_EXTERNAL_GATES),
     )
-    print(json.dumps(install_repository(repo, settings, args.dry_run), ensure_ascii=False, indent=2))
-    return 0
+    result = install_repository(repo, settings, dry_run=args.dry_run or args.check)
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    return 0 if not args.check or result["up_to_date"] else 1
 
 
 if __name__ == "__main__":

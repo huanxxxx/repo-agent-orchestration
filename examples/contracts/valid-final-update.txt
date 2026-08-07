@@ -1,9 +1,8 @@
-TASK_ID: write-backend
-MILESTONE: final
-SUMMARY: implementation and verification complete
+TASK_ID: write-ledger-core
+STATUS: final
+SUMMARY: ledger core implementation and focused validation complete
 EVIDENCE: commit=0123456789abcdef0123456789abcdef01234567; tests=PASS
-RISKS_OR_LIMITS: local repository evidence only
-PENDING_ITEMS: none
-REPORT_DELIVERY: task_message:controller-thread-1
-TURN_STATE: ending
-BLOCKER_OR_NEXT: owner=controller; action=verify_and_close; check_after=none
+RISKS_OR_LIMITS: local evidence only
+PENDING_ITEMS: controller verification and integration
+DELIVERY: task_message:controller-task-1
+NEXT: controller verifies the candidate

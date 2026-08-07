@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the shape of repository agent dispatch and milestone contracts."""
+"""Validate the small safety boundary of repository task packets."""
 
 from __future__ import annotations
 
@@ -16,21 +16,16 @@ from pathlib import Path, PurePosixPath, PureWindowsPath
 REQUIRED = {
     "binding": (
         "TASK_ID",
+        "TASK_MODE",
         "REPOSITORY_ROOT",
         "WORKTREE_ROOT",
-        "EXECUTION_WORKTREE",
+        "EXECUTION_PATH",
         "TASK_PROJECT_ID",
-        "TASK_PROJECT_PATH",
-        "TASK_ENVIRONMENT",
         "ACTUAL_THREAD_CWD",
         "ACTUAL_THREAD_PROJECT_ID",
-        "COMMAND_WORKDIR_POLICY",
-        "ROOT_WRITE_POLICY",
-        "BINDING_STATUS",
     ),
     "write": (
         "TASK_ID",
-        "WORKTREE_POLICY",
         "WORKTREE_ROOT",
         "WORKTREE",
         "BRANCH",
@@ -40,64 +35,53 @@ REQUIRED = {
         "DO_NOT_TOUCH",
         "ACCEPTANCE",
         "REQUIRED_TESTS",
-        "INTEGRATION_TARGET",
         "MODEL_POLICY",
-        "EXPECTED_NEXT_MILESTONE",
-        "CONTROLLER_AFTER_DISPATCH",
-        "NO_REPORT_CHECK_AFTER",
     ),
     "review": (
         "REVIEW_TASK_ID",
-        "TARGET_WORKTREE",
-        "TARGET_BRANCH",
+        "TARGET_MODE",
+        "TARGET_PATH",
         "TARGET_COMMIT_OR_RANGE",
         "READ_ONLY",
         "REVIEW_SCOPE",
         "ACCEPTANCE",
-        "REQUIRED_CHECKS",
-        "REPORT_FORMAT",
         "MODEL_POLICY",
-        "EXPECTED_NEXT_MILESTONE",
-        "CONTROLLER_AFTER_DISPATCH",
-        "NO_REPORT_CHECK_AFTER",
     ),
     "update": (
         "TASK_ID",
-        "MILESTONE",
+        "STATUS",
         "SUMMARY",
         "EVIDENCE",
-        "REPORT_DELIVERY",
-        "TURN_STATE",
-        "BLOCKER_OR_NEXT",
+        "DELIVERY",
+        "NEXT",
     ),
 }
 
 FIELD_RE = re.compile(r"^([A-Z][A-Z0-9_]*)\s*[:=]\s*(.*)$")
 FULL_SHA_RE = re.compile(r"^(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64})$")
-ISO_8601_RE = re.compile(
-    r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})$"
-)
 MODEL_POLICY_RE = re.compile(
     r"^(?:repo_write_default|repo_review_default|user_explicit):[^<>\s]+/[^<>/\s]+$"
 )
-TASK_MESSAGE_DELIVERY_RE = re.compile(r"^task_message:[^<>\s]+$")
+TASK_MESSAGE_RE = re.compile(r"^task_message:[^<>\s]+$")
 BLOCKED_DELIVERY_RE = re.compile(r"^blocked:[^<>\s].*$")
-MILESTONES = {
-    "baseline_confirmed",
-    "plan_frozen",
-    "blocked",
-    "fix_ready",
-    "tests_complete",
-    "final",
-}
-REVIEW_FORBIDDEN_FIELDS = {
+TASK_MODES = {"write", "review_root", "review_worktree"}
+REVIEW_MODES = {"root_readonly", "existing_worktree", "detached_snapshot"}
+STATUSES = {"progress", "blocked", "final"}
+
+OBSOLETE_DISPATCH_FIELDS = {
     "WORKTREE_POLICY",
-    "WORKTREE_ROOT",
-    "WORKTREE",
-    "BRANCH",
-    "BASE_COMMIT",
-    "OWNED_PATHS",
+    "INTEGRATION_TARGET",
+    "EXPECTED_NEXT_MILESTONE",
+    "CONTROLLER_AFTER_DISPATCH",
+    "NO_REPORT_CHECK_AFTER",
 }
+OBSOLETE_REPORT_FIELDS = {
+    "MILESTONE",
+    "REPORT_DELIVERY",
+    "TURN_STATE",
+    "BLOCKER_OR_NEXT",
+}
+REVIEW_WRITABLE_FIELDS = {"WORKTREE", "BRANCH", "BASE_COMMIT", "OWNED_PATHS"}
 
 
 def parse_fields(text: str) -> dict[str, str]:
@@ -137,6 +121,15 @@ def canonical_path(value: str) -> tuple[str, PureWindowsPath | PurePosixPath] | 
     return None
 
 
+def normalized_path(value: str) -> str:
+    canonical = canonical_path(value)
+    if canonical is None:
+        return value
+    kind, path = canonical
+    normalized = str(path)
+    return normalized.casefold() if kind == "windows" else normalized
+
+
 def is_descendant_path(child: str, root: str) -> bool:
     root_canonical = canonical_path(root)
     child_canonical = canonical_path(child)
@@ -153,76 +146,65 @@ def is_descendant_path(child: str, root: str) -> bool:
     return bool(relative.parts)
 
 
-def normalized_path(value: str) -> str:
-    canonical = canonical_path(value)
-    if canonical is None:
-        return value
-    kind, path = canonical
-    normalized = str(path)
-    return normalized.casefold() if kind == "windows" else normalized
-
-
-def validate_checkpoint(value: str, field_name: str) -> list[str]:
-    if value in {"current_turn_once", "none"} or ISO_8601_RE.fullmatch(value):
+def validate_existing_resolution(root: str, execution_path: str) -> list[str]:
+    root_path = Path(root)
+    execution = Path(execution_path)
+    if not root_path.exists() or not execution.exists():
         return []
-    if value == "current_turn":
-        return [
-            f"{field_name} current_turn is ambiguous and forbidden; "
-            "use current_turn_once and yield after at most one immediate snapshot"
-        ]
-    return [
-        f"{field_name} must be current_turn_once, none, or an ISO-8601 timestamp with timezone"
-    ]
+    resolved_root = root_path.resolve()
+    resolved_execution = execution.resolve()
+    errors: list[str] = []
+    if os.path.normcase(str(resolved_root)) != os.path.normcase(str(root_path.absolute())):
+        errors.append("WORKTREE_ROOT must not resolve through a path substitute")
+    if os.path.normcase(str(resolved_execution)) != os.path.normcase(
+        str(execution.absolute())
+    ):
+        errors.append("execution path must not resolve through a path substitute")
+    if not is_descendant_path(str(resolved_execution), str(resolved_root)):
+        errors.append("resolved execution path must be below resolved WORKTREE_ROOT")
+    return errors
 
 
-def validate_model_policy(kind: str, value: str) -> list[str]:
+def validate_model(kind: str, value: str) -> list[str]:
     if has_placeholder(value):
         return ["MODEL_POLICY must not contain placeholders"]
     if kind == "write":
-        if value.startswith("app_default"):
-            return [
-                "write MODEL_POLICY must explicitly bind the execution model; "
-                "app_default is reserved for declared review policy"
-            ]
-        if not MODEL_POLICY_RE.fullmatch(value) or not value.startswith(
+        if MODEL_POLICY_RE.fullmatch(value) and value.startswith(
             ("repo_write_default:", "user_explicit:")
         ):
-            return [
-                "write MODEL_POLICY must be "
-                "repo_write_default:<model>/<reasoning> or "
-                "user_explicit:<model>/<reasoning>"
-            ]
-        return []
+            return []
+        return [
+            "write MODEL_POLICY must explicitly bind "
+            "repo_write_default:<model>/<reasoning> or user_explicit:<model>/<reasoning>"
+        ]
     if value == "app_default":
         return []
-    if not MODEL_POLICY_RE.fullmatch(value) or not value.startswith(
+    if MODEL_POLICY_RE.fullmatch(value) and value.startswith(
         ("repo_review_default:", "user_explicit:")
     ):
-        return [
-            "review MODEL_POLICY must be app_default, "
-            "repo_review_default:<model>/<reasoning>, or "
-            "user_explicit:<model>/<reasoning>"
-        ]
-    return []
+        return []
+    return [
+        "review MODEL_POLICY must be app_default, "
+        "repo_review_default:<model>/<reasoning>, or user_explicit:<model>/<reasoning>"
+    ]
 
 
-def validate_existing_path_resolution(root: str, worktree: str) -> list[str]:
-    errors: list[str] = []
-    root_path = Path(root)
-    worktree_path = Path(worktree)
-    if not root_path.exists() or not worktree_path.exists():
-        return errors
-    resolved_root = root_path.resolve()
-    resolved_worktree = worktree_path.resolve()
-    if os.path.normcase(str(resolved_root)) != os.path.normcase(str(root_path.absolute())):
-        errors.append("WORKTREE_ROOT must not resolve through a path substitute")
-    if os.path.normcase(str(resolved_worktree)) != os.path.normcase(
-        str(worktree_path.absolute())
-    ):
-        errors.append("WORKTREE must not resolve through a path substitute")
-    if not is_descendant_path(str(resolved_worktree), str(resolved_root)):
-        errors.append("resolved WORKTREE must be below resolved WORKTREE_ROOT")
-    return errors
+def validate_commit_or_range(value: str) -> bool:
+    if FULL_SHA_RE.fullmatch(value):
+        return True
+    separator = "..." if "..." in value else ".." if ".." in value else None
+    if separator is None:
+        return False
+    left, right = value.split(separator, 1)
+    return bool(FULL_SHA_RE.fullmatch(left) and FULL_SHA_RE.fullmatch(right))
+
+
+def add_obsolete_errors(
+    errors: list[str], fields: dict[str, str], obsolete: set[str]
+) -> None:
+    found = sorted(obsolete.intersection(fields))
+    if found:
+        errors.append("obsolete protocol fields must be removed: " + ", ".join(found))
 
 
 def validate(kind: str, fields: dict[str, str]) -> list[str]:
@@ -233,170 +215,113 @@ def validate(kind: str, fields: dict[str, str]) -> list[str]:
         elif not fields[name]:
             errors.append(f"empty field: {name}")
 
+    if kind in {"write", "review"}:
+        add_obsolete_errors(errors, fields, OBSOLETE_DISPATCH_FIELDS)
+    if kind == "update":
+        add_obsolete_errors(errors, fields, OBSOLETE_REPORT_FIELDS)
+
     if kind == "binding":
         repository_root = fields.get("REPOSITORY_ROOT", "")
         worktree_root = fields.get("WORKTREE_ROOT", "")
-        execution_worktree = fields.get("EXECUTION_WORKTREE", "")
-        project_path = fields.get("TASK_PROJECT_PATH", "")
+        execution_path = fields.get("EXECUTION_PATH", "")
         actual_cwd = fields.get("ACTUAL_THREAD_CWD", "")
-        project_id = fields.get("TASK_PROJECT_ID", "")
-        actual_project_id = fields.get("ACTUAL_THREAD_PROJECT_ID", "")
+        mode = fields.get("TASK_MODE", "")
         for field_name, value in (
             ("REPOSITORY_ROOT", repository_root),
             ("WORKTREE_ROOT", worktree_root),
-            ("EXECUTION_WORKTREE", execution_worktree),
-            ("TASK_PROJECT_PATH", project_path),
+            ("EXECUTION_PATH", execution_path),
             ("ACTUAL_THREAD_CWD", actual_cwd),
         ):
             if value and not is_absolute_path(value):
                 errors.append(f"{field_name} must be absolute")
             if value and has_placeholder(value):
                 errors.append(f"{field_name} must not contain placeholders")
-        if repository_root and project_path and normalized_path(repository_root) != normalized_path(project_path):
-            errors.append("TASK_PROJECT_PATH must equal REPOSITORY_ROOT")
+        if mode and mode not in TASK_MODES:
+            errors.append("TASK_MODE must be write, review_root, or review_worktree")
         if repository_root and actual_cwd and normalized_path(repository_root) != normalized_path(actual_cwd):
             errors.append("ACTUAL_THREAD_CWD must equal REPOSITORY_ROOT")
         if repository_root and worktree_root and not is_descendant_path(worktree_root, repository_root):
             errors.append("WORKTREE_ROOT must be below REPOSITORY_ROOT")
-        if worktree_root and execution_worktree and not is_descendant_path(execution_worktree, worktree_root):
-            errors.append("EXECUTION_WORKTREE must be below WORKTREE_ROOT")
+        if mode == "review_root":
+            if repository_root and execution_path and normalized_path(repository_root) != normalized_path(execution_path):
+                errors.append("review_root EXECUTION_PATH must equal REPOSITORY_ROOT")
+        elif mode in {"write", "review_worktree"}:
+            if worktree_root and execution_path and not is_descendant_path(execution_path, worktree_root):
+                errors.append("EXECUTION_PATH must be below WORKTREE_ROOT")
+            if worktree_root and execution_path and is_absolute_path(worktree_root) and is_absolute_path(execution_path):
+                errors.extend(validate_existing_resolution(worktree_root, execution_path))
+        project_id = fields.get("TASK_PROJECT_ID", "")
+        actual_project_id = fields.get("ACTUAL_THREAD_PROJECT_ID", "")
         forbidden_ids = {"null", "none", "projectless", "<none>"}
         if project_id.casefold() in forbidden_ids:
-            errors.append("TASK_PROJECT_ID must identify the current saved repository project")
+            errors.append("TASK_PROJECT_ID must identify the saved repository project")
         if actual_project_id.casefold() in forbidden_ids:
             errors.append("ACTUAL_THREAD_PROJECT_ID must be non-null")
         if project_id and actual_project_id and project_id != actual_project_id:
             errors.append("ACTUAL_THREAD_PROJECT_ID must equal TASK_PROJECT_ID")
-        if fields.get("TASK_ENVIRONMENT") != "local":
-            errors.append("TASK_ENVIRONMENT must be local for repository_project_local")
-        if fields.get("COMMAND_WORKDIR_POLICY") != "exact_execution_worktree":
-            errors.append("COMMAND_WORKDIR_POLICY must be exact_execution_worktree")
-        if fields.get("ROOT_WRITE_POLICY") != "forbidden":
-            errors.append("ROOT_WRITE_POLICY must be forbidden")
-        if fields.get("BINDING_STATUS") != "verified":
-            errors.append("BINDING_STATUS must be verified")
-
-    if kind == "write" and fields.get("WORKTREE_POLICY") != "repo_local_only":
-        errors.append("WORKTREE_POLICY must be repo_local_only")
 
     if kind == "write":
         root = fields.get("WORKTREE_ROOT", "")
         worktree = fields.get("WORKTREE", "")
-        if root and not is_absolute_path(root):
-            errors.append("WORKTREE_ROOT must be absolute")
-        if worktree and not is_absolute_path(worktree):
-            errors.append("WORKTREE must be absolute")
+        for field_name, value in (("WORKTREE_ROOT", root), ("WORKTREE", worktree)):
+            if value and not is_absolute_path(value):
+                errors.append(f"{field_name} must be absolute")
         if root and worktree and not is_descendant_path(worktree, root):
             errors.append("WORKTREE must be below WORKTREE_ROOT")
         if root and worktree and is_absolute_path(root) and is_absolute_path(worktree):
-            errors.extend(validate_existing_path_resolution(root, worktree))
+            errors.extend(validate_existing_resolution(root, worktree))
         base_commit = fields.get("BASE_COMMIT", "")
         if base_commit and not FULL_SHA_RE.fullmatch(base_commit):
             errors.append("BASE_COMMIT must be a full 40- or 64-character hex SHA")
-        for field_name in ("BRANCH", "OBJECTIVE", "OWNED_PATHS", "ACCEPTANCE"):
-            value = fields.get(field_name, "")
-            if value and has_placeholder(value):
-                errors.append(f"{field_name} must not contain placeholders")
-
-    if kind == "review" and fields.get("READ_ONLY", "").lower() != "true":
-        errors.append("READ_ONLY must be true")
+        for name in ("BRANCH", "OBJECTIVE", "OWNED_PATHS", "ACCEPTANCE"):
+            if fields.get(name) and has_placeholder(fields[name]):
+                errors.append(f"{name} must not contain placeholders")
 
     if kind == "review":
-        target = fields.get("TARGET_WORKTREE", "")
-        if target and not is_absolute_path(target):
-            errors.append("TARGET_WORKTREE must be absolute")
-        forbidden = sorted(REVIEW_FORBIDDEN_FIELDS.intersection(fields))
-        if forbidden:
+        mode = fields.get("TARGET_MODE", "")
+        target = fields.get("TARGET_PATH", "")
+        if mode and mode not in REVIEW_MODES:
             errors.append(
-                "review contract must not create a writable boundary: "
-                + ", ".join(forbidden)
+                "TARGET_MODE must be root_readonly, existing_worktree, or detached_snapshot"
             )
+        if target and not is_absolute_path(target):
+            errors.append("TARGET_PATH must be absolute")
+        if fields.get("READ_ONLY", "").casefold() != "true":
+            errors.append("READ_ONLY must be true")
+        commit_or_range = fields.get("TARGET_COMMIT_OR_RANGE", "")
+        if commit_or_range and not validate_commit_or_range(commit_or_range):
+            errors.append("TARGET_COMMIT_OR_RANGE must be a full SHA or full-SHA range")
+        forbidden = sorted(REVIEW_WRITABLE_FIELDS.intersection(fields))
+        if forbidden:
+            errors.append("review must not declare a writable boundary: " + ", ".join(forbidden))
 
     model_policy = fields.get("MODEL_POLICY", "")
     if kind in {"write", "review"} and model_policy:
-        errors.extend(validate_model_policy(kind, model_policy))
-
-    if kind in {"write", "review"}:
-        wait_policy = fields.get("CONTROLLER_AFTER_DISPATCH", "")
-        if wait_policy and wait_policy != "event_driven_yield":
-            errors.append(
-                "CONTROLLER_AFTER_DISPATCH must be event_driven_yield"
-            )
-        checkpoint = fields.get("NO_REPORT_CHECK_AFTER", "")
-        if checkpoint:
-            errors.extend(validate_checkpoint(checkpoint, "NO_REPORT_CHECK_AFTER"))
-            if checkpoint == "none":
-                errors.append(
-                    "NO_REPORT_CHECK_AFTER must be current_turn_once or a supported "
-                    "one-shot ISO-8601 checkpoint"
-                )
+        errors.extend(validate_model(kind, model_policy))
 
     if kind == "update":
-        milestone = fields.get("MILESTONE", "")
-        if milestone and milestone not in MILESTONES:
-            errors.append("MILESTONE must be one of the declared milestone values")
-        evidence = fields.get("EVIDENCE", "")
-        if milestone in {"tests_complete", "final"} and evidence.lower() == "none":
-            errors.append(f"{milestone} EVIDENCE must include actual commands or artifacts")
-        if milestone == "final":
-            for field_name in ("RISKS_OR_LIMITS", "PENDING_ITEMS"):
-                if field_name not in fields:
-                    errors.append(f"final milestone missing field: {field_name}")
-                elif not fields[field_name]:
-                    errors.append(f"final milestone empty field: {field_name}")
-        delivery = fields.get("REPORT_DELIVERY", "")
-        delivery_is_task_message = bool(
-            delivery and TASK_MESSAGE_DELIVERY_RE.fullmatch(delivery)
-        )
-        delivery_is_blocked = bool(delivery and BLOCKED_DELIVERY_RE.fullmatch(delivery))
-        if delivery and not delivery_is_task_message and not delivery_is_blocked:
+        status = fields.get("STATUS", "")
+        if status and status not in STATUSES:
+            errors.append("STATUS must be progress, blocked, or final")
+        delivery = fields.get("DELIVERY", "")
+        direct = bool(delivery and TASK_MESSAGE_RE.fullmatch(delivery))
+        blocked_delivery = bool(delivery and BLOCKED_DELIVERY_RE.fullmatch(delivery))
+        if delivery and not direct and not blocked_delivery:
             errors.append(
-                "REPORT_DELIVERY must be task_message:<controller-thread-id> "
-                "or blocked:<reason>"
+                "DELIVERY must be task_message:<controller-task-id> or blocked:<reason>"
             )
-        if delivery_is_blocked and milestone != "blocked":
-            errors.append("blocked REPORT_DELIVERY requires MILESTONE=blocked")
-        if milestone and milestone != "blocked" and not delivery_is_task_message:
-            errors.append(
-                "non-blocked milestone REPORT_DELIVERY must use task_message:<controller-thread-id>"
-            )
-        turn_state = fields.get("TURN_STATE", "")
-        if turn_state and turn_state not in {"continuing", "ending"}:
-            errors.append("TURN_STATE must be continuing or ending")
-        handoff = fields.get("BLOCKER_OR_NEXT", "")
-        owner_match = re.search(r"\bowner\s*=\s*(controller|task)\b", handoff)
-        action_match = re.search(r"\baction\s*=\s*([^;]+)", handoff)
-        check_match = re.search(r"\bcheck_after\s*=\s*([^;]+)", handoff)
-        if not owner_match:
-            errors.append("BLOCKER_OR_NEXT must include owner=controller|task")
-        if not action_match or not action_match.group(1).strip():
-            errors.append("BLOCKER_OR_NEXT must include action=<value>")
-        if not check_match or not check_match.group(1).strip():
-            errors.append("BLOCKER_OR_NEXT must include check_after=<value>")
-        else:
-            errors.extend(
-                validate_checkpoint(
-                    check_match.group(1).strip(), "BLOCKER_OR_NEXT check_after"
-                )
-            )
-        if milestone in {"blocked", "final"} and owner_match:
-            if owner_match.group(1) != "controller":
-                errors.append(f"{milestone} milestone must hand ownership to controller")
-        if milestone in {"blocked", "final"} and turn_state and turn_state != "ending":
-            errors.append(f"{milestone} milestone must use TURN_STATE=ending")
-        if owner_match and turn_state:
-            expected_owner = "task" if turn_state == "continuing" else "controller"
-            if owner_match.group(1) != expected_owner:
-                errors.append(
-                    f"TURN_STATE={turn_state} requires owner={expected_owner}"
-                )
-        if (
-            owner_match
-            and owner_match.group(1) == "task"
-            and check_match
-            and check_match.group(1).strip() == "none"
-        ):
-            errors.append("owner=task requires a non-none check_after checkpoint")
+        if blocked_delivery and status != "blocked":
+            errors.append("blocked DELIVERY requires STATUS=blocked")
+        if status and status != "blocked" and not direct:
+            errors.append("progress and final DELIVERY must use task_message:<controller-task-id>")
+        if status == "final":
+            if fields.get("EVIDENCE", "").casefold() == "none":
+                errors.append("final EVIDENCE must include commands or artifacts")
+            for name in ("RISKS_OR_LIMITS", "PENDING_ITEMS"):
+                if name not in fields:
+                    errors.append(f"final report missing field: {name}")
+                elif not fields[name]:
+                    errors.append(f"final report empty field: {name}")
 
     return errors
 
@@ -422,7 +347,6 @@ def main() -> int:
         "errors": errors,
         "fields": sorted(fields),
     }
-
     if args.as_json:
         print(json.dumps(result, ensure_ascii=False, indent=2))
     elif errors:
@@ -431,7 +355,6 @@ def main() -> int:
             print(f"- {error}")
     else:
         print(f"VALID {args.kind} contract")
-
     return 0 if not errors else 1
 
 

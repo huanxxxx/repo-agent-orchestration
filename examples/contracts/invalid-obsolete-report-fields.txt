@@ -1,0 +1,10 @@
+TASK_ID: write-ledger-core
+STATUS: final
+SUMMARY: old ownership protocol should be rejected
+EVIDENCE: tests=PASS
+RISKS_OR_LIMITS: none
+PENDING_ITEMS: none
+DELIVERY: task_message:controller-task-1
+NEXT: controller verifies the candidate
+TURN_STATE: ending
+BLOCKER_OR_NEXT: owner=controller; action=verify; check_after=none

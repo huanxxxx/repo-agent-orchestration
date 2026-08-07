@@ -2,14 +2,13 @@
 
 ## Silent task
 
-1. Confirm that the expected milestone and checkpoint are still valid.
-2. Inspect the task state once and distinguish an active in-progress turn from a completed or idle turn.
-3. If it is in progress, do not interrupt it or send a duplicate continuation. Stop after the one status check.
-4. If the turn completed without a delivered task message, read its latest final once to preserve evidence. Treat that as recovery evidence, not proof that ordinary delivery worked.
-5. Rebuild ownership: a completed turn returns ownership to the controller regardless of any stale `owner=task` text. Send a continuation only after validating the recovered report and only if the same task actually owns the next stage.
-6. If no new fact appears, stop querying and preserve the worktree and task evidence.
-7. Do not create recurring heartbeats to imitate a one-time check.
-8. If a true one-shot wakeup is unavailable, report that proactive checking cannot be guaranteed.
+1. Start only on a real wake: a one-shot checkpoint, task signal, user request, or another controller decision.
+2. Inspect the task once and distinguish an active turn from a completed or idle turn.
+3. If it is active, do not interrupt or send a duplicate continuation. Stop after the one check.
+4. If it completed without a delivered task message, read its latest final once and treat it as recovery evidence.
+5. A completed turn returns control to the controller. Continue the task only when the recovered state actually requires another stage.
+6. If no new fact appears, stop querying and preserve the task and worktree evidence.
+7. Do not create recurring heartbeats or immediate snapshots to imitate a future missing-report check. If a true one-shot wakeup is unavailable, say that proactive silent-task detection cannot be guaranteed.
 
 ## Controller takeover
 
@@ -43,10 +42,10 @@ Treat any worktree created outside the declared repository-local root as an orph
 1. Revoke further write authority and send a stop instruction once; do not rely on the task to reinterpret its prompt.
 2. Record the task id, actual cwd, project id, intended worktree, last successful write, dirty paths, in-flight commands, and recovery value.
 3. Never let a user-global or projectless task continue by addressing a repository through absolute paths.
-4. A repository-root cwd is valid only as a verified `repository_project_local` host. Confirm the non-null repository project id, clean root, exact registered execution worktree, and exact-workdir policy before continuing.
+4. A repository-root cwd is valid only as a verified `repository_project_local` host. Confirm the non-null repository project id, recorded root baseline, and exact execution path before continuing.
 5. Detect duplicate task ids before restoring any owner. Multiple sessions that touched one writable worktree make every overlapping path mixed ownership until proven otherwise.
 6. Preserve dirty evidence and stop. Do not reset, overwrite, combine, stage, commit, or remove the task directory merely to restore routing cleanliness.
-7. Re-dispatch only after a repository-host/execution-worktree or direct-existing-cwd receipt passes. If unavailable, keep the implementation blocked.
+7. Re-dispatch only after the fast route gate can pass. If unavailable, keep the implementation blocked.
 
 ## Completion and cleanup
 

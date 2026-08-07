@@ -1,9 +1,8 @@
-TASK_ID: write-backend
-MILESTONE: final
-SUMMARY: implementation and verification complete
-EVIDENCE: commit=0123456789abcdef0123456789abcdef01234567; tests=PASS
-RISKS_OR_LIMITS: local repository evidence only
+TASK_ID: write-ledger-core
+STATUS: final
+SUMMARY: local final emitted without controller delivery
+EVIDENCE: tests=PASS
+RISKS_OR_LIMITS: none
 PENDING_ITEMS: none
-REPORT_DELIVERY: local_final_only
-TURN_STATE: ending
-BLOCKER_OR_NEXT: owner=controller; action=verify_and_close; check_after=none
+DELIVERY: local_final_only
+NEXT: controller verifies the candidate

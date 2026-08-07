@@ -1,113 +1,58 @@
 # Controller workflow
 
-## Mainline anchor
+## Keep four mainline facts
 
-Maintain these facts throughout the task:
+Keep the product objective, current gate, active tasks, and next product step. Add an authorization ceiling only when external or destructive actions are in scope. Do not maintain a second project-management system for agent mechanics.
 
-```text
-MAINLINE_OBJECTIVE: <user-visible product outcome>
-CURRENT_GATE: <single gate blocking the next outcome>
-ACTIVE_TASKS: <task ids and owned outcomes>
-READY_CANDIDATES: <authorized and dependency-closed candidates>
-NEXT_AFTER_GATE: <next product step>
-AUTHORIZATION_CEILING: <explicitly excluded actions>
-```
+## Decide readiness
 
-Do not turn routing, reporting, or model policy into a competing product mainline.
+Before dispatch, answer four questions:
 
-## Readiness audit
+1. Is the work authorized?
+2. Are its inputs and dependencies ready?
+3. Does it have an exclusive write boundary, or is it read-only?
+4. Can it be accepted independently?
 
-Run the audit at task start, plan freeze, blocker clearance, task dispatch, and stage integration. Re-run it when a task enters a wait state; one active or waiting task never suspends scanning of other candidates.
+Dispatch every ready, non-conflicting task when capacity permits. When serializing, record the one concrete dependency, shared write, acceptance coupling, or external gate. Re-run this decision when a task reports or another real event wakes the controller; do not stay online merely to rescan.
 
-Record one row per candidate:
+## Prepare the route
 
-```text
-TASK_CANDIDATE: <name>
-AUTHORIZED: yes|no:<reason>
-DEPENDENCIES: closed|blocked_by:<task-or-gate>
-INPUTS: complete|missing:<fact>
-OWNED_PATHS: <isolated paths or read-only target>
-ACCEPTANCE: <independent acceptance result>
-SHARED_WRITE: none|<exact surface>
-EXTERNAL_GATE: none|<exact gate>
-DECISION: ready|serial_with:<task>|blocked
-```
+For a writer, create one repository-local worktree and branch only when ready. Verify its base, branch, registry entry, and status. Record the root status as a baseline rather than demanding an unrelated user-owned root be clean.
 
-Dispatch multiple ready candidates in one wave when capacity permits. Never use “another task is active” as a serialization reason.
+For a review, select the lightest target:
 
-Keep implementation and review of the same moving candidate serial. Permit parallel reviews only for different frozen candidates.
+- stable short committed review: `root_readonly`;
+- frozen candidate: `existing_worktree`;
+- long, cross-turn, test-running, or historical review: create `detached_snapshot` on demand below `WORKTREE_ROOT`.
 
-Create a worktree only when its task is authorized, dependency-closed, and ready to begin. Do not pre-create future worktrees or create a temporary integration branch merely because a task is large. Record a temporary integration topology only when multiple independent write lines actually require it.
+The reviewer does not create a tree. Never share a writable worktree between owners.
 
-## Worktree ownership and review corrections
+## Create once and continue once
 
-- Give each writable worktree one task boundary, one branch, and one user-visible write owner.
-- Never let different tasks share a writable worktree.
-- Freeze the exact implementation worktree, branch, and commit or range before formal review; the implementation owner pauses while the candidate is frozen.
-- Return review findings to the original implementation owner in the same worktree by default. Let a reviewer write only with explicit repair authority and a separate writable boundary.
-- Stop and report when the owned scope, shared contract, dirty state, or writer identity becomes ambiguous.
+1. Preflight the saved repository project and task API.
+2. Create the task against that project with environment `local`; reject `projectless` and App-managed substitute trees.
+3. Include the dispatch packet and conditional execution authority in the initial instruction.
+4. The task performs the fast route gate first. A passing task continues implementation or review in the same turn; a failing task writes nothing and reports `blocked`.
+5. Do not require a binding-only turn, a controller receipt decision, and a second authorization message for a route that can be decided deterministically.
 
-## Fixed role routing
+Use the repository write model through real creation parameters. Omit a model override only when review policy deliberately says `app_default`. Treat the submitted model as unverified unless the product echoes the effective runtime model.
 
-| Work | Route |
-|---|---|
-| Repository search or evidence extraction, current turn, read-only | Internal helper |
-| Code, document, or test write | User-visible write task |
-| Commit or independently accepted deliverable | User-visible write task |
-| Formal PASS/FAIL review | User-visible read-only review task |
-| Long-running or cross-turn work | User-visible task |
-| Shared-state update and integration correction | Controller in an integration worktree |
+## Receive reports and yield
 
-Repository policy or an explicit user instruction may narrow these routes. Do not broaden them by preference.
+Only direct task-message delivery is an ordinary report. `progress` keeps the current task turn; record the new fact but do not send a continuation to an already-running task. `blocked` and `final` return control to the controller. A child local final may be read once for recovery, but is not normal delivery.
 
-## Controller responsibilities
+After successful creation or continuation, end the controller turn. Resume only on:
 
-- Preserve the mainline and authorization ceiling.
-- Create worktrees, dispatch tasks, and save task ids.
-- Preflight the task API and saved-project registry. For repository-local worktrees, require the selected project to resolve to the repository root, create the task in that project's local environment, and keep the exact execution worktree as a separate coordinate.
-- Use a read-only bootstrap prompt for every new task. Verify the repository host and execution worktree receipt before sending execution authorization; archive or stop a mismatched task without letting it write.
-- Process milestone reports and actually deliver decisions through the task-message capability; do not make the user relay routine coordination.
-- Treat only a report received through the task-message capability as delivered. A worker's local final, title, status, or `owner=task` text is not a receipt. Record the expected milestone and non-`none` checkpoint for every dispatched stage.
-- After each successful task creation or continuation, take at most one immediate nonblocking status snapshot and then end the controller turn. Task messages are the normal wakeup path. Do not keep the controller active for progress monitoring or emit unchanged timeout commentary.
-- Before continuing a task, distinguish `inProgress` from a completed turn. Never send a redundant continuation to an in-progress task or assume a completed turn can restart itself.
-- Verify evidence, integrate in order, and rerun acceptance.
-- Update repository-owned shared status at integration points.
-- Mark `PASS_VERIFIED` only after all acceptance, evidence, blocker, reply, correction, and in-flight-operation checks clear; then archive the task immediately.
-- Receive internal-helper results, confirm the helper stopped, and release its slot promptly.
-- Retain recoverable worktrees until their separate cleanup gate clears.
+- a delivered task report;
+- a real one-shot checkpoint;
+- a blocker or input request;
+- a user status request;
+- an acceptance or integration decision.
 
-Do not delegate final authorization, integration acceptance, or product-state claims.
+Do not call recursive waits, emit unchanged status, or use an immediate snapshot as a fake future checkpoint. If the product has no one-shot wakeup, silent-task recovery is available only on the next real controller wake; state that limitation once instead of adding per-task ceremony.
 
-## Report delivery and turn ownership gate
+## Accept and close
 
-For every worker or reviewer report:
+Verify the actual diff or reviewed commit, owned paths, required tests, evidence limits, unresolved findings, and root-baseline drift. Integrate only within authority and in dependency order. Keep external gates separate.
 
-1. Require the canonical milestone schema, `REPORT_DELIVERY: task_message:<controller-thread-id>`, and `TURN_STATE`.
-2. Accept the report only when it arrives through the task-message capability. Do not scrape a child final as the ordinary success path.
-3. Interpret `owner=task` only with `TURN_STATE=continuing` while that same turn is still in progress. A task final always ends the turn and therefore returns `owner=controller`.
-4. When the next stage still belongs to the same task, validate the report, decide, then send one explicit continuation. Ownership transfers only after that call succeeds.
-5. If the expected report is absent at its checkpoint, inspect status once. If the turn is in progress, do not interrupt it. If the turn completed, read its latest final once to preserve evidence, then send a continuation only when the reported state actually requires one.
-
-After creation or continuation succeeds, follow this fixed sequence:
-
-```text
-dispatch succeeds
--> optional wait_threads(timeoutMs=0) snapshot once
--> end the controller turn
--> task_message or another valid event starts the next controller turn
-```
-
-The optional snapshot is for dispatch confirmation, not progress monitoring. Do not follow it with another wait, a timeout-based "still running" update, or a fresh `current_turn_once` checkpoint for the same stage. A milestone report invalidates the prior checkpoint; after processing it and delivering the next stage, yield again.
-
-## Repository host and execution-worktree gate
-
-The task host directory and the Git execution worktree are separate authority boundaries.
-
-- Reject `projectless` for repository execution or review, even when the prompt contains an absolute repository path.
-- When repository policy requires an already-created repository-local worktree, select the current repository's saved project and environment `local`. Require the actual task cwd and project path to equal the repository root.
-- Keep `EXECUTION_WORKTREE` separate. Require it to be a registered Git worktree below the declared repo-local `WORKTREE_ROOT`, with the contracted branch, head, base, and ownership.
-- Require every shell command to set its working directory to `EXECUTION_WORKTREE`; require every file operation to use an absolute path below it. Never run a repository mutation from the host root and never use a relative path that could resolve there.
-- Verify root status is clean before authorization and again at every milestone and final handoff. Any root drift or operation outside `EXECUTION_WORKTREE` is an immediate blocker.
-- Use an App-managed `worktree` only when repository policy explicitly permits App-managed placement. It is not a substitute for a repo-local tree.
-- Permit direct existing-cwd binding when a task API supports it, but do not require each linked worktree to be registered as a separate saved project.
-- Treat pending creation as one in-flight task. Wait for that result; never issue duplicate creation calls as a retry.
+Archive a task after acceptance is verified and no correction or in-flight operation remains. Remove a worktree separately, only when clean and without recovery value.

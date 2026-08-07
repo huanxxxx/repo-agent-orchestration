@@ -77,6 +77,55 @@ class RepositoryInstallerTests(unittest.TestCase):
         third = INSTALLER.install_repository(repo, self.settings(repo, "executor/medium"))
         self.assertFalse(third["agents_changed"])
         self.assertEqual(third["changed_skill_files"], 0)
+        self.assertTrue(third["up_to_date"])
+
+    def test_cli_upgrade_without_overrides_preserves_managed_profile(self) -> None:
+        temporary, repo = self.make_repo()
+        self.addCleanup(temporary.cleanup)
+        custom = INSTALLER.Settings(
+            main_branch="main",
+            worktree_root=repo / ".worktrees",
+            write_task_model="custom-executor/high",
+            review_task_model="custom-review/medium",
+            shared_integration_paths="docs/status.md",
+        )
+        INSTALLER.install_repository(repo, custom)
+        before = (repo / "AGENTS.md").read_text(encoding="utf-8")
+
+        result = subprocess.run(
+            [sys.executable, "-B", str(INSTALLER_PATH), "--repo", str(repo)],
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+        self.assertEqual((repo / "AGENTS.md").read_text(encoding="utf-8"), before)
+
+    def test_check_reports_drift_without_writing(self) -> None:
+        temporary, repo = self.make_repo()
+        self.addCleanup(temporary.cleanup)
+
+        before = subprocess.run(
+            [sys.executable, "-B", str(INSTALLER_PATH), "--repo", str(repo), "--check"],
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+        self.assertEqual(before.returncode, 1)
+        self.assertFalse((repo / ".agents").exists())
+
+        INSTALLER.install_repository(repo, self.settings(repo))
+        after = subprocess.run(
+            [sys.executable, "-B", str(INSTALLER_PATH), "--repo", str(repo), "--check"],
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+        self.assertEqual(after.returncode, 0, after.stderr or after.stdout)
 
     def test_preserves_legacy_profile_values_and_only_adds_missing_parameters(self) -> None:
         temporary, repo = self.make_repo()

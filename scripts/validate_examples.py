@@ -21,25 +21,19 @@ CASES = {
     ),
     "invalid-worktree-escape.txt": (
         "binding",
-        ("EXECUTION_WORKTREE must be below WORKTREE_ROOT",),
+        ("EXECUTION_PATH must be below WORKTREE_ROOT",),
     ),
     "invalid-local-final-only.txt": (
         "update",
-        ("REPORT_DELIVERY must be task_message",),
+        ("DELIVERY must be task_message",),
     ),
-    "invalid-ended-owner-task.txt": (
+    "invalid-obsolete-report-fields.txt": (
         "update",
-        (
-            "final milestone must hand ownership to controller",
-            "TURN_STATE=ending requires owner=controller",
-        ),
+        ("obsolete protocol fields must be removed",),
     ),
-    "invalid-continuous-controller-wait.txt": (
+    "invalid-obsolete-dispatch-fields.txt": (
         "write",
-        (
-            "CONTROLLER_AFTER_DISPATCH must be event_driven_yield",
-            "current_turn is ambiguous and forbidden",
-        ),
+        ("obsolete protocol fields must be removed",),
     ),
 }
 

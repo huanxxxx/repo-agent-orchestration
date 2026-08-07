@@ -44,17 +44,13 @@ def validate(validator, kind: str, packet: str) -> list[str]:
 def binding_packet(repository: Path, worktree_root: Path, execution_worktree: Path, task_id: str) -> str:
     return f"""
 TASK_ID: {task_id}
+TASK_MODE: write
 REPOSITORY_ROOT: {repository}
 WORKTREE_ROOT: {worktree_root}
-EXECUTION_WORKTREE: {execution_worktree}
+EXECUTION_PATH: {execution_worktree}
 TASK_PROJECT_ID: demo-saved-project
-TASK_PROJECT_PATH: {repository}
-TASK_ENVIRONMENT: local
 ACTUAL_THREAD_CWD: {repository}
 ACTUAL_THREAD_PROJECT_ID: demo-saved-project
-COMMAND_WORKDIR_POLICY: exact_execution_worktree
-ROOT_WRITE_POLICY: forbidden
-BINDING_STATUS: verified
 """
 
 
@@ -62,7 +58,6 @@ def write_packet(worktree_root: Path, worktree: Path, branch: str, head: str) ->
     task_name = branch.removeprefix("codex/")
     return f"""
 TASK_ID: {task_name}
-WORKTREE_POLICY: repo_local_only
 WORKTREE_ROOT: {worktree_root}
 WORKTREE: {worktree}
 BRANCH: {branch}
@@ -72,11 +67,7 @@ OWNED_PATHS: {task_name}/*
 DO_NOT_TOUCH: the sibling writer and repository root
 ACCEPTANCE: binding and isolation checks pass
 REQUIRED_TESTS: python scripts/run_local_demo.py
-INTEGRATION_TARGET: main
 MODEL_POLICY: repo_write_default:gpt-5.6-luna/max
-EXPECTED_NEXT_MILESTONE: tests_complete
-CONTROLLER_AFTER_DISPATCH: event_driven_yield
-NO_REPORT_CHECK_AFTER: current_turn_once
 """
 
 
@@ -131,29 +122,23 @@ def run_demo() -> dict[str, object]:
         backend_branch, backend_path = workers["backend"]
         review = f"""
 REVIEW_TASK_ID: review-backend
-TARGET_WORKTREE: {backend_path}
-TARGET_BRANCH: {backend_branch}
+TARGET_MODE: existing_worktree
+TARGET_PATH: {backend_path}
 TARGET_COMMIT_OR_RANGE: {head}
 READ_ONLY: true
 REVIEW_SCOPE: frozen backend demo candidate
 ACCEPTANCE: report PASS or findings
-REQUIRED_CHECKS: inspect exact candidate
-REPORT_FORMAT: findings and evidence
 MODEL_POLICY: app_default
-EXPECTED_NEXT_MILESTONE: final
-CONTROLLER_AFTER_DISPATCH: event_driven_yield
-NO_REPORT_CHECK_AFTER: current_turn_once
 """
         final_update = f"""
 TASK_ID: write-backend
-MILESTONE: final
+STATUS: final
 SUMMARY: local demo complete
 EVIDENCE: commit={head}; local_demo=PASS
 RISKS_OR_LIMITS: no Codex task API or runtime-model verification
 PENDING_ITEMS: none
-REPORT_DELIVERY: task_message:demo-controller-thread
-TURN_STATE: ending
-BLOCKER_OR_NEXT: owner=controller; action=verify_and_close; check_after=none
+DELIVERY: task_message:demo-controller-thread
+NEXT: controller verifies and closes
 """
         escaped = worktree_root / "child" / ".." / ".." / "outside"
         invalid = binding_packet(repository, worktree_root, escaped, "invalid-projectless")
