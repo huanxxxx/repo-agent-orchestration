@@ -43,6 +43,7 @@ REQUIRED = {
         "INTEGRATION_TARGET",
         "MODEL_POLICY",
         "EXPECTED_NEXT_MILESTONE",
+        "CONTROLLER_AFTER_DISPATCH",
         "NO_REPORT_CHECK_AFTER",
     ),
     "review": (
@@ -57,6 +58,7 @@ REQUIRED = {
         "REPORT_FORMAT",
         "MODEL_POLICY",
         "EXPECTED_NEXT_MILESTONE",
+        "CONTROLLER_AFTER_DISPATCH",
         "NO_REPORT_CHECK_AFTER",
     ),
     "update": (
@@ -161,10 +163,15 @@ def normalized_path(value: str) -> str:
 
 
 def validate_checkpoint(value: str, field_name: str) -> list[str]:
-    if value in {"current_turn", "none"} or ISO_8601_RE.fullmatch(value):
+    if value in {"current_turn_once", "none"} or ISO_8601_RE.fullmatch(value):
         return []
+    if value == "current_turn":
+        return [
+            f"{field_name} current_turn is ambiguous and forbidden; "
+            "use current_turn_once and yield after at most one immediate snapshot"
+        ]
     return [
-        f"{field_name} must be current_turn, none, or an ISO-8601 timestamp with timezone"
+        f"{field_name} must be current_turn_once, none, or an ISO-8601 timestamp with timezone"
     ]
 
 
@@ -310,12 +317,17 @@ def validate(kind: str, fields: dict[str, str]) -> list[str]:
         errors.extend(validate_model_policy(kind, model_policy))
 
     if kind in {"write", "review"}:
+        wait_policy = fields.get("CONTROLLER_AFTER_DISPATCH", "")
+        if wait_policy and wait_policy != "event_driven_yield":
+            errors.append(
+                "CONTROLLER_AFTER_DISPATCH must be event_driven_yield"
+            )
         checkpoint = fields.get("NO_REPORT_CHECK_AFTER", "")
         if checkpoint:
             errors.extend(validate_checkpoint(checkpoint, "NO_REPORT_CHECK_AFTER"))
             if checkpoint == "none":
                 errors.append(
-                    "NO_REPORT_CHECK_AFTER must be current_turn or a supported "
+                    "NO_REPORT_CHECK_AFTER must be current_turn_once or a supported "
                     "one-shot ISO-8601 checkpoint"
                 )
 

@@ -34,6 +34,13 @@ CASES = {
             "TURN_STATE=ending requires owner=controller",
         ),
     ),
+    "invalid-continuous-controller-wait.txt": (
+        "write",
+        (
+            "CONTROLLER_AFTER_DISPATCH must be event_driven_yield",
+            "current_turn is ambiguous and forbidden",
+        ),
+    ),
 }
 
 

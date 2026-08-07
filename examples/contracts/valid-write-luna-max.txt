@@ -12,4 +12,5 @@ REQUIRED_TESTS: python -m unittest discover -s tests -v
 INTEGRATION_TARGET: main
 MODEL_POLICY: repo_write_default:gpt-5.6-luna/max
 EXPECTED_NEXT_MILESTONE: tests_complete
-NO_REPORT_CHECK_AFTER: current_turn
+CONTROLLER_AFTER_DISPATCH: event_driven_yield
+NO_REPORT_CHECK_AFTER: current_turn_once

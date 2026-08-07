@@ -167,7 +167,7 @@ OpenAI's desktop worktree feature uses Codex-managed worktrees and is documented
 - Review is read-only against a frozen candidate.
 - Worker or reviewer PASS remains evidence, not controller acceptance.
 - A child task's local final is not a delivered controller report; milestones declare task-message delivery and literal turn state.
-- Every dispatched stage has a non-`none` missing-report checkpoint; completed turns return ownership to the controller.
+- Every dispatched stage declares `event_driven_yield`; the controller takes at most one immediate nonblocking snapshot, ends its turn, and resumes only on task-message delivery or another valid event.
 - Merge, push, deployment, publication, production data, credentials, and permissions remain separate gates.
 
 ## Run tests

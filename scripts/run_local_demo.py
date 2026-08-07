@@ -75,7 +75,8 @@ REQUIRED_TESTS: python scripts/run_local_demo.py
 INTEGRATION_TARGET: main
 MODEL_POLICY: repo_write_default:gpt-5.6-luna/max
 EXPECTED_NEXT_MILESTONE: tests_complete
-NO_REPORT_CHECK_AFTER: current_turn
+CONTROLLER_AFTER_DISPATCH: event_driven_yield
+NO_REPORT_CHECK_AFTER: current_turn_once
 """
 
 
@@ -140,7 +141,8 @@ REQUIRED_CHECKS: inspect exact candidate
 REPORT_FORMAT: findings and evidence
 MODEL_POLICY: app_default
 EXPECTED_NEXT_MILESTONE: final
-NO_REPORT_CHECK_AFTER: current_turn
+CONTROLLER_AFTER_DISPATCH: event_driven_yield
+NO_REPORT_CHECK_AFTER: current_turn_once
 """
         final_update = f"""
 TASK_ID: write-backend

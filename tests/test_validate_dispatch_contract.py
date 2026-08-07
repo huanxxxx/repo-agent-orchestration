@@ -34,7 +34,8 @@ REQUIRED_TESTS: python -m unittest
 INTEGRATION_TARGET: main
 MODEL_POLICY: repo_write_default:execution-model/medium
 EXPECTED_NEXT_MILESTONE: tests_complete
-NO_REPORT_CHECK_AFTER: current_turn
+CONTROLLER_AFTER_DISPATCH: event_driven_yield
+NO_REPORT_CHECK_AFTER: current_turn_once
 """
 
 VALID_BINDING = """
@@ -64,7 +65,8 @@ REQUIRED_CHECKS: inspect diff
 REPORT_FORMAT: findings with evidence
 MODEL_POLICY: app_default
 EXPECTED_NEXT_MILESTONE: final
-NO_REPORT_CHECK_AFTER: current_turn
+CONTROLLER_AFTER_DISPATCH: event_driven_yield
+NO_REPORT_CHECK_AFTER: current_turn_once
 """
 
 VALID_FINAL = """
@@ -223,11 +225,27 @@ class ContractValidationTests(unittest.TestCase):
         for kind, packet in (("write", VALID_WRITE), ("review", VALID_REVIEW)):
             with self.subTest(kind=kind):
                 invalid = packet.replace(
-                    "NO_REPORT_CHECK_AFTER: current_turn",
+                    "NO_REPORT_CHECK_AFTER: current_turn_once",
                     "NO_REPORT_CHECK_AFTER: none",
                 )
                 errors = "\n".join(self.validate(kind, invalid))
-                self.assertIn("NO_REPORT_CHECK_AFTER must be current_turn", errors)
+                self.assertIn("NO_REPORT_CHECK_AFTER must be current_turn_once", errors)
+
+    def test_write_and_review_reject_ambiguous_or_continuous_controller_wait(self) -> None:
+        for kind, packet in (("write", VALID_WRITE), ("review", VALID_REVIEW)):
+            with self.subTest(kind=kind):
+                invalid = packet.replace(
+                    "CONTROLLER_AFTER_DISPATCH: event_driven_yield",
+                    "CONTROLLER_AFTER_DISPATCH: keep_waiting",
+                ).replace(
+                    "NO_REPORT_CHECK_AFTER: current_turn_once",
+                    "NO_REPORT_CHECK_AFTER: current_turn",
+                )
+                errors = "\n".join(self.validate(kind, invalid))
+                self.assertIn(
+                    "CONTROLLER_AFTER_DISPATCH must be event_driven_yield", errors
+                )
+                self.assertIn("current_turn is ambiguous and forbidden", errors)
 
     def test_update_requires_direct_task_message_delivery(self) -> None:
         invalid = VALID_FINAL.replace(
@@ -278,10 +296,10 @@ SUMMARY: focused tests passed and full validation continues
 EVIDENCE: python -m unittest=PASS
 REPORT_DELIVERY: task_message:controller-thread-1
 TURN_STATE: continuing
-BLOCKER_OR_NEXT: owner=task; action=run_full_validation; check_after=current_turn
+BLOCKER_OR_NEXT: owner=task; action=run_full_validation; check_after=current_turn_once
 """
         self.assertEqual(self.validate("update", continuing), [])
-        invalid = continuing.replace("check_after=current_turn", "check_after=none")
+        invalid = continuing.replace("check_after=current_turn_once", "check_after=none")
         errors = "\n".join(self.validate("update", invalid))
         self.assertIn("owner=task requires a non-none check_after", errors)
 

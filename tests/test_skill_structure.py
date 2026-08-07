@@ -63,6 +63,23 @@ class SkillStructureTests(unittest.TestCase):
         self.assertIn("dot segments lexically", contracts)
         self.assertIn("not filesystem evidence", contracts)
 
+    def test_controller_waiting_is_event_driven_and_single_snapshot(self) -> None:
+        skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+        controller = (SKILL / "references" / "controller.md").read_text(
+            encoding="utf-8"
+        )
+        contracts = (SKILL / "references" / "contracts.md").read_text(
+            encoding="utf-8"
+        )
+        validator = (SKILL / "scripts" / "validate_dispatch_contract.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("Do not keep the controller active to monitor progress", skill)
+        self.assertIn("wait_threads(timeoutMs=0) snapshot once", controller)
+        self.assertIn("CONTROLLER_AFTER_DISPATCH: event_driven_yield", contracts)
+        self.assertIn("current_turn_once", contracts)
+        self.assertIn("current_turn is ambiguous and forbidden", validator)
+
     def test_readme_documents_demo_compatibility_and_evidence_limits(self) -> None:
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         self.assertIn("## Run the local end-to-end demo", readme)

@@ -1,0 +1,16 @@
+TASK_ID: write-backend
+WORKTREE_POLICY: repo_local_only
+WORKTREE_ROOT: C:\repo\.worktrees
+WORKTREE: C:\repo\.worktrees\write-backend
+BRANCH: codex/write-backend
+BASE_COMMIT: 0123456789abcdef0123456789abcdef01234567
+OBJECTIVE: implement one isolated backend change
+OWNED_PATHS: backend/src/example.py
+DO_NOT_TOUCH: repository root and sibling worktrees
+ACCEPTANCE: focused tests pass
+REQUIRED_TESTS: python -m unittest
+INTEGRATION_TARGET: main
+MODEL_POLICY: repo_write_default:gpt-5.6-luna/max
+EXPECTED_NEXT_MILESTONE: tests_complete
+CONTROLLER_AFTER_DISPATCH: keep_waiting
+NO_REPORT_CHECK_AFTER: current_turn

@@ -38,12 +38,13 @@ REQUIRED_TESTS: <commands or checks>
 INTEGRATION_TARGET: <branch or integration task>
 MODEL_POLICY: repo_write_default:<model>/<reasoning>|user_explicit:<model>/<reasoning>
 EXPECTED_NEXT_MILESTONE: <milestone>
-NO_REPORT_CHECK_AFTER: <ISO-8601|current_turn>
+CONTROLLER_AFTER_DISPATCH: event_driven_yield
+NO_REPORT_CHECK_AFTER: <ISO-8601|current_turn_once>
 ```
 
 Create and verify the worktree before creating the user-visible task. Never use `app_default` for a write task. A successful task API call proves submitted binding, not the effective runtime model unless the product echoes it.
 
-Every dispatched stage must have a non-`none` missing-report checkpoint. Use `current_turn` when the next milestone is expected before the controller turn ends, or a real ISO-8601 one-shot wakeup when the product supports it. If neither can be enforced, report the capability gap instead of silently using `none`.
+Every dispatched stage must declare `CONTROLLER_AFTER_DISPATCH: event_driven_yield` and a non-`none` missing-report checkpoint. `current_turn_once` permits at most one immediate nonblocking status snapshot after successful creation or continuation; whether used or skipped, the controller then ends its turn and waits for task-message delivery. Use a real ISO-8601 one-shot wakeup only when the product supports it. If neither can be enforced, report the capability gap instead of silently using `none` or keeping the controller online.
 
 Before dispatch, resolve and verify the repository and worktree root; main head and dirty state; full base SHA; unoccupied branch and target; absence of path substitution; and the final path, branch, head, and base shown by the Git worktree registry. Create only immediately ready worktrees. A task session does not create or own an implicit platform-managed tree.
 
@@ -98,7 +99,8 @@ REQUIRED_CHECKS: <read-only checks>
 REPORT_FORMAT: <findings and evidence format>
 MODEL_POLICY: app_default|repo_review_default:<model>/<reasoning>|user_explicit:<model>/<reasoning>
 EXPECTED_NEXT_MILESTONE: <milestone>
-NO_REPORT_CHECK_AFTER: <ISO-8601|current_turn>
+CONTROLLER_AFTER_DISPATCH: event_driven_yield
+NO_REPORT_CHECK_AFTER: <ISO-8601|current_turn_once>
 ```
 
 Do not create a new worktree or branch for review, and do not modify files, the index, or commits. Freeze the implementation owner until review ends. Return findings to that owner in the same implementation worktree by default; a reviewer may write only with explicit repair authority and a separate writable boundary. When `MODEL_POLICY: app_default`, deliberately omit the model override; the user does not need to select a model for each review. If the product does not echo the runtime model, report `EFFECTIVE_MODEL=unverified` rather than claiming inheritance.
@@ -117,7 +119,7 @@ RISKS_OR_LIMITS: <current limits or none; required for final>
 PENDING_ITEMS: <remaining items or none; required for final>
 REPORT_DELIVERY: task_message:<controller-thread-id>
 TURN_STATE: continuing|ending
-BLOCKER_OR_NEXT: owner=<controller|task>; action=<decision or next milestone>; check_after=<ISO-8601|current_turn|none>
+BLOCKER_OR_NEXT: owner=<controller|task>; action=<decision or next milestone>; check_after=<ISO-8601|current_turn_once|none>
 ```
 
 Report every applicable milestone: baseline confirmation, plan or contract freeze, a blocker requiring controller or user action, correction completion, test completion, and final delivery. Report a blocker immediately. A `tests_complete` report must include actual commands and results. A `final` report must identify the artifact or commit, acceptance result, risks or limits, and pending items. Do not manufacture empty milestones or repeat unchanged facts.
@@ -128,6 +130,6 @@ Validate every report with `--kind update`, then send the validated text to the 
 
 If task-message delivery fails or is unavailable, do not claim the intended milestone was delivered. Emit only a local recovery report with `MILESTONE=blocked`, `REPORT_DELIVERY=blocked:<reason>`, `TURN_STATE=ending`, and `owner=controller`; then rely on the controller's due single checkpoint to recover it. The user must not be used as the routine relay.
 
-`check_after` is a single missing-report checkpoint for the current owner and stage. `current_turn` permits one purposeful check before the controller turn ends and creates no automation. `none` is valid only after ownership has returned to the controller and no worker report is outstanding. An ISO-8601 value may create a wakeup only when the product supports a true one-shot trigger.
+`check_after` is a single missing-report checkpoint for the current owner and stage. `current_turn_once` permits at most one immediate nonblocking snapshot before the controller ends its turn and creates no automation. It never authorizes a bounded wait loop, recursive `wait_threads`, or unchanged progress commentary. `none` is valid only after ownership has returned to the controller and no worker report is outstanding. An ISO-8601 value may create a wakeup only when the product supports a true one-shot trigger.
 
-Any new valid milestone or actually delivered stage instruction invalidates the previous checkpoint. Never emulate one-shot behavior with a recurring schedule. When a due check yields no new fact, stop rather than polling recursively.
+Any new valid milestone or actually delivered stage instruction invalidates the previous checkpoint. Never emulate one-shot behavior with a recurring schedule. When a due check yields no new fact, end the controller turn rather than polling recursively. Child commentary or a timeout snapshot is not a new event and must not be narrated as controller progress.

@@ -9,4 +9,5 @@ REQUIRED_CHECKS: inspect exact diff, tests, and unresolved risks
 REPORT_FORMAT: findings first, followed by evidence and evidence limits
 MODEL_POLICY: app_default
 EXPECTED_NEXT_MILESTONE: final
-NO_REPORT_CHECK_AFTER: current_turn
+CONTROLLER_AFTER_DISPATCH: event_driven_yield
+NO_REPORT_CHECK_AFTER: current_turn_once
