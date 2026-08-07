@@ -62,6 +62,21 @@ def resolve_repository(value: Path) -> Path:
     return supplied
 
 
+def primary_worktree_root(repo: Path) -> Path:
+    common_dir = Path(
+        run_git(repo, "rev-parse", "--path-format=absolute", "--git-common-dir")
+    ).resolve()
+    if common_dir.name.casefold() != ".git":
+        return repo
+    primary = common_dir.parent.resolve()
+    registered = {
+        Path(line.removeprefix("worktree ")).resolve()
+        for line in run_git(repo, "worktree", "list", "--porcelain").splitlines()
+        if line.startswith("worktree ")
+    }
+    return primary if primary in registered else repo
+
+
 def detect_main_branch(repo: Path) -> str:
     remote_head = run_git(
         repo, "symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD", check=False
@@ -233,9 +248,10 @@ def package_payload(path: Path) -> bytes:
 
 def install_repository(repo_value: Path, settings: Settings, dry_run: bool = False) -> dict[str, object]:
     repo = resolve_repository(repo_value)
+    profile_root = primary_worktree_root(repo)
     resolved_worktree_root = settings.worktree_root.resolve()
     try:
-        relative_worktree_root = resolved_worktree_root.relative_to(repo)
+        relative_worktree_root = resolved_worktree_root.relative_to(profile_root)
     except ValueError as exc:
         raise ValueError("WORKTREE_ROOT must be inside the target repository") from exc
     if not relative_worktree_root.parts:
@@ -316,9 +332,10 @@ def main() -> int:
     repo = resolve_repository(args.repo)
     existing, _, _ = read_text_format(repo / "AGENTS.md")
     current = managed_profile_values(existing)
+    profile_root = primary_worktree_root(repo)
     worktree_root = (
         args.worktree_root
-        or Path(current.get("WORKTREE_ROOT", str(repo / ".worktrees")))
+        or Path(current.get("WORKTREE_ROOT", str(profile_root / ".worktrees")))
     ).resolve()
     if not worktree_root.is_absolute():
         raise ValueError("worktree root must be absolute")

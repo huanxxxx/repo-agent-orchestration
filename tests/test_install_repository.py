@@ -127,6 +127,34 @@ class RepositoryInstallerTests(unittest.TestCase):
         )
         self.assertEqual(after.returncode, 0, after.stderr or after.stdout)
 
+    def test_installs_from_linked_worktree_with_primary_repo_worktree_root(self) -> None:
+        temporary, repo = self.make_repo()
+        self.addCleanup(temporary.cleanup)
+        subprocess.run(["git", "-C", str(repo), "config", "user.name", "Test"], check=True)
+        subprocess.run(
+            ["git", "-C", str(repo), "config", "user.email", "test@example.invalid"],
+            check=True,
+        )
+        (repo / "README.md").write_text("# test\n", encoding="utf-8")
+        subprocess.run(["git", "-C", str(repo), "add", "README.md"], check=True)
+        subprocess.run(["git", "-C", str(repo), "commit", "-m", "baseline"], check=True)
+        linked = repo / "linked-install"
+        subprocess.run(
+            ["git", "-C", str(repo), "worktree", "add", "-b", "install-test", str(linked)],
+            check=True,
+            capture_output=True,
+        )
+
+        result = INSTALLER.install_repository(linked, self.settings(repo))
+
+        self.assertEqual(INSTALLER.primary_worktree_root(linked), repo)
+        self.assertEqual(result["repository"], str(linked.resolve()))
+        self.assertTrue(
+            (linked / ".agents" / "skills" / "repo-agent-orchestration" / "SKILL.md").is_file()
+        )
+        agents = (linked / "AGENTS.md").read_text(encoding="utf-8")
+        self.assertIn(f"WORKTREE_ROOT: {repo / '.worktrees'}", agents)
+
     def test_preserves_legacy_profile_values_and_only_adds_missing_parameters(self) -> None:
         temporary, repo = self.make_repo()
         self.addCleanup(temporary.cleanup)
