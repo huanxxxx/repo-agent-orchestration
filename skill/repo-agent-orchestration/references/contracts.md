@@ -73,7 +73,7 @@ ACTUAL_THREAD_PROJECT_ID: <actual project id>
 
 The actual cwd must equal `REPOSITORY_ROOT`, and both project ids must be non-null and equal. `write` and `review_worktree` execution paths must be strict descendants of `WORKTREE_ROOT`; `review_root` must equal `REPOSITORY_ROOT`.
 
-This gate checks routing shape. Also verify through Git that the selected worktree is registered at the contracted branch/commit and that its status is suitable. Record the repository-root status before the task starts and verify that the task did not change it; unrelated pre-existing root changes do not by themselves block an isolated task.
+Run the validator CLI on the packet immediately before dispatch and again for the task's fast route gate. The CLI fails closed unless each required path exists and the selected worktree is registered at the contracted branch/commit. A path remembered by a task or chat is only a hint: after cleanup or restore, validate it again before treating it as a baseline. Record the repository-root status before the task starts and verify that the task did not change it; unrelated pre-existing root changes do not by themselves block an isolated task.
 
 ## Task report
 

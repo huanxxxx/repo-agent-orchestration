@@ -62,6 +62,16 @@ class SkillStructureTests(unittest.TestCase):
         self.assertNotIn("BINDING_STATUS", contracts)
         self.assertNotIn("COMMAND_WORKDIR_POLICY", contracts)
 
+    def test_route_cli_uses_live_git_identity_checks(self) -> None:
+        skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+        validator = (SKILL / "scripts" / "validate_dispatch_contract.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("required paths currently exist", skill)
+        self.assertIn("def validate_live_worktree", validator)
+        self.assertIn('"worktree", "list", "--porcelain"', validator)
+        self.assertIn("must not use detached HEAD", validator)
+
     def test_controller_waiting_is_event_driven_without_fake_checkpoint(self) -> None:
         skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
         controller = (SKILL / "references" / "controller.md").read_text(

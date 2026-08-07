@@ -9,6 +9,7 @@ import ntpath
 import os
 import posixpath
 import re
+import subprocess
 import sys
 from pathlib import Path, PurePosixPath, PureWindowsPath
 
@@ -147,7 +148,8 @@ def is_descendant_path(child: str, root: str) -> bool:
     return bool(relative.parts)
 
 
-def validate_existing_resolution(root: str, execution_path: str) -> list[str]:
+def validate_resolution_if_present(root: str, execution_path: str) -> list[str]:
+    """Check path substitution when static example paths happen to exist."""
     root_path = Path(root)
     execution = Path(execution_path)
     if not root_path.exists() or not execution.exists():
@@ -163,6 +165,121 @@ def validate_existing_resolution(root: str, execution_path: str) -> list[str]:
         errors.append("execution path must not resolve through a path substitute")
     if not is_descendant_path(str(resolved_execution), str(resolved_root)):
         errors.append("resolved execution path must be below resolved WORKTREE_ROOT")
+    return errors
+
+
+def git_output(worktree: Path, *args: str) -> tuple[str | None, str | None]:
+    result = subprocess.run(
+        [
+            "git",
+            "-c",
+            f"safe.directory={worktree.resolve()}",
+            "-C",
+            str(worktree),
+            *args,
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+    )
+    if result.returncode:
+        return None, result.stderr.strip() or result.stdout.strip() or "Git command failed"
+    return result.stdout.strip(), None
+
+
+def validate_live_worktree(
+    field_name: str,
+    value: str,
+    *,
+    expected_branch: str | None = None,
+    expected_head: str | None = None,
+    require_clean: bool = False,
+) -> list[str]:
+    path = Path(value)
+    if not path.is_dir():
+        return [f"{field_name} does not exist or is not a directory"]
+
+    top_level, error = git_output(path, "rev-parse", "--show-toplevel")
+    if error:
+        return [f"{field_name} is not a readable Git worktree: {error}"]
+    if normalized_path(top_level or "") != normalized_path(str(path.resolve())):
+        return [f"{field_name} must be the exact Git worktree root"]
+
+    registry, error = git_output(path, "worktree", "list", "--porcelain")
+    if error:
+        return [f"cannot read Git worktree registry for {field_name}: {error}"]
+    registered = {
+        normalized_path(line.removeprefix("worktree "))
+        for line in (registry or "").splitlines()
+        if line.startswith("worktree ")
+    }
+    if normalized_path(str(path.resolve())) not in registered:
+        return [f"{field_name} is not registered in the current Git worktree list"]
+
+    errors: list[str] = []
+    if expected_branch:
+        branch, branch_error = git_output(path, "symbolic-ref", "--short", "-q", "HEAD")
+        if branch_error or not branch:
+            errors.append(f"{field_name} must not use detached HEAD for a write task")
+        elif branch != expected_branch:
+            errors.append(f"{field_name} branch must equal BRANCH")
+    if expected_head:
+        head, head_error = git_output(path, "rev-parse", "HEAD")
+        if head_error or not head:
+            errors.append(f"cannot read HEAD for {field_name}: {head_error or 'unknown error'}")
+        elif head.casefold() != expected_head.casefold():
+            errors.append(f"{field_name} HEAD must equal the contracted commit")
+    if require_clean:
+        status, status_error = git_output(path, "status", "--porcelain")
+        if status_error:
+            errors.append(f"cannot read status for {field_name}: {status_error}")
+        elif status:
+            errors.append(f"{field_name} must be clean at the route gate")
+    return errors
+
+
+def validate_live(kind: str, fields: dict[str, str]) -> list[str]:
+    """Add current-filesystem and Git identity checks to the static packet checks."""
+    errors = validate(kind, fields)
+    if errors:
+        return errors
+
+    if kind == "binding":
+        repository_root = fields["REPOSITORY_ROOT"]
+        worktree_root = Path(fields["WORKTREE_ROOT"])
+        errors.extend(validate_live_worktree("REPOSITORY_ROOT", repository_root))
+        if not worktree_root.is_dir():
+            errors.append("WORKTREE_ROOT does not exist or is not a directory")
+        if fields["TASK_MODE"] in {"write", "review_worktree"}:
+            errors.extend(
+                validate_live_worktree(
+                    "EXECUTION_PATH", fields["EXECUTION_PATH"], require_clean=True
+                )
+            )
+    elif kind == "write":
+        if not Path(fields["WORKTREE_ROOT"]).is_dir():
+            errors.append("WORKTREE_ROOT does not exist or is not a directory")
+        errors.extend(
+            validate_live_worktree(
+                "WORKTREE",
+                fields["WORKTREE"],
+                expected_branch=fields["BRANCH"],
+                expected_head=fields["BASE_COMMIT"],
+                require_clean=True,
+            )
+        )
+    elif kind == "review":
+        commit_or_range = fields["TARGET_COMMIT_OR_RANGE"]
+        expected_head = re.split(r"\.\.\.?", commit_or_range)[-1]
+        errors.extend(
+            validate_live_worktree(
+                "TARGET_PATH",
+                fields["TARGET_PATH"],
+                expected_head=expected_head,
+                require_clean=True,
+            )
+        )
     return errors
 
 
@@ -209,6 +326,7 @@ def add_obsolete_errors(
 
 
 def validate(kind: str, fields: dict[str, str]) -> list[str]:
+    """Validate portable packet shape; use validate_live or the CLI at boundaries."""
     errors: list[str] = []
     for name in REQUIRED[kind]:
         if name not in fields:
@@ -250,7 +368,7 @@ def validate(kind: str, fields: dict[str, str]) -> list[str]:
             if worktree_root and execution_path and not is_descendant_path(execution_path, worktree_root):
                 errors.append("EXECUTION_PATH must be below WORKTREE_ROOT")
             if worktree_root and execution_path and is_absolute_path(worktree_root) and is_absolute_path(execution_path):
-                errors.extend(validate_existing_resolution(worktree_root, execution_path))
+                errors.extend(validate_resolution_if_present(worktree_root, execution_path))
         project_id = fields.get("TASK_PROJECT_ID", "")
         actual_project_id = fields.get("ACTUAL_THREAD_PROJECT_ID", "")
         forbidden_ids = {"null", "none", "projectless", "<none>"}
@@ -270,7 +388,7 @@ def validate(kind: str, fields: dict[str, str]) -> list[str]:
         if root and worktree and not is_descendant_path(worktree, root):
             errors.append("WORKTREE must be below WORKTREE_ROOT")
         if root and worktree and is_absolute_path(root) and is_absolute_path(worktree):
-            errors.extend(validate_existing_resolution(root, worktree))
+            errors.extend(validate_resolution_if_present(root, worktree))
         base_commit = fields.get("BASE_COMMIT", "")
         if base_commit and not FULL_SHA_RE.fullmatch(base_commit):
             errors.append("BASE_COMMIT must be a full 40- or 64-character hex SHA")
@@ -345,7 +463,7 @@ def main() -> int:
         return 2
 
     fields = parse_fields(text)
-    errors = validate(args.kind, fields)
+    errors = validate_live(args.kind, fields)
     result = {
         "kind": args.kind,
         "valid": not errors,
@@ -359,7 +477,7 @@ def main() -> int:
         for error in errors:
             print(f"- {error}")
     else:
-        print(f"VALID {args.kind} contract")
+        print(f"VALID live {args.kind} contract")
     return 0 if not errors else 1
 
 

@@ -17,7 +17,7 @@ Dispatch every ready, non-conflicting task when capacity permits. When serializi
 
 ## Prepare the route
 
-For a writer, create one repository-local worktree and branch only when ready. Verify its base, branch, registry entry, and status. Record the root status as a baseline rather than demanding an unrelated user-owned root be clean.
+For a writer, create one repository-local worktree and branch only when ready. Run the validator CLI to verify its physical path, base, branch, registry entry, and status. Never reuse a task or chat's remembered path as a baseline without this live check; restore or recreate a missing tree first. Record the root status as a baseline rather than demanding an unrelated user-owned root be clean.
 
 For a review, select the lightest target:
 

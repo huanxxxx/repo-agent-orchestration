@@ -38,7 +38,7 @@ def git(repo: Path, *args: str) -> str:
 
 
 def validate(validator, kind: str, packet: str) -> list[str]:
-    return validator.validate(kind, validator.parse_fields(packet))
+    return validator.validate_live(kind, validator.parse_fields(packet))
 
 
 def binding_packet(repository: Path, worktree_root: Path, execution_worktree: Path, task_id: str) -> str:
@@ -152,12 +152,19 @@ NEXT: controller verifies and closes
             if line.startswith("worktree ")
         }
         invalid_errors = validate(validator, "binding", invalid)
+        missing_path = worktree_root / "missing-writer"
+        missing_errors = validate(
+            validator,
+            "write",
+            write_packet(worktree_root, missing_path, "codex/missing-writer", head),
+        )
         result = {
             "passed": all(not errors for errors in binding_errors.values())
             and all(not errors for errors in write_errors.values())
             and not validate(validator, "review", review)
             and not validate(validator, "update", final_update)
-            and bool(invalid_errors),
+            and bool(invalid_errors)
+            and bool(missing_errors),
             "writers_isolated": all(
                 validator.normalized_path(str(path)) in registered_paths
                 for _, path in workers.values()
@@ -166,6 +173,8 @@ NEXT: controller verifies and closes
             "valid_write_errors": write_errors,
             "invalid_binding_rejected": bool(invalid_errors),
             "invalid_binding_errors": invalid_errors,
+            "missing_worktree_rejected": bool(missing_errors),
+            "missing_worktree_errors": missing_errors,
             "root_clean": not bool(git(repository, "status", "--porcelain")),
             "evidence_limit": "Local Git and contract-gate evidence only; no Codex task was created and no runtime model was verified.",
         }

@@ -121,7 +121,7 @@ See [examples/AGENTS.profile.md](examples/AGENTS.profile.md) for a neutral profi
 python scripts/run_local_demo.py
 ```
 
-The demo creates a temporary Git repository, two independent writer branches and worktrees, valid route/write/review/final contracts, and one deliberately invalid `projectless` route with an escaping `..` path. It passes only when both writers are registered separately, valid contracts pass, the invalid route is rejected, and the writers do not change the root baseline. The final contract also proves direct controller delivery.
+The demo creates a temporary Git repository, two independent writer branches and worktrees, valid route/write/review/final contracts, one deliberately invalid `projectless` route with an escaping `..` path, and one missing-worktree route. It passes only when both writers are registered separately, valid contracts pass, both invalid routes are rejected, and the writers do not change the root baseline. The final contract also proves direct controller delivery.
 
 Evidence boundary: this deterministic demo exercises local Git isolation and the contract gate. It does not create Codex tasks, verify task-message delivery, or prove an effective runtime model. Use [the Codex Desktop runbook](examples/demo/CODEX_DESKTOP_RUNBOOK.md) for a reproducible product-facing demonstration and record those external receipts separately.
 
@@ -150,10 +150,10 @@ You can also invoke the validator directly:
 
 ```bash
 python skill/repo-agent-orchestration/scripts/validate_dispatch_contract.py \
-  --kind binding examples/contracts/valid-binding-windows.txt
+  --kind update examples/contracts/valid-final-update.txt
 ```
 
-Supported kinds are `binding`, `write`, `review`, and `update`.
+Supported kinds are `binding`, `write`, `review`, and `update`. Direct CLI checks for `binding`, `write`, and `review` are live: synthetic example paths are intentionally rejected unless they currently exist and match the Git worktree registry, branch, commit, and clean-state contract. `scripts/validate_examples.py` performs the portable static example matrix.
 
 ## Compatibility and evidence limits
 
