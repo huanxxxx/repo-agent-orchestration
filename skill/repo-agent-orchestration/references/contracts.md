@@ -49,8 +49,11 @@ TARGET_MODE: root_readonly|existing_worktree|detached_snapshot
 TARGET_PATH: <absolute path>
 TARGET_COMMIT_OR_RANGE: <full sha or exact range>
 READ_ONLY: true
+ACCEPTANCE_BASELINE: <frozen criterion IDs and authoritative references>
+THREAT_MODEL: <bounded actors and failures covered by the baseline>
+NON_GOALS: <excluded hardening or none>
 REVIEW_SCOPE: <requirements and risk surface>
-ACCEPTANCE: <PASS/FAIL standard>
+ACCEPTANCE: <PASS/FAIL only against the frozen baseline>
 MODEL_POLICY: app_default|repo_review_default:<model>/<reasoning>|user_explicit:<model>/<reasoning>
 ```
 
@@ -59,6 +62,10 @@ MODEL_POLICY: app_default|repo_review_default:<model>/<reasoning>|user_explicit:
 - `detached_snapshot`: the controller creates an on-demand detached worktree below `WORKTREE_ROOT` for a long, cross-turn, test-running, or historical review. The reviewer never creates it.
 
 A reviewer never modifies files, the index, commits, or external state. Review tests must be explicitly safe for the selected target; otherwise use a disposable detached snapshot.
+
+The baseline is immutable for the review cycle. Every blocking finding must contain a stable finding ID, severity, violated acceptance ID, reproducible evidence, and impact within `THREAT_MODEL`. If it cannot cite a frozen criterion, place it under non-blocking observations even when it is useful hardening. A potentially critical out-of-baseline issue becomes a scope-reopen request to the controller; it does not silently rewrite the current verdict or authorize a writer.
+
+The reviewer reports `PASS` when the frozen baseline has no blocking finding. On correction review, recheck accepted finding IDs and regressions against that same baseline. The controller adjudicates findings before sending any correction and performs a scope-drift audit instead of automatically starting a third correction cycle when two consecutive reviews introduce new accepted blockers.
 
 ## Fast route gate
 

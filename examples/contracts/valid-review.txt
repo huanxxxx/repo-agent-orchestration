@@ -5,6 +5,9 @@ TARGET_MODE: existing_worktree
 TARGET_PATH: C:\Projects\ledger\.worktrees\ledger-core
 TARGET_COMMIT_OR_RANGE: 0123456789abcdef0123456789abcdef01234567
 READ_ONLY: true
+ACCEPTANCE_BASELINE: A1 ledger entries balance; A2 focused regression checks pass
+THREAT_MODEL: repository inputs and failures named by A1-A2
+NON_GOALS: unrelated hardening and new accounting features
 REVIEW_SCOPE: inspect the frozen ledger candidate
-ACCEPTANCE: report PASS or ordered findings with evidence
+ACCEPTANCE: PASS when A1-A2 have no mapped blocker
 MODEL_POLICY: app_default

@@ -27,6 +27,14 @@ For a review, select the lightest target:
 
 The reviewer does not create a tree. Never share a writable worktree between owners.
 
+## Freeze and adjudicate review scope
+
+Before the first review, freeze criterion IDs, the bounded threat model, and non-goals from the user's request and authoritative repository material. Keep that baseline unchanged across correction reviews unless the user or an authorized parent decision explicitly reopens it.
+
+Require each blocking finding to identify the violated criterion and reproducible evidence. The controller, not the reviewer, decides whether it is an `accepted_blocker`, `non_blocking_observation`, or `scope_reopen_request`. Severity alone never grants scope or correction authority. Do not send non-blocking hardening to a writer.
+
+On correction review, check the accepted blockers and regressions against the same baseline. New observations may be reported, but only mapped baseline violations can fail it. If two consecutive reviews each introduce a new accepted blocker, stop automatic correction, compare the work with the last minimal candidate, and run a scope-drift audit. Revert unnecessary hardening, defer it, or request explicit authority; do not silently start a third correction cycle.
+
 ## Create once and continue once
 
 1. Preflight the saved repository project and task API.
@@ -55,6 +63,6 @@ Do not call recursive waits, emit unchanged status, or use an immediate snapshot
 
 ## Accept and close
 
-Verify the actual diff or reviewed commit, owned paths, required tests, evidence limits, unresolved findings, and root-baseline drift. Integrate only within authority and in dependency order. Keep external gates separate.
+Verify the actual diff or reviewed commit, owned paths, required tests, evidence limits, adjudicated findings, and root-baseline drift. The baseline passes when it has no accepted blocker; non-blocking observations do not prevent PASS. Integrate only within authority and in dependency order. Keep external gates separate.
 
 Archive a task after acceptance is verified and no correction or in-flight operation remains. Call `set_thread_archived({threadId: <accepted-task-id>, archived: true})` and confirm success before declaring closure. A child `final` does not archive itself. Do not archive a task that still needs correction, input, or recovery. Remove a worktree separately, only when clean and without recovery value.

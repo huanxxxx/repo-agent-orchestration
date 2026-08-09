@@ -49,6 +49,9 @@ REQUIRED = {
         "TARGET_PATH",
         "TARGET_COMMIT_OR_RANGE",
         "READ_ONLY",
+        "ACCEPTANCE_BASELINE",
+        "THREAT_MODEL",
+        "NON_GOALS",
         "REVIEW_SCOPE",
         "ACCEPTANCE",
         "MODEL_POLICY",
@@ -426,6 +429,15 @@ def validate(kind: str, fields: dict[str, str]) -> list[str]:
         commit_or_range = fields.get("TARGET_COMMIT_OR_RANGE", "")
         if commit_or_range and not validate_commit_or_range(commit_or_range):
             errors.append("TARGET_COMMIT_OR_RANGE must be a full SHA or full-SHA range")
+        for name in (
+            "ACCEPTANCE_BASELINE",
+            "THREAT_MODEL",
+            "NON_GOALS",
+            "REVIEW_SCOPE",
+            "ACCEPTANCE",
+        ):
+            if fields.get(name) and has_placeholder(fields[name]):
+                errors.append(f"{name} must not contain placeholders")
         forbidden = sorted(REVIEW_WRITABLE_FIELDS.intersection(fields))
         if forbidden:
             errors.append("review must not declare a writable boundary: " + ", ".join(forbidden))

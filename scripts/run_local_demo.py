@@ -131,8 +131,11 @@ TARGET_MODE: existing_worktree
 TARGET_PATH: {backend_path}
 TARGET_COMMIT_OR_RANGE: {head}
 READ_ONLY: true
+ACCEPTANCE_BASELINE: A1 backend demo behavior; A2 contracted checks pass
+THREAT_MODEL: repository inputs and failures named by A1-A2
+NON_GOALS: unrelated hardening and new protocol design
 REVIEW_SCOPE: frozen backend demo candidate
-ACCEPTANCE: report PASS or findings
+ACCEPTANCE: PASS when A1-A2 have no mapped blocker
 MODEL_POLICY: app_default
 """
         final_update = f"""

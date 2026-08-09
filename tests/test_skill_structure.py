@@ -108,6 +108,25 @@ class SkillStructureTests(unittest.TestCase):
         self.assertIn("existing_worktree", contracts)
         self.assertIn("detached_snapshot", contracts)
 
+    def test_review_contract_freezes_acceptance_and_stops_scope_drift(self) -> None:
+        skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+        contracts = (SKILL / "references" / "contracts.md").read_text(
+            encoding="utf-8"
+        )
+        controller = (SKILL / "references" / "controller.md").read_text(
+            encoding="utf-8"
+        )
+        validator = (SKILL / "scripts" / "validate_dispatch_contract.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("Freeze the acceptance baseline", skill)
+        self.assertIn("ACCEPTANCE_BASELINE:", contracts)
+        self.assertIn("THREAT_MODEL:", contracts)
+        self.assertIn("NON_GOALS:", contracts)
+        self.assertIn("Severity alone never grants scope", controller)
+        self.assertIn("scope-drift audit", controller)
+        self.assertIn('"ACCEPTANCE_BASELINE"', validator)
+
     def test_reports_do_not_duplicate_turn_and_owner_state(self) -> None:
         contracts = (SKILL / "references" / "contracts.md").read_text(
             encoding="utf-8"

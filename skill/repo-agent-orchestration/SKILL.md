@@ -43,7 +43,9 @@ Run `scripts/validate_dispatch_contract.py` on dispatch, route, and report packe
 
 ## Accept, integrate, and recover
 
-Treat worker or reviewer PASS as evidence. Verify the actual diff or reviewed commit, required checks, evidence limits, and unresolved findings before integration. Keep merge, push, deployment, publication, production data, credentials, and permissions behind their own gates.
+Freeze the acceptance baseline, bounded threat model, and non-goals before review. A reviewer evaluates that baseline; it does not create new acceptance criteria or silently widen the threat model. Every blocking finding must cite a frozen acceptance ID and reproducible evidence. Severity describes impact, not scope or authority. Treat unmapped hardening as non-blocking unless the controller explicitly reopens the baseline within its authority.
+
+Treat worker or reviewer PASS/FAIL as evidence. The controller adjudicates findings before routing corrections, then verifies the actual diff or reviewed commit, required checks, evidence limits, and unresolved findings before integration. A correction review keeps the same baseline and checks accepted findings plus regressions. If two consecutive reviews introduce new accepted blockers, stop automatic correction and audit scope drift before another writer cycle. Keep merge, push, deployment, publication, production data, credentials, and permissions behind their own gates.
 
 After a task is accepted and has no correction or in-flight operation, archive its user-visible task through the App task API and confirm success. Do not confuse a child `final` with archival, and do not archive before acceptance.
 

@@ -56,8 +56,11 @@ TARGET_MODE: existing_worktree
 TARGET_PATH: C:\repo\.worktrees\write-1
 TARGET_COMMIT_OR_RANGE: {FULL_SHA}
 READ_ONLY: true
+ACCEPTANCE_BASELINE: A1 focused behavior; A2 required regression checks
+THREAT_MODEL: repository inputs and failures named by A1-A2
+NON_GOALS: unrelated hardening and new protocol design
 REVIEW_SCOPE: inspect the frozen candidate
-ACCEPTANCE: report PASS or ordered findings
+ACCEPTANCE: PASS when A1-A2 have no mapped blocker
 MODEL_POLICY: app_default
 """
 
@@ -189,6 +192,24 @@ class ContractValidationTests(unittest.TestCase):
         errors = "\n".join(self.validate("review", invalid))
         self.assertIn("must be a full SHA or full-SHA range", errors)
         self.assertIn("must not declare a writable boundary", errors)
+
+    def test_review_requires_frozen_acceptance_boundary(self) -> None:
+        for field in ("ACCEPTANCE_BASELINE", "THREAT_MODEL", "NON_GOALS"):
+            with self.subTest(field=field):
+                invalid = "\n".join(
+                    line for line in VALID_REVIEW.splitlines() if not line.startswith(f"{field}:")
+                )
+                self.assertIn(f"missing field: {field}", self.validate("review", invalid))
+
+    def test_review_boundary_rejects_placeholders(self) -> None:
+        invalid = VALID_REVIEW.replace(
+            "ACCEPTANCE_BASELINE: A1 focused behavior; A2 required regression checks",
+            "ACCEPTANCE_BASELINE: <whatever the reviewer considers important>",
+        )
+        self.assertIn(
+            "ACCEPTANCE_BASELINE must not contain placeholders",
+            self.validate("review", invalid),
+        )
 
     def test_final_requires_direct_delivery_and_evidence(self) -> None:
         invalid = VALID_FINAL.replace("DELIVERY: task_message:controller-1", "DELIVERY: local_final_only").replace(
