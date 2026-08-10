@@ -18,6 +18,10 @@ Before dispatch, answer five questions:
 
 Use an independent user-visible task when question 4 or 5 is yes, or for formal review. Otherwise use the current task or a bounded internal subagent. Agent count alone is not a task boundary. Dispatch every ready, non-conflicting independent task when capacity permits. When serializing, record the one concrete dependency, shared write, acceptance coupling, or external gate. Re-run this decision when a task reports or another real event wakes the controller; do not stay online merely to rescan.
 
+## Lock the implementation boundary
+
+Dispatch one accepted outcome, not an invitation to redesign the surrounding system. `OWNED_PATHS` says where a task may write; it does not authorize every possible change inside those paths. Require the writer to make the smallest sufficient change and to stop when `ACCEPTANCE` and `REQUIRED_TESTS` pass. If the writer concludes that an architecture change, alternate execution path, or broader refactor is necessary, it reports the conflict and waits for reauthorization instead of widening the task.
+
 ## Prepare the route
 
 For an independent write task, create one repository-local worktree and branch only when ready. That task owns the tree. Its internal subagents inherit the exact execution path and may receive disjoint file scopes, but must not create another branch or worktree. Run the validator CLI to verify the owning task's physical path, base, branch, registry entry, and status. Never reuse a task or chat's remembered path as a baseline without this live check; restore or recreate a missing tree first. Record the root status as a baseline rather than demanding an unrelated user-owned root be clean.
@@ -76,6 +80,6 @@ Do not call recursive waits, emit unchanged status, or use an immediate snapshot
 
 ## Accept and close
 
-Verify the actual diff or reviewed commit, owned paths, required tests, evidence limits, adjudicated findings, and root-baseline drift. The baseline passes when it has no accepted blocker; non-blocking observations do not prevent PASS. Integrate only within authority and in dependency order. Keep external gates separate.
+Verify the actual diff or reviewed commit, owned paths, required tests, evidence limits, adjudicated findings, and root-baseline drift. Require a concise mapping from each acceptance condition to its changed paths and verification evidence; defer or reject changes that cannot be justified by the accepted outcome even when tests are green. The baseline passes when it has no accepted blocker; non-blocking observations do not prevent PASS and do not authorize more implementation. Integrate only within authority and in dependency order. Keep external gates separate.
 
 Archive a task after acceptance is verified and no correction or in-flight operation remains. Call `set_thread_archived({threadId: <accepted-task-id>, archived: true})` and confirm success before declaring closure. A child `final` does not archive itself. Do not archive a task that still needs correction, input, or recovery. Remove a worktree separately, only when clean and without recovery value.

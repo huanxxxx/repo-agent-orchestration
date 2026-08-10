@@ -190,6 +190,7 @@ OpenAI's desktop worktree feature uses Codex-managed worktrees and is documented
 - Repository continuity packages are optional durable fact anchors, never task-message channels, authorization tokens, or workflow engines.
 - A clean task worktree uses its HEAD as the recovery anchor; prechange snapshots require an explicit request or an authorized risky rewrite of task-owned tracked changes.
 - Coherent task-owned output is committed locally before a cross-turn pause, ownership handoff, formal review, or final; unsafe mixed ownership is reported precisely instead of staged.
+- Write tasks make the smallest acceptance-satisfying change and stop when acceptance passes; unrequested architecture, alternate paths, and hardening require a separately authorized scope.
 - The controller yields after dispatch and resumes only on a real event. The Skill does not pretend an immediate snapshot can detect later silence.
 - Merge, push, deployment, publication, production data, credentials, and permissions remain separate gates.
 

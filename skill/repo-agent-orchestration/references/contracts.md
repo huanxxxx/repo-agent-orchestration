@@ -52,6 +52,8 @@ REQUIRED_TESTS: <commands or checks>
 MODEL_POLICY: repo_write_default:<model>/<reasoning>|user_explicit:<model>/<reasoning>
 ```
 
+These fields are the implementation boundary. `OWNED_PATHS` grants locations, not permission to redesign everything inside them. Implement the smallest change that satisfies `OBJECTIVE`, `ACCEPTANCE`, and `REQUIRED_TESTS`; do not add unrequired features, abstractions, alternate paths, refactors, or hardening. If the accepted outcome requires crossing that boundary, report `blocked` with the conflict and request reauthorization rather than expanding scope. Passing acceptance is the stop condition.
+
 Create and verify one worktree for the independent task only when it is ready. Create the visible task with `target: {type: "project", projectId: <saved-project-id>, environment: {type: "local"}}`; never use or omit into the Git-project default of `worktree`. If a same-task fork or internal subagent is genuinely required, it inherits the task's execution path and must never request `worktree`. Submit the model through the real task API only while creating or continuing this write task. The initial task instruction grants execution conditionally: run the fast route gate first, continue in the same turn when it passes, and report `blocked` without writing when it fails.
 
 ## Read-only review dispatch
@@ -119,7 +121,7 @@ NEXT: <next action>
 
 `progress` is optional and means the same task turn continues. `blocked` and `final` end the task turn and return control to the controller. Do not duplicate this with separate owner or turn-state fields.
 
-For a write-task `final`, `EVIDENCE` must name the local checkpoint commit. Before a planned pause or handoff, commit every coherent task-owned unit even when the broader task continues later. If a safe commit is impossible, use `blocked` and put the exact dirty paths, ownership issue, and recovery action in `EVIDENCE`, `RISKS_OR_LIMITS`, and `NEXT`. Never hide recoverable work behind `none`, and never stage another owner's files merely to satisfy this boundary.
+For a write-task `final`, `EVIDENCE` must name the local checkpoint commit and concisely map each acceptance condition to its changed paths and verification evidence. Before a planned pause or handoff, commit every coherent task-owned unit even when the broader task continues later. If a safe commit is impossible, use `blocked` and put the exact dirty paths, ownership issue, and recovery action in `EVIDENCE`, `RISKS_OR_LIMITS`, and `NEXT`. Never hide recoverable work behind `none`, and never stage another owner's files merely to satisfy this boundary. Put optional hardening under `RISKS_OR_LIMITS` without implementing it under the completed task.
 
 `TARGET_SETTINGS: preserve` is mandatory. When sending the report to the controller, omit both `model` and `thinking` from the task-message call. These are destination-thread overrides, not sender metadata; attaching the worker model to a controller-bound report changes the controller model. Model overrides are allowed only when the controller creates or continues the task whose policy authorizes that model.
 

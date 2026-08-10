@@ -137,6 +137,22 @@ class SkillStructureTests(unittest.TestCase):
         self.assertIn("exact dirty paths", contracts)
         self.assertIn("prechange snapshot from a checkpoint commit", recovery)
 
+    def test_write_tasks_stop_at_acceptance_without_scope_expansion(self) -> None:
+        skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+        controller = (SKILL / "references" / "controller.md").read_text(
+            encoding="utf-8"
+        )
+        contracts = (SKILL / "references" / "contracts.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("smallest change that satisfies", skill)
+        self.assertIn("Every changed path must have a concrete acceptance justification", skill)
+        self.assertIn("Once the required acceptance and tests pass, stop implementation", skill)
+        self.assertIn("OWNED_PATHS` says where a task may write", controller)
+        self.assertIn("mapping from each acceptance condition", controller)
+        self.assertIn("Passing acceptance is the stop condition", contracts)
+        self.assertIn("map each acceptance condition to its changed paths", contracts)
+
     def test_controller_waiting_is_event_driven_without_fake_checkpoint(self) -> None:
         skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
         controller = (SKILL / "references" / "controller.md").read_text(

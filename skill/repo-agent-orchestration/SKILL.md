@@ -29,6 +29,10 @@ Use an internal subagent only as a bounded participant in the current task. It i
 
 Read [references/controller.md](references/controller.md) when acting as controller or deciding parallelism. Read [references/contracts.md](references/contracts.md) before dispatching a task or sending a task report. Read [references/continuity.md](references/continuity.md) only when repository policy defines an execution package, task package, ADR bundle, or equivalent durable recovery entry.
 
+## Keep implementation bounded
+
+A write task implements the smallest change that satisfies its `OBJECTIVE` and `ACCEPTANCE`. Do not add features, reusable abstractions, alternate execution paths, platform-wide refactors, or speculative hardening unless they are required by the accepted outcome. Every changed path must have a concrete acceptance justification. If acceptance appears to require architecture or scope expansion, stop and request reauthorization before crossing the current boundary. Once the required acceptance and tests pass, stop implementation; report extra hardening only as a non-blocking observation.
+
 ## Dispatch without ceremony
 
 1. Create an independent task only when the outcome can be accepted separately or needs its own cross-turn wait, model binding, branch, recovery boundary, or formal review. Otherwise keep bounded collaboration inside the current task.
