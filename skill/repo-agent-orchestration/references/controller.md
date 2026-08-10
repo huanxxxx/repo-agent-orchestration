@@ -30,6 +30,12 @@ For a review, select the lightest target:
 
 The reviewer does not create a tree. Pause the implementation owner while a formal reviewer uses its frozen tree. Never share a writable worktree between independent task owners.
 
+## Commit before crossing a task boundary
+
+Do not strand completed work only in a dirty worktree. Before a planned cross-turn pause, ownership handoff, formal review, or final report, inspect the exact task-owned paths, run proportional checks, and create a local checkpoint commit for each coherent recoverable unit. Freeze formal review on that commit. A checkpoint commit records real output after work; it is not a prechange snapshot and grants no push, integration, deployment, or publication authority.
+
+Internal subagents working in one task never race to commit the shared branch. They return exact changed paths and evidence; the parent task verifies ownership and creates the combined checkpoint. If changes are mixed-owned, contain unsafe material, or cannot form a coherent commit, do not stage them. Preserve the dirty state and report the paths, reason, and next recovery action.
+
 ## Delegate inside the current task
 
 Use internal subagents for bounded current-turn retrieval, comparison, or implementation slices that do not need separate acceptance or recovery. The parent task remains accountable for the combined result and gives each writing subagent non-overlapping paths. A subagent inherits the current cwd, branch, and worktree; it must not create or select another worktree. If the parent lacks write authority for that path, or the work becomes independently acceptable or cross-turn, stop and promote the remaining boundary to an independent task.
@@ -54,7 +60,7 @@ Use the repository write model through real creation parameters. Omit a model ov
 
 ## Receive reports and yield
 
-Only direct task-message delivery is an ordinary report. Require `TARGET_SETTINGS: preserve`: the worker must omit `model` and `thinking` because task-message overrides apply to the destination controller. `progress` keeps the current task turn; record the new fact but do not send a continuation to an already-running task. `blocked` and `final` return control to the controller. A child local final may be read once for recovery, but is not normal delivery.
+Only direct task-message delivery is an ordinary report. Require `TARGET_SETTINGS: preserve`: the worker must omit `model` and `thinking` because task-message overrides apply to the destination controller. `progress` keeps the current task turn; record the new fact but do not send a continuation to an already-running task. `blocked` and `final` return control to the controller. A write-task final names its checkpoint commit; a blocked or unsafe-to-commit report names the exact dirty paths and reason. A child local final may be read once for recovery, but is not normal delivery.
 
 Record the controller model and reasoning effort before dispatch. On a report-triggered wake, compare the current turn settings with that baseline. If they changed without an explicit user selection, stop routing and report controller-model drift before accepting or integrating evidence.
 

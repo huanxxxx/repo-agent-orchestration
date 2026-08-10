@@ -119,6 +119,8 @@ NEXT: <next action>
 
 `progress` is optional and means the same task turn continues. `blocked` and `final` end the task turn and return control to the controller. Do not duplicate this with separate owner or turn-state fields.
 
+For a write-task `final`, `EVIDENCE` must name the local checkpoint commit. Before a planned pause or handoff, commit every coherent task-owned unit even when the broader task continues later. If a safe commit is impossible, use `blocked` and put the exact dirty paths, ownership issue, and recovery action in `EVIDENCE`, `RISKS_OR_LIMITS`, and `NEXT`. Never hide recoverable work behind `none`, and never stage another owner's files merely to satisfy this boundary.
+
 `TARGET_SETTINGS: preserve` is mandatory. When sending the report to the controller, omit both `model` and `thinking` from the task-message call. These are destination-thread overrides, not sender metadata; attaching the worker model to a controller-bound report changes the controller model. Model overrides are allowed only when the controller creates or continues the task whose policy authorizes that model.
 
 ```text

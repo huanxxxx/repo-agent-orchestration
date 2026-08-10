@@ -17,6 +17,7 @@ CONTROLLER_MODEL_POLICY: app_current_task
 WRITE_TASK_MODEL: <execution-model>/<reasoning>
 REVIEW_TASK_MODEL: app_default
 SHARED_INTEGRATION_PATHS: <repository-specific shared paths>
+CONTINUITY_POLICY: none|repository_defined:<index or entry>
 EXTERNAL_GATES: merge main; push; deploy; publish; production data; credentials; permissions
 ```
 

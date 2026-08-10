@@ -50,6 +50,7 @@ class RepositoryInstallerTests(unittest.TestCase):
         self.assertIn("TASK_HOST_POLICY: repository_project_local", agents)
         self.assertIn(f"WORKTREE_ROOT: {repo / '.worktrees'}", agents)
         self.assertIn("WRITE_TASK_MODEL: gpt-5.6-luna/max", agents)
+        self.assertIn("CONTINUITY_POLICY: none", agents)
         self.assertIn(
             "Use the repository-local `$repo-agent-orchestration` Skill", agents
         )
@@ -89,6 +90,7 @@ class RepositoryInstallerTests(unittest.TestCase):
             write_task_model="custom-executor/high",
             review_task_model="custom-review/medium",
             shared_integration_paths="docs/status.md",
+            continuity_policy="repository_defined:docs/status.md",
         )
         INSTALLER.install_repository(repo, custom)
         before = (repo / "AGENTS.md").read_text(encoding="utf-8")
@@ -103,6 +105,7 @@ class RepositoryInstallerTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
         self.assertEqual((repo / "AGENTS.md").read_text(encoding="utf-8"), before)
+        self.assertIn("CONTINUITY_POLICY: repository_defined:docs/status.md", before)
 
     def test_check_reports_drift_without_writing(self) -> None:
         temporary, repo = self.make_repo()

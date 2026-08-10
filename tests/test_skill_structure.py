@@ -114,6 +114,29 @@ class SkillStructureTests(unittest.TestCase):
         self.assertIn("HEAD of a clean task worktree", recovery)
         self.assertIn("user explicitly requests one", recovery)
 
+    def test_focused_evidence_cannot_claim_full_or_production_proof(self) -> None:
+        skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("focused checks do not prove the full repository", skill)
+        self.assertIn("or production behavior", skill)
+
+    def test_task_output_is_checkpointed_before_crossing_boundaries(self) -> None:
+        skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+        controller = (SKILL / "references" / "controller.md").read_text(
+            encoding="utf-8"
+        )
+        contracts = (SKILL / "references" / "contracts.md").read_text(
+            encoding="utf-8"
+        )
+        recovery = (SKILL / "references" / "recovery.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("cross-turn pause, ownership handoff, formal review, or `final`", skill)
+        self.assertIn("parent verifies and commits the combined checkpoint", skill)
+        self.assertIn("Do not strand completed work only in a dirty worktree", controller)
+        self.assertIn("write-task `final`", contracts)
+        self.assertIn("exact dirty paths", contracts)
+        self.assertIn("prechange snapshot from a checkpoint commit", recovery)
+
     def test_controller_waiting_is_event_driven_without_fake_checkpoint(self) -> None:
         skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
         controller = (SKILL / "references" / "controller.md").read_text(

@@ -112,6 +112,7 @@ CONTROLLER_MODEL_POLICY: app_current_task
 WRITE_TASK_MODEL: <explicit model>/<reasoning>
 REVIEW_TASK_MODEL: app_default
 SHARED_INTEGRATION_PATHS: <repository-specific paths>
+CONTINUITY_POLICY: none|repository_defined:<index or entry>
 EXTERNAL_GATES: <merge, push, deploy, data, credential, and publication gates>
 ```
 
@@ -188,6 +189,7 @@ OpenAI's desktop worktree feature uses Codex-managed worktrees and is documented
 - Accepted child tasks are archived explicitly by the controller; a child `final` is delivery, not archival.
 - Repository continuity packages are optional durable fact anchors, never task-message channels, authorization tokens, or workflow engines.
 - A clean task worktree uses its HEAD as the recovery anchor; prechange snapshots require an explicit request or an authorized risky rewrite of task-owned tracked changes.
+- Coherent task-owned output is committed locally before a cross-turn pause, ownership handoff, formal review, or final; unsafe mixed ownership is reported precisely instead of staged.
 - The controller yields after dispatch and resumes only on a real event. The Skill does not pretend an immediate snapshot can detect later silence.
 - Merge, push, deployment, publication, production data, credentials, and permissions remain separate gates.
 

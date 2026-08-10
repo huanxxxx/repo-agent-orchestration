@@ -33,6 +33,7 @@ class Settings:
     write_task_model: str = "gpt-5.6-luna/max"
     review_task_model: str = "app_default"
     shared_integration_paths: str = "none"
+    continuity_policy: str = "none"
     external_gates: str = DEFAULT_EXTERNAL_GATES
 
 
@@ -119,6 +120,7 @@ def setting_values(settings: Settings) -> tuple[tuple[str, str], ...]:
         ("WRITE_TASK_MODEL", settings.write_task_model),
         ("REVIEW_TASK_MODEL", settings.review_task_model),
         ("SHARED_INTEGRATION_PATHS", settings.shared_integration_paths),
+        ("CONTINUITY_POLICY", settings.continuity_policy),
         ("EXTERNAL_GATES", settings.external_gates),
     )
 
@@ -322,6 +324,7 @@ def main() -> int:
     parser.add_argument("--write-task-model")
     parser.add_argument("--review-task-model")
     parser.add_argument("--shared-integration-paths")
+    parser.add_argument("--continuity-policy")
     parser.add_argument("--external-gates")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument(
@@ -353,6 +356,8 @@ def main() -> int:
         or current.get("REVIEW_TASK_MODEL", "app_default"),
         shared_integration_paths=args.shared_integration_paths
         or current.get("SHARED_INTEGRATION_PATHS", "none"),
+        continuity_policy=args.continuity_policy
+        or current.get("CONTINUITY_POLICY", "none"),
         external_gates=args.external_gates
         or current.get("EXTERNAL_GATES", DEFAULT_EXTERNAL_GATES),
     )

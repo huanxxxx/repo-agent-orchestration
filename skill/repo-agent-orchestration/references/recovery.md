@@ -6,6 +6,7 @@
 2. Create a prechange snapshot only when the user explicitly requests one, or when an authorized task must preserve task-owned tracked changes before a risky rewrite.
 3. Confirm the exact owned paths first. Stop when candidate changes include ambiguous, user-owned, or another task's files.
 4. Keep snapshot commit, push, main integration, deployment, and publication as separate authorization boundaries. Use a repository utility when one exists; this Skill does not prescribe a repository-specific script.
+5. Distinguish a prechange snapshot from a checkpoint commit: the former preserves prior dirty input before risky rewriting; the latter records real task output before a pause, handoff, review, or final.
 
 ## Silent task
 
