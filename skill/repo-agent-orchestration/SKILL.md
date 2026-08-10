@@ -1,6 +1,6 @@
 ---
 name: repo-agent-orchestration
-description: Coordinate repository work between a controller, user-visible write or review tasks, and short read-only helpers. Use for multi-step implementation, parallel dispatch, Git worktree isolation, independent review, explicit model routing, task handoffs, recovery, integration, or closure.
+description: Coordinate repository work between a controller, bounded internal subagents, and independently owned write or review tasks. Use for multi-step implementation, parallel dispatch, Git worktree isolation, durable repository continuity packages, independent review, explicit model routing, task handoffs, recovery, integration, or closure.
 ---
 
 # Repository Agent Orchestration
@@ -9,7 +9,7 @@ Keep the product mainline primary and the coordination protocol small.
 
 ## Authority
 
-1. Read the repository `AGENTS.md` and only the active execution-package material needed for the task.
+1. Read the repository `AGENTS.md` and only the active continuity-package material needed for the task.
 2. Treat user instructions and repository facts as authoritative. Keep model defaults, product boundaries, shared paths, and external gates in the repository.
 3. The controller plans, routes, verifies, integrates, and closes. Write tasks implement. Review tasks review without writing.
 4. Never turn local evidence into deployment or production authority.
@@ -18,20 +18,21 @@ Keep the product mainline primary and the coordination protocol small.
 
 | Work | Route | Worktree |
 |---|---|---|
-| Short current-turn read-only lookup | Controller or internal helper | None |
-| File or test change, commit, or long implementation | User-visible write task | Create on demand |
-| Review of a frozen implementation candidate | User-visible review task | Reuse the candidate worktree |
+| Short current-turn lookup or comparison | Controller or internal subagent | Inherit the current execution path; create none |
+| Bounded current-turn decomposition inside an already authorized task | Internal subagent | Inherit the current execution path; create none |
+| Independently acceptable, cross-turn, separately recoverable, or explicitly model-bound implementation | User-visible write task | One repository-local worktree for that task |
+| Review of a frozen implementation candidate | User-visible review task | Reuse the candidate worktree read-only while its writer is paused |
 | Short review of a stable committed root | User-visible review task | None |
 | Long, cross-turn, test-running, or historical review | User-visible review task | Controller creates an on-demand detached snapshot |
 
-Use an internal helper only for bounded current-turn retrieval or comparison. It must not write, own a milestone, issue formal PASS/FAIL, or wait across turns.
+Use an internal subagent only as a bounded participant in the current task. It inherits that task's authority and exact execution path, must return in the current turn, and must not own an independent milestone, branch, worktree, formal verdict, or recovery lifecycle. It may write only when the current task already has write authority and gives it non-overlapping owned paths. More agents alone never justify more worktrees.
 
-Read [references/controller.md](references/controller.md) when acting as controller or deciding parallelism. Read [references/contracts.md](references/contracts.md) before dispatching a task or sending a task report.
+Read [references/controller.md](references/controller.md) when acting as controller or deciding parallelism. Read [references/contracts.md](references/contracts.md) before dispatching a task or sending a task report. Read [references/continuity.md](references/continuity.md) only when repository policy defines an execution package, task package, ADR bundle, or equivalent durable recovery entry.
 
 ## Dispatch without ceremony
 
-1. Dispatch work when it is authorized, dependency-closed, independently acceptable, and has no overlapping writer. Record only the reason when one of these conditions blocks or serializes it.
-2. Give each writer one task boundary, branch, repository-local worktree, and exclusive write scope. Create the worktree only when the task is ready.
+1. Create an independent task only when the outcome can be accepted separately or needs its own cross-turn wait, model binding, branch, recovery boundary, or formal review. Otherwise keep bounded collaboration inside the current task.
+2. Give each independent write task one branch, one repository-local worktree, and one exclusive write boundary. Internal subagents inherit that worktree and receive disjoint paths; they never create another branch or worktree. Different independent write tasks never share a writable worktree. Create a worktree only when its owning task is ready.
 3. Reject projectless or foreign-project tasks. Host every user-visible task in the saved repository project with an explicit App environment of `local`; never request an App-managed worktree. Keep the repository-local worktree only as the task's explicit execution path.
 4. Bind write-task models through real task creation or continuation parameters only when the destination is that write task. Prompt text alone is not model binding. For declared `app_default` review policy, omit the override deliberately.
 5. Put conditional execution authority in the initial task: first perform the fast route gate; if it passes, continue the work in the same turn. If it fails, write nothing and report `blocked`. Do not require a binding-only turn followed by a second authorization turn.
@@ -49,4 +50,4 @@ Treat worker or reviewer PASS/FAIL as evidence. The controller adjudicates findi
 
 After a task is accepted and has no correction or in-flight operation, archive its user-visible task through the App task API and confirm success. Do not confuse a child `final` with archival, and do not archive before acceptance.
 
-Read [references/recovery.md](references/recovery.md) only for a silent task, takeover, wrong route, dirty ownership, or cleanup. Retain a task or worktree only while it has recovery value.
+Read [references/recovery.md](references/recovery.md) only for a silent task, takeover, wrong route, dirty ownership, recovery anchor, or cleanup. A clean task worktree already has its HEAD as a recovery anchor; never manufacture a snapshot commit merely because work begins. Retain a task, package, or worktree only while it has recovery value.

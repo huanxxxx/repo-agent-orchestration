@@ -53,7 +53,8 @@ class RepositoryInstallerTests(unittest.TestCase):
         self.assertIn(
             "Use the repository-local `$repo-agent-orchestration` Skill", agents
         )
-        self.assertIn("do not silently fall back", agents)
+        self.assertIn("independent task ownership", agents)
+        self.assertIn("do not collapse it into current-task execution", agents)
 
     def test_preserves_existing_agents_content_and_updates_only_managed_block(self) -> None:
         temporary, repo = self.make_repo()

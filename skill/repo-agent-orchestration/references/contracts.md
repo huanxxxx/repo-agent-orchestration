@@ -14,10 +14,25 @@ CONTROLLER_MODEL_POLICY: app_current_task
 WRITE_TASK_MODEL: <explicit model/reasoning>
 REVIEW_TASK_MODEL: app_default|<explicit model/reasoning>
 SHARED_INTEGRATION_PATHS: <paths>
+CONTINUITY_POLICY: none|repository_defined:<index or entry>
 EXTERNAL_GATES: <gates>
 ```
 
 Repository configuration is read once by the controller. Do not copy invariant wait policy, root-write policy, or integration policy into every child packet.
+
+## Internal subagent handoff
+
+Internal subagents do not cross a user-visible task boundary, so do not give them a branch, worktree, App task, model-binding, or task-report contract. Give only the current-turn facts they need:
+
+```text
+EXECUTION_PATH: inherit_current
+OBJECTIVE: <bounded contribution to the parent task>
+OWNED_PATHS: <non-overlapping paths, or read_only>
+DO_NOT_TOUCH: <sibling scopes>
+RETURN: current_turn
+```
+
+The parent task owns acceptance and recovery. Writing is allowed only when the parent already owns the execution path and write authority. If the work needs independent acceptance, a separate model, cross-turn waiting, or its own recovery coordinate, use a write dispatch instead.
 
 ## Write dispatch
 
@@ -37,7 +52,7 @@ REQUIRED_TESTS: <commands or checks>
 MODEL_POLICY: repo_write_default:<model>/<reasoning>|user_explicit:<model>/<reasoning>
 ```
 
-Create and verify the worktree only when the task is ready. Create the visible task with `target: {type: "project", projectId: <saved-project-id>, environment: {type: "local"}}`; never use or omit into the Git-project default of `worktree`. If a same-task fork is genuinely required, use `environment: {type: "same-directory"}`, never `worktree`. Submit the model through the real task API only while creating or continuing this write task. The initial task instruction grants execution conditionally: run the fast route gate first, continue in the same turn when it passes, and report `blocked` without writing when it fails.
+Create and verify one worktree for the independent task only when it is ready. Create the visible task with `target: {type: "project", projectId: <saved-project-id>, environment: {type: "local"}}`; never use or omit into the Git-project default of `worktree`. If a same-task fork or internal subagent is genuinely required, it inherits the task's execution path and must never request `worktree`. Submit the model through the real task API only while creating or continuing this write task. The initial task instruction grants execution conditionally: run the fast route gate first, continue in the same turn when it passes, and report `blocked` without writing when it fails.
 
 ## Read-only review dispatch
 

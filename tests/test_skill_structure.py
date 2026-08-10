@@ -16,6 +16,7 @@ class SkillStructureTests(unittest.TestCase):
             "agents/openai.yaml",
             "references/controller.md",
             "references/contracts.md",
+            "references/continuity.md",
             "references/recovery.md",
             "scripts/validate_dispatch_contract.py",
         )
@@ -82,6 +83,36 @@ class SkillStructureTests(unittest.TestCase):
         self.assertIn("def validate_live_worktree", validator)
         self.assertIn('"worktree", "list", "--porcelain"', validator)
         self.assertIn("must not use detached HEAD", validator)
+
+    def test_worktrees_belong_to_independent_tasks_not_subagents(self) -> None:
+        skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+        controller = (SKILL / "references" / "controller.md").read_text(
+            encoding="utf-8"
+        )
+        contracts = (SKILL / "references" / "contracts.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("More agents alone never justify more worktrees", skill)
+        self.assertIn("Different independent write tasks never share", skill)
+        self.assertIn("Agent count alone is not a task boundary", controller)
+        self.assertIn("EXECUTION_PATH: inherit_current", contracts)
+        self.assertIn("must not create another branch or worktree", controller)
+
+    def test_continuity_package_and_snapshot_boundaries_are_lightweight(self) -> None:
+        skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+        continuity = (SKILL / "references" / "continuity.md").read_text(
+            encoding="utf-8"
+        )
+        recovery = (SKILL / "references" / "recovery.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("references/continuity.md", skill)
+        self.assertIn("App task owns", continuity)
+        self.assertIn("Git worktree owns", continuity)
+        self.assertIn("not an authorization token", continuity)
+        self.assertIn("Do not create a package for short work", continuity)
+        self.assertIn("HEAD of a clean task worktree", recovery)
+        self.assertIn("user explicitly requests one", recovery)
 
     def test_controller_waiting_is_event_driven_without_fake_checkpoint(self) -> None:
         skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")

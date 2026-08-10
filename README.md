@@ -2,9 +2,9 @@
 
 ### A controllable, repository-native Ultra-style workflow for Codex
 
-**The controller plans and accepts. Explicitly routed workers execute. Independent agents review. Git worktrees keep every writer isolated.**
+**The controller plans and accepts. Current-task subagents collaborate in place. Independent tasks own isolated worktrees. Independent agents review.**
 
-Repo Agent Orchestration is a lightweight Codex Skill for coordinating multi-agent repository work through explicit role separation, model routing, on-demand Git worktrees, independent review, direct reports, and controller-owned acceptance.
+Repo Agent Orchestration is a lightweight Codex Skill for coordinating multi-agent repository work through explicit role separation, model routing, on-demand Git worktrees, optional repository continuity packages, independent review, direct reports, and controller-owned acceptance.
 
 Codex already knows how to use agents. This project focuses on the harder engineering questions: who may write, where they may write, which model is submitted for the task, how completion is proven, and who may integrate the result.
 
@@ -14,7 +14,7 @@ Codex already knows how to use agents. This project focuses on the harder engine
 
 Multi-agent coding fails when:
 
-- two agents write to the same working tree;
+- two independent task owners write to the same working tree;
 - an execution task runs from the wrong repository or cwd;
 - a worker silently falls back to an unintended model;
 - a reviewer modifies the candidate it is supposed to review;
@@ -26,7 +26,7 @@ Multi-agent coding fails when:
 
 This Skill turns those failure modes into explicit contracts and fail-closed gates.
 
-**No daemon. No dashboard. No shared writable worktree.**
+**No daemon. No dashboard. No shared writable worktree between independent tasks.**
 
 ## Default Luna-first profile
 
@@ -35,7 +35,7 @@ This Skill turns those failure modes into explicit contracts and fail-closed gat
 | Controller | Plan, route, decide, accept, integrate, and close | Current Codex task selection |
 | Write task | Implement one independently accepted change | Explicit repository model; installer default is `gpt-5.6-luna/max` |
 | Review task | Review one frozen candidate without writing | App default unless repository or user overrides it |
-| Internal helper | Short current-turn read-only retrieval or comparison | Inherited; never an execution fallback |
+| Internal subagent | Bounded current-turn retrieval or non-overlapping contribution | Inherits the current task path; never owns a branch or worktree |
 
 The model names are repository configuration, not a promise that every Codex surface exposes the same models or echoes the effective runtime model. A submitted model binding is recorded as submitted; treat it as unverified unless the product returns the effective model.
 
@@ -63,7 +63,9 @@ The model names are repository configuration, not a promise that every Codex sur
                          controller acceptance gate
 ```
 
-Every writer owns one task boundary, one branch, one repository-local worktree, and one writable ownership boundary. Short read-only work needs no tree. Candidate review reuses the frozen implementation tree; long or historical review gets an on-demand detached snapshot only when a stable filesystem is useful.
+Every independent write task owns one branch, one repository-local worktree, and one writable ownership boundary. Internal subagents are participants in that task: they inherit its path, receive non-overlapping scopes, and create no tree of their own. A separate task is justified by independent acceptance, cross-turn waiting, model binding, recovery, or formal review—not by agent count alone. Candidate review reuses the frozen implementation tree while its writer is paused; long or historical review gets an on-demand detached snapshot only when a stable filesystem is useful.
+
+When a repository defines an execution package or equivalent continuity entry, the Skill keeps it separate from both the App task and Git worktree. It stores durable objective, scope, state, acceptance, recovery, and next-step facts; repository-specific tiers, paths, templates, and scaffolding stay in the repository. Clean worktrees use their current HEAD as the recovery anchor, and prechange snapshots remain explicit rather than ceremonial.
 
 Task startup is one phase: the initial instruction performs a fast route gate and continues in the same turn when it passes. A route mismatch fails before the first write; there is no mandatory binding-only turn followed by a second authorization turn.
 
@@ -80,7 +82,7 @@ The installer:
 1. requires the exact absolute Git repository root;
 2. copies the Skill to `.agents/skills/repo-agent-orchestration`;
 3. creates or idempotently updates one marked block in the root `AGENTS.md`;
-4. writes an explicit instruction to use the Skill for implementation, formal review, parallel dispatch, recovery, integration, and closure;
+4. writes an explicit instruction to use the Skill when work needs independent task ownership, formal review, parallel task dispatch, cross-turn recovery, integration, or closure;
 5. preserves existing repository configuration outside the managed block;
 6. excludes `__pycache__` and `.pyc` artifacts.
 
@@ -184,6 +186,8 @@ OpenAI's desktop worktree feature uses Codex-managed worktrees and is documented
 - Controller-bound reports preserve the controller's task settings: workers omit `model` and `thinking`, which otherwise override the destination task.
 - Visible repository tasks explicitly use App environment `local`; isolation comes from the repository-local execution worktree, never an App-managed worktree.
 - Accepted child tasks are archived explicitly by the controller; a child `final` is delivery, not archival.
+- Repository continuity packages are optional durable fact anchors, never task-message channels, authorization tokens, or workflow engines.
+- A clean task worktree uses its HEAD as the recovery anchor; prechange snapshots require an explicit request or an authorized risky rewrite of task-owned tracked changes.
 - The controller yields after dispatch and resumes only on a real event. The Skill does not pretend an immediate snapshot can detect later silence.
 - Merge, push, deployment, publication, production data, credentials, and permissions remain separate gates.
 

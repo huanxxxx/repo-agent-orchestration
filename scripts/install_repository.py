@@ -134,12 +134,14 @@ def render_block(
         values = tuple((key, value) for key, value in values if key in include_keys)
     body = newline.join(f"{key}: {value}" for key, value in values)
     activation = (
-        "- Use the repository-local `$repo-agent-orchestration` Skill for implementation, "
-        "formal review, parallel dispatch, handoffs, recovery, integration, and closure."
+        "- Use the repository-local `$repo-agent-orchestration` Skill when work needs "
+        "independent task ownership, formal review, parallel task dispatch, cross-turn "
+        "handoffs or recovery, integration, or closure; keep bounded same-task collaboration "
+        "inside the current task."
     )
     failure = (
-        "- If the Skill or a required task, path, message, or model-binding capability is "
-        "unavailable, stop and report; do not silently fall back to another execution route."
+        "- If the Skill or a capability required for an independently scoped task is "
+        "unavailable, stop and report; do not collapse it into current-task execution."
     )
     return newline.join(
         (

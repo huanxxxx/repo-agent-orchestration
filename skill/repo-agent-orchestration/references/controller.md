@@ -4,20 +4,23 @@
 
 Keep the product objective, current gate, active tasks, and next product step. Add an authorization ceiling only when external or destructive actions are in scope. Do not maintain a second project-management system for agent mechanics.
 
+If repository policy defines a continuity package, treat it as the durable repository copy of objective, scope, current state, acceptance, recovery coordinates, and next product step. Update it only when one of those facts materially changes. App task messages remain the delivery channel; do not copy every progress message or agent mechanic into the package.
+
 ## Decide readiness
 
-Before dispatch, answer four questions:
+Before dispatch, answer five questions:
 
 1. Is the work authorized?
 2. Are its inputs and dependencies ready?
 3. Does it have an exclusive write boundary, or is it read-only?
 4. Can it be accepted independently?
+5. Does it need its own cross-turn wait, model binding, branch, or recovery boundary?
 
-Dispatch every ready, non-conflicting task when capacity permits. When serializing, record the one concrete dependency, shared write, acceptance coupling, or external gate. Re-run this decision when a task reports or another real event wakes the controller; do not stay online merely to rescan.
+Use an independent user-visible task when question 4 or 5 is yes, or for formal review. Otherwise use the current task or a bounded internal subagent. Agent count alone is not a task boundary. Dispatch every ready, non-conflicting independent task when capacity permits. When serializing, record the one concrete dependency, shared write, acceptance coupling, or external gate. Re-run this decision when a task reports or another real event wakes the controller; do not stay online merely to rescan.
 
 ## Prepare the route
 
-For a writer, create one repository-local worktree and branch only when ready. Run the validator CLI to verify its physical path, base, branch, registry entry, and status. Never reuse a task or chat's remembered path as a baseline without this live check; restore or recreate a missing tree first. Record the root status as a baseline rather than demanding an unrelated user-owned root be clean.
+For an independent write task, create one repository-local worktree and branch only when ready. That task owns the tree. Its internal subagents inherit the exact execution path and may receive disjoint file scopes, but must not create another branch or worktree. Run the validator CLI to verify the owning task's physical path, base, branch, registry entry, and status. Never reuse a task or chat's remembered path as a baseline without this live check; restore or recreate a missing tree first. Record the root status as a baseline rather than demanding an unrelated user-owned root be clean.
 
 For a review, select the lightest target:
 
@@ -25,7 +28,11 @@ For a review, select the lightest target:
 - frozen candidate: `existing_worktree`;
 - long, cross-turn, test-running, or historical review: create `detached_snapshot` on demand below `WORKTREE_ROOT`.
 
-The reviewer does not create a tree. Never share a writable worktree between owners.
+The reviewer does not create a tree. Pause the implementation owner while a formal reviewer uses its frozen tree. Never share a writable worktree between independent task owners.
+
+## Delegate inside the current task
+
+Use internal subagents for bounded current-turn retrieval, comparison, or implementation slices that do not need separate acceptance or recovery. The parent task remains accountable for the combined result and gives each writing subagent non-overlapping paths. A subagent inherits the current cwd, branch, and worktree; it must not create or select another worktree. If the parent lacks write authority for that path, or the work becomes independently acceptable or cross-turn, stop and promote the remaining boundary to an independent task.
 
 ## Freeze and adjudicate review scope
 
