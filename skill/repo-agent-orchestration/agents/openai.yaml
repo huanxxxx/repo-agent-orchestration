@@ -1,4 +1,4 @@
 interface:
   display_name: "Repository Agent Orchestration"
-  short_description: "Route, dispatch, review, and integrate repository agents"
-  default_prompt: "Use $repo-agent-orchestration to coordinate this repository task with safe parallel dispatch, verification, and closure."
+  short_description: "Route peer tasks and same-task subagents safely"
+  default_prompt: "Use $repo-agent-orchestration to distinguish peer tasks from same-task subagents, then coordinate safe dispatch, verification, and closure."

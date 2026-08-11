@@ -16,7 +16,11 @@ Before dispatch, answer five questions:
 4. Can it be accepted independently?
 5. Does it need its own cross-turn wait, model binding, branch, or recovery boundary?
 
-Use an independent user-visible task when question 4 or 5 is yes, or for formal review. Otherwise use the current task or a bounded internal subagent. Agent count alone is not a task boundary. Dispatch every ready, non-conflicting independent task when capacity permits. When serializing, record the one concrete dependency, shared write, acceptance coupling, or external gate. Re-run this decision when a task reports or another real event wakes the controller; do not stay online merely to rescan.
+Use an independent user-visible peer task when question 4 or 5 is yes, or for formal review. Otherwise use the current task or a bounded internal subagent. Agent count alone is not a task boundary. Dispatch every ready, non-conflicting peer task when capacity permits. When serializing, record the one concrete dependency, shared write, acceptance coupling, or external gate. Re-run this decision when a peer reports or another real event wakes the controller; do not stay online merely to rescan.
+
+## Distinguish peer tasks from internal subagents
+
+Treat every App-created user-visible task as a peer, regardless of which task dispatched it. A controller owns coordination and acceptance decisions, not the peer's runtime turn. Only an internal-subagent capability creates a same-task parent/subagent relationship whose result must be joined before the current turn ends. Route by the actual creation capability: App task creation means peer lifecycle; internal subagent creation means current-turn participation. Never keep a controller online merely because it originated a peer task.
 
 ## Lock the implementation boundary
 
@@ -24,7 +28,7 @@ Dispatch one accepted outcome, not an invitation to redesign the surrounding sys
 
 ## Prepare the route
 
-For an independent write task, create one repository-local worktree and branch only when ready. That task owns the tree. Its internal subagents inherit the exact execution path and may receive disjoint file scopes, but must not create another branch or worktree. Run the validator CLI to verify the owning task's physical path, base, branch, registry entry, and status. Never reuse a task or chat's remembered path as a baseline without this live check; restore or recreate a missing tree first. Record the root status as a baseline rather than demanding an unrelated user-owned root be clean.
+For an independent peer write task, create one repository-local worktree and branch only when ready. That peer owns the tree. Its internal subagents inherit the exact execution path and may receive disjoint file scopes, but must not create another branch or worktree. Run the validator CLI to verify the owning peer's physical path, base, branch, registry entry, and status. Never reuse a task or chat's remembered path as a baseline without this live check; restore or recreate a missing tree first. Record the root status as a baseline rather than demanding an unrelated user-owned root be clean.
 
 For a review, select the lightest target:
 
@@ -55,7 +59,7 @@ On correction review, check the accepted blockers and regressions against the sa
 ## Create once and continue once
 
 1. Preflight the saved repository project and task API.
-2. Create the task against that project with the explicit target object `target: {type: "project", projectId, environment: {type: "local"}}`; do not rely on the Git-project default, and reject `projectless` or App-managed substitute trees. If using a fork, require `environment: {type: "same-directory"}` and reject `worktree`.
+2. Create the peer task against that project with the explicit target object `target: {type: "project", projectId, environment: {type: "local"}}`; do not rely on the Git-project default, and reject `projectless` or App-managed substitute trees. The receipt must identify an actual peer task; a queued worktree setup, worktree-creation UI, or `clientThreadId` without a created task means the route failed before the peer existed. Do not wait on or retry that phantom task. If using a same-task fork, require `environment: {type: "same-directory"}` and reject `worktree`.
 3. Include the dispatch packet and conditional execution authority in the initial instruction.
 4. The task performs the fast route gate first. A passing task continues implementation or review in the same turn; a failing task writes nothing and reports `blocked`.
 5. Do not require a binding-only turn, a controller receipt decision, and a second authorization message for a route that can be decided deterministically.
@@ -64,11 +68,11 @@ Use the repository write model through real creation parameters. Omit a model ov
 
 ## Receive reports and yield
 
-Only direct task-message delivery is an ordinary report. Require `TARGET_SETTINGS: preserve`: the worker must omit `model` and `thinking` because task-message overrides apply to the destination controller. `progress` keeps the current task turn; record the new fact but do not send a continuation to an already-running task. `blocked` and `final` return control to the controller. A write-task final names its checkpoint commit; a blocked or unsafe-to-commit report names the exact dirty paths and reason. A child local final may be read once for recovery, but is not normal delivery.
+Only direct peer-to-peer task-message delivery is an ordinary report. Require `TARGET_SETTINGS: preserve`: the worker must omit `model` and `thinking` because task-message overrides apply to the destination controller. `progress` keeps the peer's current turn; record the new fact but do not send a continuation to an already-running peer. `blocked` and `final` return control to the controller. A peer write-task final names its checkpoint commit; a blocked or unsafe-to-commit report names the exact dirty paths and reason. A peer's local final may be read once for recovery, but is not normal delivery.
 
 Record the controller model and reasoning effort before dispatch. On a report-triggered wake, compare the current turn settings with that baseline. If they changed without an explicit user selection, stop routing and report controller-model drift before accepting or integrating evidence.
 
-After successful creation or continuation, end the controller turn. Resume only on:
+After successful peer creation or continuation, perform a product-required startup wait at most once. Use it only to detect immediate failure or confirm start; an ordinary active, progress, or timeout result ends the controller turn and must not trigger a second wait. Resume only on:
 
 - a delivered task report;
 - a real one-shot checkpoint;
@@ -76,10 +80,10 @@ After successful creation or continuation, end the controller turn. Resume only 
 - a user status request;
 - an acceptance or integration decision.
 
-Do not call recursive waits, emit unchanged status, or use an immediate snapshot as a fake future checkpoint. If the product has no one-shot wakeup, silent-task recovery is available only on the next real controller wake; state that limitation once instead of adding per-task ceremony.
+Do not call recursive waits, relay unchanged peer progress, or use an immediate snapshot as a fake future checkpoint. If the product has no one-shot wakeup, silent-peer recovery is available only on the next real controller wake; state that limitation once instead of adding per-task ceremony.
 
 ## Accept and close
 
 Verify the actual diff or reviewed commit, owned paths, required tests, evidence limits, adjudicated findings, and root-baseline drift. Require a concise mapping from each acceptance condition to its changed paths and verification evidence; defer or reject changes that cannot be justified by the accepted outcome even when tests are green. The baseline passes when it has no accepted blocker; non-blocking observations do not prevent PASS and do not authorize more implementation. Integrate only within authority and in dependency order. Keep external gates separate.
 
-Archive a task after acceptance is verified and no correction or in-flight operation remains. Call `set_thread_archived({threadId: <accepted-task-id>, archived: true})` and confirm success before declaring closure. A child `final` does not archive itself. Do not archive a task that still needs correction, input, or recovery. Remove a worktree separately, only when clean and without recovery value.
+Archive a peer task after acceptance is verified and no correction or in-flight operation remains. Call `set_thread_archived({threadId: <accepted-task-id>, archived: true})` and confirm success before declaring closure. A peer's `final` does not archive itself. Do not archive a peer that still needs correction, input, or recovery. Remove a worktree separately, only when clean and without recovery value.

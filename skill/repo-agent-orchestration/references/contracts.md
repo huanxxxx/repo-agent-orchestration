@@ -18,7 +18,7 @@ CONTINUITY_POLICY: none|repository_defined:<index or entry>
 EXTERNAL_GATES: <gates>
 ```
 
-Repository configuration is read once by the controller. Do not copy invariant wait policy, root-write policy, or integration policy into every child packet.
+Repository configuration is read once by the controller. Do not copy invariant wait policy, root-write policy, or integration policy into every peer-task packet.
 
 ## Internal subagent handoff
 
@@ -26,15 +26,15 @@ Internal subagents do not cross a user-visible task boundary, so do not give the
 
 ```text
 EXECUTION_PATH: inherit_current
-OBJECTIVE: <bounded contribution to the parent task>
+OBJECTIVE: <bounded contribution to the owning current task>
 OWNED_PATHS: <non-overlapping paths, or read_only>
 DO_NOT_TOUCH: <sibling scopes>
 RETURN: current_turn
 ```
 
-The parent task owns acceptance and recovery. Writing is allowed only when the parent already owns the execution path and write authority. If the work needs independent acceptance, a separate model, cross-turn waiting, or its own recovery coordinate, use a write dispatch instead.
+The owning current task is the internal subagent's parent and owns acceptance and recovery. Writing is allowed only when that task already owns the execution path and write authority. If the work needs independent acceptance, a separate model, cross-turn waiting, or its own recovery coordinate, use a peer write dispatch instead.
 
-## Write dispatch
+## Peer write-task dispatch
 
 ```text
 TASK_ID: <id or pending>
@@ -54,7 +54,7 @@ MODEL_POLICY: repo_write_default:<model>/<reasoning>|user_explicit:<model>/<reas
 
 These fields are the implementation boundary. `OWNED_PATHS` grants locations, not permission to redesign everything inside them. Implement the smallest change that satisfies `OBJECTIVE`, `ACCEPTANCE`, and `REQUIRED_TESTS`; do not add unrequired features, abstractions, alternate paths, refactors, or hardening. If the accepted outcome requires crossing that boundary, report `blocked` with the conflict and request reauthorization rather than expanding scope. Passing acceptance is the stop condition.
 
-Create and verify one worktree for the independent task only when it is ready. Create the visible task with `target: {type: "project", projectId: <saved-project-id>, environment: {type: "local"}}`; never use or omit into the Git-project default of `worktree`. If a same-task fork or internal subagent is genuinely required, it inherits the task's execution path and must never request `worktree`. Submit the model through the real task API only while creating or continuing this write task. The initial task instruction grants execution conditionally: run the fast route gate first, continue in the same turn when it passes, and report `blocked` without writing when it fails.
+Create and verify one worktree for the peer write task only when it is ready. Create the visible peer with `target: {type: "project", projectId: <saved-project-id>, environment: {type: "local"}}`; never use or omit into the Git-project default of `worktree`. If a same-task fork or internal subagent is genuinely required, it inherits the owning task's execution path and must never request `worktree`. Submit the model through the real task API only while creating or continuing this peer write task. The initial task instruction grants execution conditionally: run the fast route gate first, continue in the same turn when it passes, and report `blocked` without writing when it fails.
 
 ## Read-only review dispatch
 
@@ -119,7 +119,7 @@ TARGET_SETTINGS: preserve
 NEXT: <next action>
 ```
 
-`progress` is optional and means the same task turn continues. `blocked` and `final` end the task turn and return control to the controller. Do not duplicate this with separate owner or turn-state fields.
+`progress` is optional and means the same peer turn continues. `blocked` and `final` end the peer turn and return control to the controller. Do not duplicate this with separate owner or turn-state fields.
 
 For a write-task `final`, `EVIDENCE` must name the local checkpoint commit and concisely map each acceptance condition to its changed paths and verification evidence. Before a planned pause or handoff, commit every coherent task-owned unit even when the broader task continues later. If a safe commit is impossible, use `blocked` and put the exact dirty paths, ownership issue, and recovery action in `EVIDENCE`, `RISKS_OR_LIMITS`, and `NEXT`. Never hide recoverable work behind `none`, and never stage another owner's files merely to satisfy this boundary. Put optional hardening under `RISKS_OR_LIMITS` without implementing it under the completed task.
 

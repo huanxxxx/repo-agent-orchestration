@@ -2,7 +2,7 @@
 
 ### A controllable, repository-native Ultra-style workflow for Codex
 
-**The controller plans and accepts. Current-task subagents collaborate in place. Independent tasks own isolated worktrees. Independent agents review.**
+**The controller plans and accepts. Current-task subagents collaborate in place. Independent peer tasks own isolated worktrees and reviews.**
 
 Repo Agent Orchestration is a lightweight Codex Skill for coordinating multi-agent repository work through explicit role separation, model routing, on-demand Git worktrees, optional repository continuity packages, independent review, direct reports, and controller-owned acceptance.
 
@@ -33,8 +33,8 @@ This Skill turns those failure modes into explicit contracts and fail-closed gat
 | Role | Responsibility | Default policy |
 |---|---|---|
 | Controller | Plan, route, decide, accept, integrate, and close | Current Codex task selection |
-| Write task | Implement one independently accepted change | Explicit repository model; installer default is `gpt-5.6-luna/max` |
-| Review task | Review one frozen candidate without writing | App default unless repository or user overrides it |
+| Peer write task | Implement one independently accepted change | Explicit repository model; installer default is `gpt-5.6-luna/max` |
+| Peer review task | Review one frozen candidate without writing | App default unless repository or user overrides it |
 | Internal subagent | Bounded current-turn retrieval or non-overlapping contribution | Inherits the current task path; never owns a branch or worktree |
 
 The model names are repository configuration, not a promise that every Codex surface exposes the same models or echoes the effective runtime model. A submitted model binding is recorded as submitted; treat it as unverified unless the product returns the effective model.
@@ -63,7 +63,7 @@ The model names are repository configuration, not a promise that every Codex sur
                          controller acceptance gate
 ```
 
-Every independent write task owns one branch, one repository-local worktree, and one writable ownership boundary. Internal subagents are participants in that task: they inherit its path, receive non-overlapping scopes, and create no tree of their own. A separate task is justified by independent acceptance, cross-turn waiting, model binding, recovery, or formal review—not by agent count alone. Candidate review reuses the frozen implementation tree while its writer is paused; long or historical review gets an on-demand detached snapshot only when a stable filesystem is useful.
+Every App-created user-visible task is a peer, even when another task dispatched it; controller is a coordination role, not runtime parentage. Every peer write task owns one branch, one repository-local worktree, and one writable ownership boundary. Internal subagents are participants inside one current task: they inherit its path, receive non-overlapping scopes, return within the current turn, and create no tree of their own. A peer task is justified by independent acceptance, cross-turn waiting, model binding, recovery, or formal review—not by agent count alone. Candidate review reuses the frozen implementation tree while its writer is paused; long or historical review gets an on-demand detached snapshot only when a stable filesystem is useful.
 
 When a repository defines an execution package or equivalent continuity entry, the Skill keeps it separate from both the App task and Git worktree. It stores durable objective, scope, state, acceptance, recovery, and next-step facts; repository-specific tiers, paths, templates, and scaffolding stay in the repository. Clean worktrees use their current HEAD as the recovery anchor, and prechange snapshots remain explicit rather than ceremonial.
 
@@ -183,15 +183,16 @@ OpenAI's desktop worktree feature uses Codex-managed worktrees and is documented
 - Every repository command must use the exact execution path.
 - Review selects the lightest safe target: root, frozen candidate, or detached snapshot.
 - Worker or reviewer PASS remains evidence, not controller acceptance.
-- A child task's local final is not a delivered controller report; blocked and final reports use direct task-message delivery.
+- A peer task's local final is not a delivered controller report; blocked and final reports use direct peer-to-peer task-message delivery.
 - Controller-bound reports preserve the controller's task settings: workers omit `model` and `thinking`, which otherwise override the destination task.
 - Visible repository tasks explicitly use App environment `local`; isolation comes from the repository-local execution worktree, never an App-managed worktree.
-- Accepted child tasks are archived explicitly by the controller; a child `final` is delivery, not archival.
+- A queued App worktree setup or worktree-creation receipt is a failed peer route, not a task to wait on or recover as if it had started.
+- Accepted peer tasks are archived explicitly by the controller; a peer `final` is delivery, not archival.
 - Repository continuity packages are optional durable fact anchors, never task-message channels, authorization tokens, or workflow engines.
 - A clean task worktree uses its HEAD as the recovery anchor; prechange snapshots require an explicit request or an authorized risky rewrite of task-owned tracked changes.
 - Coherent task-owned output is committed locally before a cross-turn pause, ownership handoff, formal review, or final; unsafe mixed ownership is reported precisely instead of staged.
 - Write tasks make the smallest acceptance-satisfying change and stop when acceptance passes; unrequested architecture, alternate paths, and hardening require a separately authorized scope.
-- The controller yields after dispatch and resumes only on a real event. The Skill does not pretend an immediate snapshot can detect later silence.
+- A product-required peer startup wait occurs at most once; ordinary active, progress, or timeout results end the controller turn instead of starting another wait.
 - Merge, push, deployment, publication, production data, credentials, and permissions remain separate gates.
 
 ## Run tests

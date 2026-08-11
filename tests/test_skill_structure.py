@@ -93,7 +93,7 @@ class SkillStructureTests(unittest.TestCase):
             encoding="utf-8"
         )
         self.assertIn("More agents alone never justify more worktrees", skill)
-        self.assertIn("Different independent write tasks never share", skill)
+        self.assertIn("Different peer write tasks never share", skill)
         self.assertIn("Agent count alone is not a task boundary", controller)
         self.assertIn("EXECUTION_PATH: inherit_current", contracts)
         self.assertIn("must not create another branch or worktree", controller)
@@ -131,7 +131,7 @@ class SkillStructureTests(unittest.TestCase):
             encoding="utf-8"
         )
         self.assertIn("cross-turn pause, ownership handoff, formal review, or `final`", skill)
-        self.assertIn("parent verifies and commits the combined checkpoint", skill)
+        self.assertIn("that task verifies and commits the combined checkpoint", skill)
         self.assertIn("Do not strand completed work only in a dirty worktree", controller)
         self.assertIn("write-task `final`", contracts)
         self.assertIn("exact dirty paths", contracts)
@@ -165,10 +165,33 @@ class SkillStructureTests(unittest.TestCase):
             encoding="utf-8"
         )
         self.assertIn("end the controller turn", skill)
+        self.assertIn("startup wait at most once", skill)
+        self.assertIn("must not trigger a second wait", controller)
         self.assertIn("Do not call recursive waits", controller)
         self.assertNotIn("CONTROLLER_AFTER_DISPATCH", contracts)
         self.assertNotIn("current_turn_once", contracts)
         self.assertIn("OBSOLETE_DISPATCH_FIELDS", validator)
+
+    def test_app_tasks_are_peers_not_internal_subagents(self) -> None:
+        skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+        controller = (SKILL / "references" / "controller.md").read_text(
+            encoding="utf-8"
+        )
+        contracts = (SKILL / "references" / "contracts.md").read_text(
+            encoding="utf-8"
+        )
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        published = "\n".join((skill, controller, contracts, readme)).casefold()
+        self.assertIn("app-created user-visible task is a peer task", published)
+        self.assertIn("controller is a coordination role", published)
+        self.assertIn("actual creation capability", published)
+        self.assertIn("same-task parent/subagent relationship", published)
+        self.assertIn("queued worktree setup", published)
+        self.assertIn("phantom task", published)
+        self.assertNotIn("child task", published)
+        self.assertNotIn("child final", published)
+        self.assertNotIn("child packet", published)
+        self.assertNotIn("child local final", published)
 
     def test_review_routing_covers_root_candidate_and_snapshot(self) -> None:
         contracts = (SKILL / "references" / "contracts.md").read_text(

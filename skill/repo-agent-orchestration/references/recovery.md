@@ -22,7 +22,7 @@
 
 1. Read the previous controller’s latest completed turns without messaging it unless authorized.
 2. Rebuild the mainline anchor from repository and task evidence.
-3. Enumerate active user-visible tasks, internal subagents, worktrees, branches, heads, and dirty paths.
+3. Enumerate active user-visible peer tasks, internal subagents, worktrees, branches, heads, and dirty paths.
 4. Separate submitted instructions from confirmed runtime effects.
 5. Preserve external and production gates.
 6. Notify active tasks only after the takeover authority and new routing are explicit.
@@ -33,8 +33,8 @@
 2. Do not discard, restore, overwrite, stage, or commit their in-flight output merely to make routing clean.
 3. Record each helper's parent task, inherited execution path, owned paths, dirty state, commit state, and remaining work.
 4. Freeze the current candidate and identify one safe owner for each write boundary.
-5. Create one repository-local worktree for each separable future independent task. Do not create one per helper. If existing dirty changes cannot be separated safely, report the conflict instead of forcing a split.
-6. Re-dispatch unfinished implementation and formal review as user-visible tasks with explicit model binding.
+5. Create one repository-local worktree for each separable future peer task. Do not create one per helper. If existing dirty changes cannot be separated safely, report the conflict instead of forcing a split.
+6. Re-dispatch unfinished implementation and formal review as user-visible peer tasks with explicit model binding.
 7. Keep the product mainline unchanged unless the user separately changes it.
 
 ## Dirty or ambiguous worktree
@@ -57,7 +57,7 @@ Treat any worktree created outside the declared repository-local root as an orph
 
 ## Completion and cleanup
 
-Mark a user-visible task `PASS_VERIFIED` only after final evidence and controller verification show that acceptance is complete and no blocker, reply, correction, or in-flight operation remains. Archive it immediately after that gate; do not leave it merely labelled “ready to archive.” Keep blocked or correctable tasks active.
+Mark a user-visible peer task `PASS_VERIFIED` only after final evidence and controller verification show that acceptance is complete and no blocker, reply, correction, or in-flight operation remains. Archive it immediately after that gate; do not leave it merely labelled “ready to archive.” Keep blocked or correctable peers active.
 
 Receive an internal subagent's final result, confirm it stopped, and release its slot promptly.
 

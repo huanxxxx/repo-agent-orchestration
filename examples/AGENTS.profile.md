@@ -4,8 +4,8 @@ Add an equivalent section to the target repository's root `AGENTS.md`. Replace e
 
 ## Agent Orchestration Profile
 
-- Use the repository-local `$repo-agent-orchestration` skill when work needs independent task ownership, formal review, parallel task dispatch, cross-turn handoffs or recovery, integration, or closure; keep bounded same-task collaboration inside the current task.
-- If the skill or a required visible-task, existing-path, or model-binding capability is unavailable, stop and report. Do not collapse work that needs an independent task into controller or internal-subagent implementation.
+- Use the repository-local `$repo-agent-orchestration` skill when work needs independent peer-task ownership, formal review, parallel peer dispatch, cross-turn handoffs or recovery, integration, or closure; keep bounded same-task collaboration inside the current task.
+- If the skill or a required visible peer-task, existing-path, or model-binding capability is unavailable, stop and report. Do not collapse work that needs a peer task into controller or internal-subagent implementation.
 
 ```text
 MAIN_BRANCH: main
