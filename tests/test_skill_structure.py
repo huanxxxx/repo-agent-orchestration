@@ -172,6 +172,28 @@ class SkillStructureTests(unittest.TestCase):
         self.assertNotIn("current_turn_once", contracts)
         self.assertIn("OBSOLETE_DISPATCH_FIELDS", validator)
 
+    def test_peer_creation_is_single_attempt_and_unknown_receipts_are_reconciled(self) -> None:
+        skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+        controller = (SKILL / "references" / "controller.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("one creation call per logical dispatch", skill)
+        self.assertIn("never authorizes an immediate second creation call", skill)
+        self.assertIn("Make exactly one creation call", controller)
+        self.assertIn("creation outcome unknown", controller)
+        self.assertIn("list tasks and reconcile", controller)
+
+    def test_scope_reopen_and_active_peer_turns_fail_closed(self) -> None:
+        skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+        controller = (SKILL / "references" / "controller.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("cannot treat its own scope-reopen decision as authority", skill)
+        self.assertIn("it may not authorize itself", controller)
+        self.assertIn("Never send another continuation or correction", skill)
+        self.assertIn("Never send a plain `continue` to an active peer", controller)
+        self.assertIn("every in-flight turn ended", controller)
+
     def test_app_tasks_are_peers_not_internal_subagents(self) -> None:
         skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
         controller = (SKILL / "references" / "controller.md").read_text(

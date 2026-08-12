@@ -50,7 +50,7 @@ Use internal subagents for bounded current-turn retrieval, comparison, or implem
 
 ## Freeze and adjudicate review scope
 
-Before the first review, freeze criterion IDs, the bounded threat model, and non-goals from the user's request and authoritative repository material. Keep that baseline unchanged across correction reviews unless the user or an authorized parent decision explicitly reopens it.
+Before the first review, freeze criterion IDs, the bounded threat model, and non-goals from the user's request and authoritative repository material. Keep that baseline unchanged across correction reviews unless the user or predeclared repository authority explicitly reopens it. The current controller may choose implementation details already inside the baseline; it may not authorize itself to add a feature, alternate path, refactor, or crossed non-goal merely because it classified a finding as `scope_reopen_request`.
 
 Require each blocking finding to identify the violated criterion and reproducible evidence. The controller, not the reviewer, decides whether it is an `accepted_blocker`, `non_blocking_observation`, or `scope_reopen_request`. Severity alone never grants scope or correction authority. Do not send non-blocking hardening to a writer.
 
@@ -59,16 +59,17 @@ On correction review, check the accepted blockers and regressions against the sa
 ## Create once and continue once
 
 1. Preflight the saved repository project and task API.
-2. Create the peer task against that project with the explicit target object `target: {type: "project", projectId, environment: {type: "local"}}`; do not rely on the Git-project default, and reject `projectless` or App-managed substitute trees. The receipt must identify an actual peer task; a queued worktree setup, worktree-creation UI, or `clientThreadId` without a created task means the route failed before the peer existed. Do not wait on or retry that phantom task. If using a same-task fork, require `environment: {type: "same-directory"}` and reject `worktree`.
-3. Include the dispatch packet and conditional execution authority in the initial instruction.
-4. The task performs the fast route gate first. A passing task continues implementation or review in the same turn; a failing task writes nothing and reports `blocked`.
-5. Do not require a binding-only turn, a controller receipt decision, and a second authorization message for a route that can be decided deterministically.
+2. Make exactly one creation call for a logical peer dispatch in a controller turn. If its receipt is empty, ambiguous, timed out, unparseable, or otherwise lacks a confirmed task id, record `creation outcome unknown`; do not infer failure and do not call create again in that turn. On the next real controller wake, list tasks and reconcile by source controller, project, objective, worktree, branch, and base. Adopt the single match, stop and resolve duplicates, or retry only after the inventory shows no created task.
+3. Create the peer task against that project with the explicit target object `target: {type: "project", projectId, environment: {type: "local"}}`; do not rely on the Git-project default, and reject `projectless` or App-managed substitute trees. A queued worktree setup, worktree-creation UI, or `clientThreadId` without a created task is a phantom task receipt, not a peer to wait on. If using a same-task fork, require `environment: {type: "same-directory"}` and reject `worktree`.
+4. Include the dispatch packet and conditional execution authority in the initial instruction.
+5. The task performs the fast route gate first. A passing task continues implementation or review in the same turn; a failing task writes nothing and reports `blocked`.
+6. Do not require a binding-only turn, a controller receipt decision, and a second authorization message for a route that can be decided deterministically.
 
 Use the repository write model through real creation parameters. Omit a model override only when review policy deliberately says `app_default`. Treat the submitted model as unverified unless the product echoes the effective runtime model.
 
 ## Receive reports and yield
 
-Only direct peer-to-peer task-message delivery is an ordinary report. Require `TARGET_SETTINGS: preserve`: the worker must omit `model` and `thinking` because task-message overrides apply to the destination controller. `progress` keeps the peer's current turn; record the new fact but do not send a continuation to an already-running peer. `blocked` and `final` return control to the controller. A peer write-task final names its checkpoint commit; a blocked or unsafe-to-commit report names the exact dirty paths and reason. A peer's local final may be read once for recovery, but is not normal delivery.
+Only direct peer-to-peer task-message delivery is an ordinary report. Require `TARGET_SETTINGS: preserve`: the worker must omit `model` and `thinking` because task-message overrides apply to the destination controller. `progress` keeps the peer's current turn; record the new fact but do not send a continuation to an already-running peer. Before any correction or continuation, inspect the live task and require that it has no `inProgress` turn. Never send a plain `continue` to an active peer. An urgent HOLD uses a product stop/interrupt or same-turn steer capability when available, then verifies that every in-flight turn ended before any further routing. If more than one in-flight turn exists, enter recovery instead of stopping or continuing only one. `blocked` and `final` return control to the controller. A peer write-task final names its checkpoint commit; a blocked or unsafe-to-commit report names the exact dirty paths and reason. A peer's local final may be read once for recovery, but is not normal delivery.
 
 Record the controller model and reasoning effort before dispatch. On a report-triggered wake, compare the current turn settings with that baseline. If they changed without an explicit user selection, stop routing and report controller-model drift before accepting or integrating evidence.
 
