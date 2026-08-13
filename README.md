@@ -98,7 +98,7 @@ Check whether an installed copy or managed profile has drifted without writing:
 python scripts/install_repository.py --repo /absolute/path/to/repository --check
 ```
 
-On upgrade, omitted CLI options preserve values already present in the managed `AGENTS.md` block. Defaults are used only when a value does not yet exist.
+On upgrade, omitted CLI options preserve values already present in the managed `AGENTS.md` block, except the former installer default `gpt-5.6-luna/max`, which migrates automatically to `app_default`. Defaults are used only when a value does not yet exist. Pass an explicit CLI value only when deliberately binding a repository to a supported model.
 
 The repository profile remains configurable:
 

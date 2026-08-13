@@ -107,6 +107,37 @@ class RepositoryInstallerTests(unittest.TestCase):
         self.assertEqual((repo / "AGENTS.md").read_text(encoding="utf-8"), before)
         self.assertIn("CONTINUITY_POLICY: repository_defined:docs/status.md", before)
 
+    def test_cli_upgrade_migrates_legacy_luna_default_to_app_default(self) -> None:
+        temporary, repo = self.make_repo()
+        self.addCleanup(temporary.cleanup)
+        legacy = INSTALLER.Settings(
+            main_branch="main",
+            worktree_root=repo / ".worktrees",
+            write_task_model="gpt-5.6-luna/max",
+        )
+        INSTALLER.install_repository(repo, legacy)
+
+        result = subprocess.run(
+            [sys.executable, "-B", str(INSTALLER_PATH), "--repo", str(repo)],
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+        agents = (repo / "AGENTS.md").read_text(encoding="utf-8")
+        self.assertIn("WRITE_TASK_MODEL: app_default", agents)
+        self.assertNotIn("WRITE_TASK_MODEL: gpt-5.6-luna/max", agents)
+
+    def test_explicit_cli_can_still_bind_legacy_luna_model(self) -> None:
+        self.assertEqual(
+            INSTALLER.resolve_write_task_model(
+                "gpt-5.6-luna/max", "gpt-5.6-luna/max"
+            ),
+            "gpt-5.6-luna/max",
+        )
+
     def test_check_reports_drift_without_writing(self) -> None:
         temporary, repo = self.make_repo()
         self.addCleanup(temporary.cleanup)

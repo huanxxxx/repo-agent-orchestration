@@ -20,6 +20,7 @@ END_MARKER = "<!-- repo-agent-orchestration:end -->"
 DEFAULT_EXTERNAL_GATES = (
     "merge main; push; deploy; publish; production data; credentials; permissions"
 )
+LEGACY_DEFAULT_WRITE_TASK_MODELS = {"gpt-5.6-luna/max"}
 TEXT_PACKAGE_SUFFIXES = {".md", ".py", ".txt", ".yaml", ".yml", ".toml", ".json"}
 
 
@@ -159,6 +160,14 @@ def render_block(
             END_MARKER,
         )
     )
+
+
+def resolve_write_task_model(explicit: str | None, current: str | None) -> str:
+    if explicit:
+        return explicit
+    if not current or current in LEGACY_DEFAULT_WRITE_TASK_MODELS:
+        return "app_default"
+    return current
 
 
 def update_agents_content(existing: str | None, settings: Settings, newline: str) -> str:
@@ -350,8 +359,9 @@ def main() -> int:
         branch_prefix=args.branch_prefix or current.get("BRANCH_PREFIX", "codex/"),
         task_host_policy=current.get("TASK_HOST_POLICY", "repository_project_local"),
         controller_model_policy=current.get("CONTROLLER_MODEL_POLICY", "app_current_task"),
-        write_task_model=args.write_task_model
-        or current.get("WRITE_TASK_MODEL", "app_default"),
+        write_task_model=resolve_write_task_model(
+            args.write_task_model, current.get("WRITE_TASK_MODEL")
+        ),
         review_task_model=args.review_task_model
         or current.get("REVIEW_TASK_MODEL", "app_default"),
         shared_integration_paths=args.shared_integration_paths
