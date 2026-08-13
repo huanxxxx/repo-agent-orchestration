@@ -203,9 +203,36 @@ class SkillStructureTests(unittest.TestCase):
         )
         self.assertIn("cannot treat its own scope-reopen decision as authority", skill)
         self.assertIn("it may not authorize itself", controller)
-        self.assertIn("Never send another continuation or correction", skill)
-        self.assertIn("Never send a plain `continue` to an active peer", controller)
-        self.assertIn("every in-flight turn ended", controller)
+        self.assertIn(
+            "When the task is `active`, do not send another continuation or correction",
+            skill,
+        )
+        self.assertIn(
+            "If the task is `active`, do not send a plain `continue`", controller
+        )
+        self.assertIn(
+            "current active-turn evidence identifies more than one live turn",
+            controller,
+        )
+
+    def test_live_turn_gate_uses_runtime_status_not_stale_history(self) -> None:
+        skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+        controller = (SKILL / "references" / "controller.md").read_text(
+            encoding="utf-8"
+        )
+        recovery = (SKILL / "references" / "recovery.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("current top-level runtime status", skill)
+        self.assertIn("`idle` or `notLoaded` means no live turn", skill)
+        self.assertIn(
+            "persisted historical turn rows are not a live-turn inventory", controller
+        )
+        self.assertIn(
+            "do not block, archive/restore, interrupt, or ask the user", controller
+        )
+        self.assertIn("do not override it by paging persisted historical turns", recovery)
+        self.assertNotIn("while any turn is `inProgress`", skill)
 
     def test_app_tasks_are_peers_not_internal_subagents(self) -> None:
         skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")

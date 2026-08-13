@@ -11,7 +11,7 @@
 ## Silent task
 
 1. Start only on a real wake: a one-shot checkpoint, task signal, user request, or another controller decision.
-2. Inspect the task once and distinguish an active turn from a completed or idle turn.
+2. Inspect the task's current top-level runtime status once. `idle` or `notLoaded` means no live turn; do not override it by paging persisted historical turns or treating a stale `inProgress` row as stoppable work.
 3. If it is active, do not interrupt or send a duplicate continuation. Stop after the one check.
 4. If it completed without a delivered task message, read its latest final once and treat it as recovery evidence.
 5. A completed turn returns control to the controller. Continue the task only when the recovered state actually requires another stage.
