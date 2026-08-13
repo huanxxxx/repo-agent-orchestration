@@ -10,6 +10,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -364,43 +365,51 @@ def main() -> int:
         help="write nothing and exit nonzero when the installed Skill or managed profile differs",
     )
     args = parser.parse_args()
-
-    repo = resolve_repository(args.repo)
-    existing, _, _ = read_text_format(repo / "AGENTS.md")
-    current = managed_profile_values(existing)
-    profile_root = primary_worktree_root(repo)
-    worktree_root = (
-        args.worktree_root
-        or Path(current.get("WORKTREE_ROOT", str(profile_root / ".worktrees")))
-    ).resolve()
-    if not worktree_root.is_absolute():
-        raise ValueError("worktree root must be absolute")
-    settings = Settings(
-        main_branch=args.main_branch or current.get("MAIN_BRANCH") or detect_main_branch(repo),
-        worktree_root=worktree_root,
-        branch_prefix=args.branch_prefix or current.get("BRANCH_PREFIX", "codex/"),
-        root_worktree_policy=args.root_worktree_policy
-        or current.get("ROOT_WORKTREE_POLICY", "observe_integrate_validate"),
-        task_host_policy=args.task_host_policy
-        or current.get("TASK_HOST_POLICY", "repository_project_local"),
-        controller_model_policy=args.controller_model_policy
-        or current.get("CONTROLLER_MODEL_POLICY", "app_current_task"),
-        write_task_model=resolve_write_task_model(
-            args.write_task_model, current.get("WRITE_TASK_MODEL")
-        ),
-        review_task_model=resolve_review_task_model(
-            args.review_task_model, current.get("REVIEW_TASK_MODEL")
-        ),
-        shared_integration_paths=args.shared_integration_paths
-        or current.get("SHARED_INTEGRATION_PATHS", "none"),
-        continuity_policy=args.continuity_policy
-        or current.get("CONTINUITY_POLICY", "none"),
-        external_gates=args.external_gates
-        or current.get("EXTERNAL_GATES", DEFAULT_EXTERNAL_GATES),
-    )
-    result = install_repository(repo, settings, dry_run=args.dry_run or args.check)
-    print(json.dumps(result, ensure_ascii=False, indent=2))
-    return 0 if not args.check or result["up_to_date"] else 1
+    try:
+        repo = resolve_repository(args.repo)
+        existing, _, _ = read_text_format(repo / "AGENTS.md")
+        current = managed_profile_values(existing)
+        profile_root = primary_worktree_root(repo)
+        worktree_root = (
+            args.worktree_root
+            or Path(current.get("WORKTREE_ROOT", str(profile_root / ".worktrees")))
+        ).resolve()
+        if not worktree_root.is_absolute():
+            raise ValueError("worktree root must be absolute")
+        settings = Settings(
+            main_branch=args.main_branch
+            or current.get("MAIN_BRANCH")
+            or detect_main_branch(repo),
+            worktree_root=worktree_root,
+            branch_prefix=args.branch_prefix or current.get("BRANCH_PREFIX", "codex/"),
+            root_worktree_policy=args.root_worktree_policy
+            or current.get("ROOT_WORKTREE_POLICY", "observe_integrate_validate"),
+            task_host_policy=args.task_host_policy
+            or current.get("TASK_HOST_POLICY", "repository_project_local"),
+            controller_model_policy=args.controller_model_policy
+            or current.get("CONTROLLER_MODEL_POLICY", "app_current_task"),
+            write_task_model=resolve_write_task_model(
+                args.write_task_model, current.get("WRITE_TASK_MODEL")
+            ),
+            review_task_model=resolve_review_task_model(
+                args.review_task_model, current.get("REVIEW_TASK_MODEL")
+            ),
+            shared_integration_paths=args.shared_integration_paths
+            or current.get("SHARED_INTEGRATION_PATHS", "none"),
+            continuity_policy=args.continuity_policy
+            or current.get("CONTINUITY_POLICY", "none"),
+            external_gates=args.external_gates
+            or current.get("EXTERNAL_GATES", DEFAULT_EXTERNAL_GATES),
+        )
+        result = install_repository(repo, settings, dry_run=args.dry_run or args.check)
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0 if not args.check or result["up_to_date"] else 1
+    except (ValueError, OSError) as exc:
+        error = {"error": str(exc)}
+        if args.check:
+            error["check"] = "failed"
+        print(json.dumps(error, ensure_ascii=False, indent=2), file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":

@@ -273,6 +273,57 @@ class RepositoryInstallerTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "inside the target repository"):
             INSTALLER.install_repository(repo, settings)
 
+    def test_check_reports_unmanaged_skill_files_as_json_error(self) -> None:
+        temporary, repo = self.make_repo()
+        self.addCleanup(temporary.cleanup)
+        INSTALLER.install_repository(repo, self.settings(repo))
+        extra = (
+            repo
+            / ".agents"
+            / "skills"
+            / "repo-agent-orchestration"
+            / "unmanaged.txt"
+        )
+        extra.write_text("unmanaged\n", encoding="utf-8")
+
+        result = subprocess.run(
+            [sys.executable, "-B", str(INSTALLER_PATH), "--repo", str(repo), "--check"],
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("unmanaged files", result.stderr)
+        self.assertIn("unmanaged.txt", result.stderr)
+        self.assertNotIn("Traceback", result.stderr)
+
+    def test_cli_rejects_invalid_model_without_traceback(self) -> None:
+        temporary, repo = self.make_repo()
+        self.addCleanup(temporary.cleanup)
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-B",
+                str(INSTALLER_PATH),
+                "--repo",
+                str(repo),
+                "--write-task-model",
+                "bad value",
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("write task model must be", result.stderr)
+        self.assertNotIn("Traceback", result.stderr)
+        self.assertFalse((repo / "AGENTS.md").exists())
+
     def test_package_files_excludes_python_cache_artifacts(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory)
