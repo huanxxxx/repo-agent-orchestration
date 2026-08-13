@@ -97,6 +97,28 @@ class ContractValidationTests(unittest.TestCase):
         )
         self.assertEqual(self.validate("binding", packet), [])
 
+    def test_posix_absolute_paths_are_classified_and_compared_correctly(self) -> None:
+        self.assertEqual(VALIDATOR.canonical_path("/tmp/repo")[0], "posix")
+        self.assertTrue(
+            VALIDATOR.is_descendant_path(
+                "/tmp/repo/.worktrees/write-1", "/tmp/repo/.worktrees"
+            )
+        )
+        self.assertFalse(
+            VALIDATOR.is_descendant_path(
+                "/tmp/repo/.worktrees", "/tmp/repo/.worktrees"
+            )
+        )
+        self.assertEqual(VALIDATOR.normalized_path("/tmp/repo"), "/tmp/repo")
+
+    def test_windows_absolute_paths_are_classified_separately_from_posix(self) -> None:
+        self.assertEqual(VALIDATOR.canonical_path("C:\\repo")[0], "windows")
+        self.assertEqual(VALIDATOR.canonical_path("/tmp/repo")[0], "posix")
+        self.assertNotEqual(
+            VALIDATOR.canonical_path("C:\\repo")[0],
+            VALIDATOR.canonical_path("/tmp/repo")[0],
+        )
+
     def test_binding_rejects_projectless_foreign_task(self) -> None:
         packet = (
             VALID_BINDING.replace("TASK_PROJECT_ID: saved-project", "TASK_PROJECT_ID: projectless")
