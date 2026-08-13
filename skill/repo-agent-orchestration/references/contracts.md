@@ -11,7 +11,7 @@ WORKTREE_ROOT: <repository-local directory>
 BRANCH_PREFIX: <prefix>
 TASK_HOST_POLICY: repository_project_local
 CONTROLLER_MODEL_POLICY: app_current_task
-WRITE_TASK_MODEL: <explicit model/reasoning>
+WRITE_TASK_MODEL: app_default|<explicit model/reasoning>
 REVIEW_TASK_MODEL: app_default|<explicit model/reasoning>
 SHARED_INTEGRATION_PATHS: <paths>
 CONTINUITY_POLICY: none|repository_defined:<index or entry>
@@ -49,12 +49,12 @@ OWNED_PATHS: <exclusive write paths>
 DO_NOT_TOUCH: <shared or excluded paths>
 ACCEPTANCE: <observable conditions>
 REQUIRED_TESTS: <commands or checks>
-MODEL_POLICY: repo_write_default:<model>/<reasoning>|user_explicit:<model>/<reasoning>
+MODEL_POLICY: app_default|repo_write_default:<model>/<reasoning>|user_explicit:<model>/<reasoning>
 ```
 
 These fields are the implementation boundary. `OWNED_PATHS` grants locations, not permission to redesign everything inside them. Implement the smallest change that satisfies `OBJECTIVE`, `ACCEPTANCE`, and `REQUIRED_TESTS`; do not add unrequired features, abstractions, alternate paths, refactors, or hardening. If the accepted outcome requires crossing that boundary, report `blocked` with the conflict and request reauthorization rather than expanding scope. Passing acceptance is the stop condition.
 
-Create and verify one worktree for the peer write task only when it is ready. Create the visible peer with `target: {type: "project", projectId: <saved-project-id>, environment: {type: "local"}}`; never use or omit into the Git-project default of `worktree`. If a same-task fork or internal subagent is genuinely required, it inherits the owning task's execution path and must never request `worktree`. Submit the model through the real task API only while creating or continuing this peer write task. The initial task instruction grants execution conditionally: run the fast route gate first, continue in the same turn when it passes, and report `blocked` without writing when it fails.
+Create and verify one worktree for the peer write task only when it is ready. Create the visible peer with `target: {type: "project", projectId: <saved-project-id>, environment: {type: "local"}}`; never use or omit into the Git-project default of `worktree`. If a same-task fork or internal subagent is genuinely required, it inherits the owning task's execution path and must never request `worktree`. For `app_default`, omit `model` and `thinking`. For an explicit binding, confirm the destination host advertises the requested model, then submit it through the real task API only while creating or continuing this peer write task; do not guess compatibility from the controller model family. The initial task instruction grants execution conditionally: run the fast route gate first, continue in the same turn when it passes, and report `blocked` without writing when it fails.
 
 ## Read-only review dispatch
 

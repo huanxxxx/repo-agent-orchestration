@@ -45,7 +45,7 @@ OWNED_PATHS: src/**; tests/**
 DO_NOT_TOUCH: production; deployment
 ACCEPTANCE: focused tests pass
 REQUIRED_TESTS: python -m unittest
-MODEL_POLICY: repo_write_default:gpt-5.6-luna/max
+MODEL_POLICY: app_default
 """
 
 VALID_REVIEW = rf"""
@@ -136,13 +136,18 @@ class ContractValidationTests(unittest.TestCase):
         packet = VALID_BINDING.replace("TASK_MODE: write", "TASK_MODE: review_worktree")
         self.assertEqual(self.validate("binding", packet), [])
 
-    def test_write_requires_explicit_model_and_full_sha(self) -> None:
-        invalid = VALID_WRITE.replace(
-            "MODEL_POLICY: repo_write_default:gpt-5.6-luna/max",
+    def test_write_accepts_explicit_model_and_requires_full_sha(self) -> None:
+        explicit = VALID_WRITE.replace(
             "MODEL_POLICY: app_default",
+            "MODEL_POLICY: repo_write_default:gpt-5.6-luna/max",
+        )
+        self.assertEqual(self.validate("write", explicit), [])
+        invalid = VALID_WRITE.replace(
+            "MODEL_POLICY: app_default",
+            "MODEL_POLICY: controller_family_auto",
         ).replace(FULL_SHA, "abc123")
         errors = "\n".join(self.validate("write", invalid))
-        self.assertIn("must explicitly bind", errors)
+        self.assertIn("must be app_default", errors)
         self.assertIn("BASE_COMMIT must be a full", errors)
 
     def test_write_rejects_external_worktree(self) -> None:

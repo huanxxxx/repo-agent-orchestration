@@ -70,7 +70,7 @@ OWNED_PATHS: {task_name}/*
 DO_NOT_TOUCH: the sibling writer and repository root
 ACCEPTANCE: binding and isolation checks pass
 REQUIRED_TESTS: python scripts/run_local_demo.py
-MODEL_POLICY: repo_write_default:gpt-5.6-luna/max
+MODEL_POLICY: app_default
 """
 
 

@@ -65,7 +65,7 @@ On correction review, check the accepted blockers and regressions against the sa
 5. The task performs the fast route gate first. A passing task continues implementation or review in the same turn; a failing task writes nothing and reports `blocked`.
 6. Do not require a binding-only turn, a controller receipt decision, and a second authorization message for a route that can be decided deterministically.
 
-Use the repository write model through real creation parameters. Omit a model override only when review policy deliberately says `app_default`. Treat the submitted model as unverified unless the product echoes the effective runtime model.
+For `app_default` write or review policy, omit `model` and `thinking` so the destination host selects its compatible default. For an explicit repository or user binding, first confirm that the task host's advertised model catalog contains the requested model, then use real creation parameters. If the model is unavailable or capability discovery is unavailable, report the explicit-binding gap instead of guessing from the controller model name or silently substituting another model. Treat a submitted binding as unverified unless the product echoes the effective runtime model.
 
 ## Receive reports and yield
 

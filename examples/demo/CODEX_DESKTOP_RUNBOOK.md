@@ -13,7 +13,7 @@ Use this runbook only on a disposable demonstration repository. It exercises the
 
 1. Ask the controller to split independent backend and frontend changes with a shared test acceptance gate.
 2. Record the readiness audit and why each candidate is safe to dispatch concurrently.
-3. Create two repository-local Git worktrees and two visible write tasks. Create each visible task in the saved project with explicit App environment `local`; never select or default to App `worktree`. Bind `WRITE_TASK_MODEL` through real task parameters.
+3. Create two repository-local Git worktrees and two visible write tasks. Create each visible task in the saved project with explicit App environment `local`; never select or default to App `worktree`. Omit model overrides for `WRITE_TASK_MODEL: app_default`; submit an explicit model through real task parameters only after the destination host advertises it.
 4. Give each task conditional authority in its initial instruction: run the fast route gate first and continue in the same turn when it passes. Each command must use its exact execution path.
 5. Freeze one candidate and create a visible read-only review task against that exact worktree and commit. Also exercise either a short `root_readonly` review or an on-demand `detached_snapshot` review.
 6. Require blocked and final reports to use `DELIVERY: task_message:<controller-task-id>` and `TARGET_SETTINGS: preserve`. Confirm the task-message call omits `model` and `thinking` and succeeds before the child emits its local final.

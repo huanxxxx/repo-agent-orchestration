@@ -28,7 +28,7 @@ class RepositoryInstallerTests(unittest.TestCase):
         )
         return temporary, repo
 
-    def settings(self, repo: Path, model: str = "gpt-5.6-luna/max"):
+    def settings(self, repo: Path, model: str = "app_default"):
         return INSTALLER.Settings(
             main_branch="main",
             worktree_root=repo / ".worktrees",
@@ -49,7 +49,7 @@ class RepositoryInstallerTests(unittest.TestCase):
         self.assertIn("ORCHESTRATION_SKILL: $repo-agent-orchestration", agents)
         self.assertIn("TASK_HOST_POLICY: repository_project_local", agents)
         self.assertIn(f"WORKTREE_ROOT: {repo / '.worktrees'}", agents)
-        self.assertIn("WRITE_TASK_MODEL: gpt-5.6-luna/max", agents)
+        self.assertIn("WRITE_TASK_MODEL: app_default", agents)
         self.assertIn("CONTINUITY_POLICY: none", agents)
         self.assertIn(
             "Use the repository-local `$repo-agent-orchestration` Skill", agents

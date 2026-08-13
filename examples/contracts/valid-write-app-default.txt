@@ -1,0 +1,13 @@
+TASK_ID: write-ledger-default
+TASK_ENVIRONMENT: local
+TASK_ARCHIVE_POLICY: controller_after_acceptance
+WORKTREE_ROOT: C:\Projects\ledger\.worktrees
+WORKTREE: C:\Projects\ledger\.worktrees\ledger-default
+BRANCH: codex/ledger-default
+BASE_COMMIT: 0123456789abcdef0123456789abcdef01234567
+OBJECTIVE: implement one isolated ledger change with the host-compatible model
+OWNED_PATHS: src/ledger/**; tests/ledger/**
+DO_NOT_TOUCH: deployment; production data; unrelated modules
+ACCEPTANCE: focused tests pass and the owned diff is complete
+REQUIRED_TESTS: python -m unittest tests.test_ledger
+MODEL_POLICY: app_default

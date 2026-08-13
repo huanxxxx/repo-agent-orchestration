@@ -28,16 +28,16 @@ This Skill turns those failure modes into explicit contracts and fail-closed gat
 
 **No daemon. No dashboard. No shared writable worktree between independent tasks.**
 
-## Default Luna-first profile
+## Default host-compatible profile
 
 | Role | Responsibility | Default policy |
 |---|---|---|
 | Controller | Plan, route, decide, accept, integrate, and close | Current Codex task selection |
-| Peer write task | Implement one independently accepted change | Explicit repository model; installer default is `gpt-5.6-luna/max` |
+| Peer write task | Implement one independently accepted change | App default unless repository or user explicitly binds a supported model |
 | Peer review task | Review one frozen candidate without writing | App default unless repository or user overrides it |
 | Internal subagent | Bounded current-turn retrieval or non-overlapping contribution | Inherits the current task path; never owns a branch or worktree |
 
-The model names are repository configuration, not a promise that every Codex surface exposes the same models or echoes the effective runtime model. A submitted model binding is recorded as submitted; treat it as unverified unless the product returns the effective model.
+The installer defaults write and review tasks to `app_default`, which omits model overrides and lets the destination host select a compatible model. An explicit repository or user binding is used only after the host advertises that model. Model names remain repository configuration, not a promise that every Codex surface exposes the same catalog or echoes the effective runtime model; never infer availability only from the controller model family.
 
 ## Workflow
 
@@ -109,7 +109,7 @@ WORKTREE_ROOT: <absolute repo-local worktree root>
 BRANCH_PREFIX: codex/
 TASK_HOST_POLICY: repository_project_local
 CONTROLLER_MODEL_POLICY: app_current_task
-WRITE_TASK_MODEL: <explicit model>/<reasoning>
+WRITE_TASK_MODEL: app_default|<explicit model>/<reasoning>
 REVIEW_TASK_MODEL: app_default
 SHARED_INTEGRATION_PATHS: <repository-specific paths>
 CONTINUITY_POLICY: none|repository_defined:<index or entry>
@@ -139,7 +139,8 @@ python scripts/validate_examples.py
 Individual examples live in [examples/contracts](examples/contracts):
 
 - valid Windows binding;
-- valid Luna Max write task;
+- valid App-default write task;
+- valid explicit Luna Max write task;
 - valid read-only review;
 - valid final milestone;
 - invalid projectless task;

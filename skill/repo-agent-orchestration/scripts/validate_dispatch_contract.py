@@ -295,13 +295,15 @@ def validate_model(kind: str, value: str) -> list[str]:
     if has_placeholder(value):
         return ["MODEL_POLICY must not contain placeholders"]
     if kind == "write":
+        if value == "app_default":
+            return []
         if MODEL_POLICY_RE.fullmatch(value) and value.startswith(
             ("repo_write_default:", "user_explicit:")
         ):
             return []
         return [
-            "write MODEL_POLICY must explicitly bind "
-            "repo_write_default:<model>/<reasoning> or user_explicit:<model>/<reasoning>"
+            "write MODEL_POLICY must be app_default, "
+            "repo_write_default:<model>/<reasoning>, or user_explicit:<model>/<reasoning>"
         ]
     if value == "app_default":
         return []

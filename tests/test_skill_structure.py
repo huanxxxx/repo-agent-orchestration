@@ -49,7 +49,20 @@ class SkillStructureTests(unittest.TestCase):
         )
         match = re.search(r"^WRITE_TASK_MODEL: (.+)$", contracts, re.MULTILINE)
         self.assertIsNotNone(match)
-        self.assertTrue(match.group(1).startswith("<"))
+        self.assertEqual(match.group(1), "app_default|<explicit model/reasoning>")
+
+    def test_write_model_defaults_to_host_compatible_and_keeps_explicit_binding(self) -> None:
+        skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+        contracts = (SKILL / "references" / "contracts.md").read_text(
+            encoding="utf-8"
+        )
+        controller = (SKILL / "references" / "controller.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("For `app_default`, omit `model` and `thinking`", skill)
+        self.assertIn("MODEL_POLICY: app_default|repo_write_default", contracts)
+        self.assertIn("host's advertised model catalog", controller)
+        self.assertIn("instead of guessing from the controller model name", controller)
 
     def test_skill_uses_repository_host_and_lightweight_route_gate(self) -> None:
         skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")

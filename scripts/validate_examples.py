@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 VALIDATOR_PATH = ROOT / "skill" / "repo-agent-orchestration" / "scripts" / "validate_dispatch_contract.py"
 CASES = {
     "valid-binding-windows.txt": ("binding", ()),
+    "valid-write-app-default.txt": ("write", ()),
     "valid-write-luna-max.txt": ("write", ()),
     "valid-review.txt": ("review", ()),
     "valid-final-update.txt": ("update", ()),

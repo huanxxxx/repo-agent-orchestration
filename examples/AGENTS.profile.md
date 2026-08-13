@@ -14,11 +14,11 @@ WORKTREE_ROOT: <absolute-repository-path>/.worktrees
 BRANCH_PREFIX: codex/
 TASK_HOST_POLICY: repository_project_local
 CONTROLLER_MODEL_POLICY: app_current_task
-WRITE_TASK_MODEL: <execution-model>/<reasoning>
+WRITE_TASK_MODEL: app_default|<execution-model>/<reasoning>
 REVIEW_TASK_MODEL: app_default
 SHARED_INTEGRATION_PATHS: <repository-specific shared paths>
 CONTINUITY_POLICY: none|repository_defined:<index or entry>
 EXTERNAL_GATES: merge main; push; deploy; publish; production data; credentials; permissions
 ```
 
-`WRITE_TASK_MODEL` must be submitted through actual task creation or continuation parameters. `REVIEW_TASK_MODEL: app_default` means deliberately omitting a model override; it does not guarantee inheritance of a controller model manually changed away from the App default.
+`WRITE_TASK_MODEL: app_default` and `REVIEW_TASK_MODEL: app_default` mean deliberately omitting `model` and `thinking` so the destination host selects its compatible default. An explicit model must be submitted through actual task creation or continuation parameters only after the destination host advertises it; it does not become available merely because the controller belongs to a particular model family.

@@ -30,7 +30,7 @@ class Settings:
     branch_prefix: str = "codex/"
     task_host_policy: str = "repository_project_local"
     controller_model_policy: str = "app_current_task"
-    write_task_model: str = "gpt-5.6-luna/max"
+    write_task_model: str = "app_default"
     review_task_model: str = "app_default"
     shared_integration_paths: str = "none"
     continuity_policy: str = "none"
@@ -351,7 +351,7 @@ def main() -> int:
         task_host_policy=current.get("TASK_HOST_POLICY", "repository_project_local"),
         controller_model_policy=current.get("CONTROLLER_MODEL_POLICY", "app_current_task"),
         write_task_model=args.write_task_model
-        or current.get("WRITE_TASK_MODEL", "gpt-5.6-luna/max"),
+        or current.get("WRITE_TASK_MODEL", "app_default"),
         review_task_model=args.review_task_model
         or current.get("REVIEW_TASK_MODEL", "app_default"),
         shared_integration_paths=args.shared_integration_paths
