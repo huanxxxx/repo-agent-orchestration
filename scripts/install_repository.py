@@ -23,6 +23,8 @@ DEFAULT_EXTERNAL_GATES = (
 )
 LEGACY_DEFAULT_WRITE_TASK_MODELS = {"gpt-5.6-luna/max"}
 PROFILE_MODEL_RE = re.compile(r"^(?:[^<>\s]+/[^<>/\s]+)$")
+TASK_HOST_POLICIES = ("repository_project_local",)
+CONTROLLER_MODEL_POLICIES = ("app_current_task",)
 TEXT_PACKAGE_SUFFIXES = {".md", ".py", ".txt", ".yaml", ".yml", ".toml", ".json"}
 
 
@@ -172,6 +174,12 @@ def validate_profile_model(kind: str, value: str) -> str:
     )
 
 
+def validate_fixed_policy(kind: str, value: str, allowed: tuple[str, ...]) -> str:
+    if value in allowed:
+        return value
+    raise ValueError(f"{kind} must be one of: {', '.join(allowed)}")
+
+
 def resolve_write_task_model(explicit: str | None, current: str | None) -> str:
     if explicit:
         return validate_profile_model("write task model", explicit)
@@ -279,6 +287,12 @@ def package_payload(path: Path) -> bytes:
 
 def install_repository(repo_value: Path, settings: Settings, dry_run: bool = False) -> dict[str, object]:
     repo = resolve_repository(repo_value)
+    validate_fixed_policy("task host policy", settings.task_host_policy, TASK_HOST_POLICIES)
+    validate_fixed_policy(
+        "controller model policy",
+        settings.controller_model_policy,
+        CONTROLLER_MODEL_POLICIES,
+    )
     validate_profile_model("write task model", settings.write_task_model)
     validate_profile_model("review task model", settings.review_task_model)
     profile_root = primary_worktree_root(repo)
@@ -351,8 +365,8 @@ def main() -> int:
     parser.add_argument("--worktree-root", type=Path)
     parser.add_argument("--branch-prefix")
     parser.add_argument("--root-worktree-policy")
-    parser.add_argument("--task-host-policy")
-    parser.add_argument("--controller-model-policy")
+    parser.add_argument("--task-host-policy", choices=TASK_HOST_POLICIES)
+    parser.add_argument("--controller-model-policy", choices=CONTROLLER_MODEL_POLICIES)
     parser.add_argument("--write-task-model")
     parser.add_argument("--review-task-model")
     parser.add_argument("--shared-integration-paths")

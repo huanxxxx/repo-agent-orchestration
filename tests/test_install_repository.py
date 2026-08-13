@@ -228,6 +228,55 @@ class RepositoryInstallerTests(unittest.TestCase):
         self.assertIn("WRITE_TASK_MODEL: gpt-5.6-luna/max", agents)
         self.assertTrue(result["agents_changed"])
 
+    def test_install_rejects_undefined_fixed_protocol_policies(self) -> None:
+        for field, value, error in (
+            ("task_host_policy", "anything", "task host policy must be one of"),
+            (
+                "controller_model_policy",
+                "anything",
+                "controller model policy must be one of",
+            ),
+        ):
+            with self.subTest(field=field):
+                temporary, repo = self.make_repo()
+                self.addCleanup(temporary.cleanup)
+                values = {
+                    "main_branch": "main",
+                    "worktree_root": repo / ".worktrees",
+                    field: value,
+                }
+
+                with self.assertRaisesRegex(ValueError, error):
+                    INSTALLER.install_repository(repo, INSTALLER.Settings(**values))
+
+                self.assertFalse((repo / "AGENTS.md").exists())
+                self.assertFalse((repo / ".agents").exists())
+
+    def test_cli_rejects_undefined_fixed_protocol_policy_before_write(self) -> None:
+        temporary, repo = self.make_repo()
+        self.addCleanup(temporary.cleanup)
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-B",
+                str(INSTALLER_PATH),
+                "--repo",
+                str(repo),
+                "--task-host-policy",
+                "anything",
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("invalid choice", result.stderr)
+        self.assertFalse((repo / "AGENTS.md").exists())
+        self.assertFalse((repo / ".agents").exists())
+
     def test_check_reports_drift_without_writing(self) -> None:
         temporary, repo = self.make_repo()
         self.addCleanup(temporary.cleanup)
