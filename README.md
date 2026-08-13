@@ -100,6 +100,8 @@ python scripts/install_repository.py --repo /absolute/path/to/repository --check
 
 On upgrade, omitted CLI options preserve values already present in the managed `AGENTS.md` block, except the former installer default `gpt-5.6-luna/max`, which migrates automatically to `app_default`. Defaults are used only when a value does not yet exist. Pass an explicit CLI value only when deliberately binding a repository to a supported model.
 
+The installer accepts `--main-branch`, `--worktree-root`, `--branch-prefix`, `--root-worktree-policy`, `--task-host-policy`, `--controller-model-policy`, `--write-task-model`, `--review-task-model`, `--shared-integration-paths`, `--continuity-policy`, and `--external-gates`. Model values must be `app_default` or `<model>/<reasoning>`; invalid values are rejected before any write. Operational failures print a structured JSON error and exit nonzero instead of a traceback.
+
 The repository profile remains configurable:
 
 ```text

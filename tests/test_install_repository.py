@@ -28,12 +28,71 @@ class RepositoryInstallerTests(unittest.TestCase):
         )
         return temporary, repo
 
+    def commit_baseline(self, repo: Path, branch: str | None = None) -> None:
+        subprocess.run(
+            ["git", "-C", str(repo), "config", "user.name", "Test"], check=True
+        )
+        subprocess.run(
+            ["git", "-C", str(repo), "config", "user.email", "test@example.invalid"],
+            check=True,
+        )
+        if branch:
+            subprocess.run(["git", "-C", str(repo), "checkout", "-b", branch], check=True)
+        (repo / "README.md").write_text("# test\n", encoding="utf-8")
+        subprocess.run(["git", "-C", str(repo), "add", "README.md"], check=True)
+        subprocess.run(
+            ["git", "-C", str(repo), "commit", "-m", "baseline"], check=True
+        )
+
     def settings(self, repo: Path, model: str = "app_default"):
         return INSTALLER.Settings(
             main_branch="main",
             worktree_root=repo / ".worktrees",
             write_task_model=model,
         )
+
+    def test_detect_main_branch_prefers_remote_origin_head(self) -> None:
+        temporary, repo = self.make_repo()
+        self.addCleanup(temporary.cleanup)
+        self.commit_baseline(repo)
+        head = subprocess.run(
+            ["git", "-C", str(repo), "rev-parse", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        ).stdout.strip()
+        subprocess.run(
+            ["git", "-C", str(repo), "update-ref", "refs/remotes/origin/main", head],
+            check=True,
+        )
+        subprocess.run(
+            [
+                "git",
+                "-C",
+                str(repo),
+                "symbolic-ref",
+                "refs/remotes/origin/HEAD",
+                "refs/remotes/origin/main",
+            ],
+            check=True,
+        )
+
+        self.assertEqual(INSTALLER.detect_main_branch(repo), "main")
+
+    def test_detect_main_branch_uses_standard_candidate(self) -> None:
+        temporary, repo = self.make_repo()
+        self.addCleanup(temporary.cleanup)
+        self.commit_baseline(repo)
+
+        self.assertEqual(INSTALLER.detect_main_branch(repo), "main")
+
+    def test_detect_main_branch_falls_back_to_current_branch(self) -> None:
+        temporary, repo = self.make_repo()
+        self.addCleanup(temporary.cleanup)
+        self.commit_baseline(repo, "feature-x")
+
+        self.assertEqual(INSTALLER.detect_main_branch(repo), "feature-x")
 
     def test_installs_skill_and_creates_minimal_agents_file(self) -> None:
         temporary, repo = self.make_repo()
