@@ -202,6 +202,7 @@ OpenAI's desktop worktree feature uses Codex-managed worktrees and is documented
 - A queued App worktree setup or worktree-creation receipt is a failed peer route, not a task to wait on or recover as if it had started.
 - Accepted peer tasks are archived explicitly by the authority that dispatched them; a peer `final` is delivery, not archival.
 - Repository continuity packages are optional durable fact anchors, never task-message channels, authorization tokens, or workflow engines.
+- A post-PASS continuity-only closeout keeps the reviewed checkpoint distinct from its later bookkeeping commit and never triggers review merely to record that PASS occurred.
 - A clean task worktree uses its HEAD as the recovery anchor; prechange snapshots require an explicit request or an authorized risky rewrite of task-owned tracked changes.
 - Coherent task-owned output is committed locally before a cross-turn pause, ownership handoff, formal review, or final; unsafe mixed ownership is reported precisely instead of staged.
 - Write tasks make the smallest acceptance-satisfying change and stop when acceptance passes; unrequested architecture, alternate paths, and hardening require a separately authorized scope.

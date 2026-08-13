@@ -204,6 +204,23 @@ class SkillStructureTests(unittest.TestCase):
         self.assertIn("HEAD of a clean task worktree", recovery)
         self.assertIn("user explicitly requests one", recovery)
 
+    def test_post_pass_continuity_closeout_does_not_reopen_review(self) -> None:
+        skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+        controller = (SKILL / "references" / "controller.md").read_text(
+            encoding="utf-8"
+        )
+        continuity = (SKILL / "references" / "continuity.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("do not reopen review merely because", skill)
+        self.assertIn("reviewed checkpoint distinct from the later continuity checkpoint", skill)
+        self.assertIn("sole detailed hot-state surface", continuity)
+        self.assertIn("does not invalidate the prior PASS", continuity)
+        self.assertIn("Do not dispatch a peer reviewer", continuity)
+        self.assertIn("invent new acceptance criteria", continuity)
+        self.assertIn("classify any proposed closeout diff", controller)
+        self.assertIn("Never dispatch a docs-only reviewer", controller)
+
     def test_focused_evidence_cannot_claim_full_or_production_proof(self) -> None:
         skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
         self.assertIn("focused checks do not prove the full repository", skill)

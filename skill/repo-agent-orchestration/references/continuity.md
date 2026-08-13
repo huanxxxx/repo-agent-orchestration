@@ -19,4 +19,20 @@ None substitutes for another. A package is not an authorization token, workflow 
 5. Keep detailed task reports in App task messages and reproducible evidence in its natural repository or artifact location. Link rather than duplicate.
 6. At closure, promote stable facts to the repository's declared long-lived source, record remaining limits, and archive or retain the package according to repository policy.
 
+## Close a passed candidate without reopening it
+
+Classify every proposed post-PASS diff before writing it:
+
+- `continuity_only` records an existing verdict, reviewed checkpoint, current state, next action, recovery coordinate, or archive pointer. It changes no implementation, normative design or contract, acceptance criterion, non-goal, finding, or verdict-bearing evidence.
+- `normative` changes one of those reviewed surfaces or introduces a new requirement, claim, finding, or evidence conclusion.
+
+For `continuity_only` closeout:
+
+1. Use the repository-declared rolling handoff or equivalent as the sole detailed hot-state surface. Update active or package indexes only with the minimal route, state token, or pointer required by repository policy; do not mirror detailed status across design, plan, task-matrix, acceptance, and evidence documents.
+2. Record the reviewed checkpoint separately from the later continuity checkpoint. A bookkeeping commit that moves HEAD does not invalidate the prior PASS for the reviewed checkpoint.
+3. Let the authority holding the repository-root write lease verify the exact allowlisted paths and fields, then commit the closeout. Do not dispatch a peer reviewer, invent new acceptance criteria, or review merely to prove that a document says the review passed.
+4. If the diff is actually `normative`, stop before writing and route it through the applicable design, acceptance, or implementation reopen path.
+
+A `continuity_only` closeout does not reopen review. Re-review only when implementation, normative design or contracts, acceptance, non-goals, findings, or verdict-bearing evidence changes.
+
 Do not create a package for short work merely to satisfy orchestration. Do not let a historical package reactivate obsolete contracts, gates, roles, or commands.
