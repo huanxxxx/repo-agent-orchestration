@@ -51,12 +51,42 @@ OBSOLETE_DISPATCH_FIELDS = {
     "NO_REPORT_CHECK_AFTER",
 }
 OBSOLETE_REPORT_FIELDS = {
-    "MILESTONE",
     "REPORT_DELIVERY",
     "TURN_STATE",
     "BLOCKER_OR_NEXT",
 }
 REVIEW_WRITABLE_FIELDS = {"WORKTREE", "BRANCH", "BASE_COMMIT", "OWNED_PATHS"}
+DELIVERY_PLAN_FIELDS = (
+    "READY_SET",
+    "PARALLEL_DISPATCH",
+    "DEPENDENCY_GRAPH",
+    "SHARED_PATH_OWNER",
+)
+
+
+def obsolete_fields(kind: str) -> set[str]:
+    fields: set[str] = set()
+    if kind in {"write", "review", "design_handoff"}:
+        fields.update(OBSOLETE_DISPATCH_FIELDS)
+    if kind in {"update", "delivery_update", "design_reopen", "design_decision"}:
+        fields.update(OBSOLETE_REPORT_FIELDS)
+    return fields
+
+
+def schema_integrity_errors(kind: str | None = None) -> list[str]:
+    """Return contradictions between declared packet fields and rejection rules."""
+    kinds = (kind,) if kind is not None else tuple(REQUIRED)
+    errors: list[str] = []
+    for packet_kind in kinds:
+        conflicts = sorted(
+            set(allowed_fields(packet_kind)) & obsolete_fields(packet_kind)
+        )
+        if conflicts:
+            errors.append(
+                f"{packet_kind} schema declares obsolete fields: "
+                + ", ".join(conflicts)
+            )
+    return errors
 
 
 def parse_fields(text: str) -> dict[str, str]:
@@ -386,12 +416,8 @@ def validate_required_task_message(fields: dict[str, str]) -> list[str]:
 
 def validate(kind: str, fields: dict[str, str]) -> list[str]:
     """Validate portable packet shape; use validate_live or the CLI at boundaries."""
-    errors: list[str] = []
-    recognized_obsolete: set[str] = set()
-    if kind in {"write", "review", "design_handoff"}:
-        recognized_obsolete.update(OBSOLETE_DISPATCH_FIELDS)
-    if kind in {"update", "delivery_update", "design_reopen", "design_decision"}:
-        recognized_obsolete.update(OBSOLETE_REPORT_FIELDS)
+    errors = schema_integrity_errors(kind)
+    recognized_obsolete = obsolete_fields(kind)
     unknown = sorted(
         set(fields) - set(allowed_fields(kind)) - recognized_obsolete
     )
@@ -403,10 +429,7 @@ def validate(kind: str, fields: dict[str, str]) -> list[str]:
         elif not fields[name]:
             errors.append(f"empty field: {name}")
 
-    if kind in {"write", "review", "design_handoff"}:
-        add_obsolete_errors(errors, fields, OBSOLETE_DISPATCH_FIELDS)
-    if kind in {"update", "delivery_update", "design_reopen", "design_decision"}:
-        add_obsolete_errors(errors, fields, OBSOLETE_REPORT_FIELDS)
+    add_obsolete_errors(errors, fields, recognized_obsolete)
 
     if kind in {"binding", "write", "review", "design_handoff"}:
         if fields.get("TASK_ENVIRONMENT", "").casefold() != "local":
@@ -660,20 +683,35 @@ def validate(kind: str, fields: dict[str, str]) -> list[str]:
         if fields.get("DECISION_REQUIRED", "").casefold() not in {"yes", "no"}:
             errors.append("DECISION_REQUIRED must be yes or no")
         if update_type == "plan":
-            for name in (
-                "READY_SET",
-                "PARALLEL_DISPATCH",
-                "DEPENDENCY_GRAPH",
-                "SHARED_PATH_OWNER",
-            ):
+            for name in DELIVERY_PLAN_FIELDS:
                 if not fields.get(name):
                     errors.append(f"delivery plan missing field: {name}")
-        if update_type == "milestone" and not fields.get("MILESTONE"):
-            errors.append("delivery milestone missing field: MILESTONE")
-        if update_type == "final" and fields.get(
-            "DECISION_REQUIRED", ""
-        ).casefold() != "yes":
-            errors.append("delivery final requires DECISION_REQUIRED=yes")
+            if fields.get("MILESTONE"):
+                errors.append("delivery plan must not declare MILESTONE")
+        if update_type == "milestone":
+            if not fields.get("MILESTONE"):
+                errors.append("delivery milestone missing field: MILESTONE")
+            plan_fields = sorted(
+                name for name in DELIVERY_PLAN_FIELDS if fields.get(name)
+            )
+            if plan_fields:
+                errors.append(
+                    "delivery milestone must not declare plan-only fields: "
+                    + ", ".join(plan_fields)
+                )
+        if update_type == "final":
+            if fields.get("DECISION_REQUIRED", "").casefold() != "yes":
+                errors.append("delivery final requires DECISION_REQUIRED=yes")
+            variant_fields = sorted(
+                name
+                for name in set(DELIVERY_PLAN_FIELDS) | {"MILESTONE"}
+                if fields.get(name)
+            )
+            if variant_fields:
+                errors.append(
+                    "delivery final must not declare plan or milestone fields: "
+                    + ", ".join(variant_fields)
+                )
         for name in (
             "SUMMARY",
             "DESIGN_ALIGNMENT",

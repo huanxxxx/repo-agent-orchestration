@@ -146,7 +146,9 @@ Individual examples live in [examples/contracts](examples/contracts):
 - valid App-default write task;
 - valid explicit Luna Max write task;
 - valid read-only review;
-- valid final milestone;
+- valid worker final update;
+- valid architected delivery plan and milestone;
+- valid design handoff, reopen, and decision packets;
 - invalid projectless task;
 - invalid worktree path escape;
 - invalid App-managed worktree environment;
@@ -207,6 +209,8 @@ OpenAI's desktop worktree feature uses Codex-managed worktrees and is documented
 - Coherent task-owned output is committed locally before a cross-turn pause, ownership handoff, formal review, or final; unsafe mixed ownership is reported precisely instead of staged.
 - Write tasks make the smallest acceptance-satisfying change and stop when acceptance passes; unrequested architecture, alternate paths, and hardening require a separately authorized scope.
 - A product-required peer startup wait occurs at most once; ordinary active, progress, or timeout results end the controller turn instead of starting another wait.
+- Each authority wake processes one bounded event batch and ends; future peer events must wake a new turn rather than extending a polling session.
+- Constructor, schema, or validator contradictions fail closed as `PROTOCOL_BLOCKED`; packet kinds cannot be relabelled to bypass the failed boundary.
 - Merge, push, deployment, publication, production data, credentials, and permissions remain separate gates.
 
 ## Run tests

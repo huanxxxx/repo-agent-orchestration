@@ -47,6 +47,8 @@ delivery_plan_packet(...) / delivery_milestone_packet(...) / delivery_final_pack
 
 Run `validate_dispatch_contract.py` at the actual dispatch or report boundary for live checks. The constructor reduces handwritten shape and routing errors; it does not prove repository state or workflow completion.
 
+Constructor or validator failure closes that task boundary as `PROTOCOL_BLOCKED`. Do not relabel the same content as `plan`, `milestone`, `final`, or a generic update to evade the failure, and do not handcraft a packet that bypasses the shared schema. Report the protocol defect in the current task and stop only the affected routing or acceptance action; unrelated authorized work may continue only when it has no dependency on that boundary.
+
 ## Internal subagent handoff
 
 Internal subagents do not cross a user-visible task boundary, so do not give them a branch, worktree, App task, model-binding, or task-report contract. Give only the current-turn facts they need:
@@ -189,6 +191,8 @@ NEXT: <next action>
 ```
 
 Do not send routine peer progress. `DECISION_REQUIRED: no` is informational and does not pause authorized work inside the frozen design. A final update always uses `yes` because the design authority owns final design-consistency acceptance.
+
+The three delivery variants are exclusive: `plan` requires the four planning fields and omits `MILESTONE`; `milestone` requires `MILESTONE` and omits the planning fields; `final` omits both sets. If the declared variant cannot carry the intended fact, stop with `PROTOCOL_BLOCKED` instead of changing its label.
 
 ### Design reopen request and decision
 

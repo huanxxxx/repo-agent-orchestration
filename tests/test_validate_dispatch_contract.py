@@ -140,6 +140,27 @@ TARGET_SETTINGS: preserve
 NEXT: continue authorized delivery
 """
 
+VALID_DELIVERY_MILESTONE = rf"""
+DELIVERY_TASK_ID: delivery-1
+DESIGN_TASK_ID: design-1
+ORCHESTRATION_MODE: architected
+SOURCE_ROLE: delivery_controller
+TARGET_ROLE: design_authority
+TARGET_TASK_ID: design-1
+UPDATE_TYPE: milestone
+DESIGN_CHECKPOINT: {FULL_SHA}
+SUMMARY: S2B-0 reached its frozen checkpoint
+DESIGN_ALIGNMENT: the candidate preserves D1-D2
+EVIDENCE: checkpoint and focused tests recorded
+RISKS_OR_LIMITS: independent review pending
+PENDING_ITEMS: independent review
+DECISION_REQUIRED: no
+MILESTONE: S2B-0 candidate frozen; independent review pending
+DELIVERY: task_message:design-1
+TARGET_SETTINGS: preserve
+NEXT: delivery continues without design action
+"""
+
 VALID_DESIGN_REOPEN = rf"""
 DELIVERY_TASK_ID: delivery-1
 DESIGN_TASK_ID: design-1
@@ -196,6 +217,44 @@ class ContractValidationTests(unittest.TestCase):
         ):
             with self.subTest(kind=kind):
                 self.assertEqual(self.validate(kind, packet), [])
+
+    def test_delivery_milestone_packet_is_valid(self) -> None:
+        self.assertEqual(
+            self.validate("delivery_update", VALID_DELIVERY_MILESTONE), []
+        )
+
+    def test_delivery_update_variants_reject_cross_type_fields(self) -> None:
+        missing_milestone = "\n".join(
+            line
+            for line in VALID_DELIVERY_MILESTONE.splitlines()
+            if not line.startswith("MILESTONE:")
+        )
+        self.assertIn(
+            "delivery milestone missing field: MILESTONE",
+            self.validate("delivery_update", missing_milestone),
+        )
+
+        plan_with_milestone = (
+            VALID_DELIVERY_PLAN
+            + "\nMILESTONE: relabelled milestone content\n"
+        )
+        self.assertIn(
+            "delivery plan must not declare MILESTONE",
+            self.validate("delivery_update", plan_with_milestone),
+        )
+
+        milestone_with_plan_fields = VALID_DELIVERY_MILESTONE.replace(
+            "MILESTONE: S2B-0 candidate frozen; independent review pending",
+            "MILESTONE: S2B-0 candidate frozen; independent review pending\n"
+            "READY_SET: S2B-R",
+        )
+        self.assertIn(
+            "delivery milestone must not declare plan-only fields: READY_SET",
+            self.validate("delivery_update", milestone_with_plan_fields),
+        )
+
+    def test_schema_fields_do_not_conflict_with_obsolete_fields(self) -> None:
+        self.assertEqual(VALIDATOR.schema_integrity_errors(), [])
 
     def test_binding_accepts_windows_extended_root_equivalence(self) -> None:
         packet = VALID_BINDING.replace(

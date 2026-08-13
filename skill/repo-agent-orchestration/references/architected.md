@@ -15,6 +15,8 @@ Own the product objective, global design, frozen decisions, non-goals, acceptanc
 - Create a checkpoint for the design candidate and obtain an independent design-review PASS against its frozen baseline before sending `DESIGN_HANDOFF`.
 - Own design writes before handoff. `DESIGN_HANDOFF` transfers the single repository-root write lease to the delivery controller; remain read-only while delivery owns that lease.
 - Do not dispatch implementation peers or manage their routine progress. Receive only the delivery plan, decision-relevant milestones, design reopen requests, and final delivery evidence.
+- End the design-authority turn after sending `DESIGN_HANDOFF` or `DESIGN_DECISION`, or after handling the decision requested by one `DELIVERY_UPDATE`. For `DECISION_REQUIRED: no`, record the bounded fact and end the turn without replying merely to acknowledge it.
+- While delivery owns the write lease, the design authority must not inspect, wait on, or monitor the delivery controller's downstream peers, task statuses, logs, worktrees, environment setup, or routine checkpoints. It may inspect repository evidence cited in a formal decision packet or perform user-authorized route recovery, but it does not shadow delivery execution.
 
 ### Delivery controller
 
@@ -27,6 +29,7 @@ Own implementation planning, the dependency graph, ready-set calculation, task d
 - Send `DELIVERY_UPDATE` for the initial plan, a decision-relevant milestone, and final delivery. A report with `DECISION_REQUIRED: no` does not pause work inside the frozen design.
 - Send `DESIGN_REOPEN_REQUEST` when implementation exposes a false assumption, incompatible constraint, or required boundary change. Pause the affected scope and its dependents; continue unrelated ready work only when independence is proven.
 - When a reopen needs a new design checkpoint, stop root integration, checkpoint all delivery-owned root changes, and reconcile root status with its recorded baseline before the design authority temporarily retakes the root-write lease. Unaffected peers may continue only in their isolated worktrees. The new `DESIGN_DECISION` transfers the lease back with the updated checkpoint.
+- End the controller turn after completing the synchronous planning, dispatch, routing, integration, or reporting actions caused by the current event. A peer remaining active, a future checkpoint, or another message expected later is not permission to keep the turn open.
 
 ### Independent peers
 
@@ -42,6 +45,6 @@ delivery controller --DELIVERY_UPDATE/DESIGN_REOPEN_REQUEST--> design authority
 design authority --DESIGN_DECISION--> delivery controller
 ```
 
-All App-created tasks remain runtime peers. The arrows describe authority and task-message destinations, not App parent-child ownership. Neither the design authority nor the delivery controller stays online to poll another peer.
+All App-created tasks remain runtime peers. The arrows describe authority and task-message destinations, not App parent-child ownership. Each wake handles one bounded event batch; neither the design authority nor the delivery controller stays online to poll another peer or stretches one turn across later task messages.
 
 Use [contracts.md](contracts.md) and the pure constructor before crossing these boundaries. Before its final report, the delivery controller accepts and archives completed implementation peers. A delivery final is evidence, not overall acceptance: the design authority compares the integrated result with the frozen design checkpoint. If it passes, archive the accepted delivery-controller peer and report completion without waking it merely to acknowledge acceptance. If delivery must resume, send a bounded `DESIGN_DECISION` instead.

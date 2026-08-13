@@ -279,6 +279,24 @@ class SkillStructureTests(unittest.TestCase):
         self.assertNotIn("current_turn_once", contracts)
         self.assertIn("OBSOLETE_DISPATCH_FIELDS", validator)
 
+    def test_authorities_yield_after_events_and_fail_closed_on_protocol_errors(self) -> None:
+        skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+        architected = (SKILL / "references" / "architected.md").read_text(
+            encoding="utf-8"
+        )
+        controller = (SKILL / "references" / "controller.md").read_text(
+            encoding="utf-8"
+        )
+        contracts = (SKILL / "references" / "contracts.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("one bounded event batch", skill)
+        self.assertIn("PROTOCOL_BLOCKED", skill)
+        self.assertIn("End the design-authority turn", architected)
+        self.assertIn("must not inspect, wait on, or monitor", architected)
+        self.assertIn("End the controller turn", controller)
+        self.assertIn("Do not relabel the same content", contracts)
+
     def test_peer_creation_is_single_attempt_and_unknown_receipts_are_reconciled(self) -> None:
         skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
         controller = (SKILL / "references" / "controller.md").read_text(

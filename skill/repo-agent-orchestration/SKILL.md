@@ -58,7 +58,11 @@ A write task implements the smallest change that satisfies its `OBJECTIVE` and `
 10. Before continuing a peer task, inspect its current top-level runtime status. `idle` or `notLoaded` means no live turn even if a persisted historical row still says `inProgress`; record that stale metadata, but do not page history, block, interrupt, or ask the user to stop it. When the task is `active`, do not send another continuation or correction; use only the product's current active-turn evidence for stop, steer, and multi-in-flight recovery. An urgent HOLD must be followed by confirmation that the current runtime is no longer active.
 11. After dispatching or continuing a peer task, perform any product-required startup wait at most once to detect immediate failure or confirm that the peer started. An ordinary active, progress, or timeout result is not authority to wait again: end the controller turn. Resume on a delivered task message, a real one-shot checkpoint, a blocker/input signal, a user status request, or another acceptance event. Do not poll recursively or invent an immediate check that cannot detect later silence.
 
+Treat each App wake as one bounded event batch. Process the report or decision that caused the wake plus only already-delivered facts needed for the same atomic decision, finish its synchronous routing actions, and end the authority turn. Future peer activity must cause a later wake; it is not a reason to keep either authority online.
+
 Run `scripts/validate_dispatch_contract.py` on dispatch, route, and report packets when the packet crosses a task boundary. For dispatch and route packets, the CLI also proves that required paths currently exist and match the live Git worktree registry, branch, and commit; remembered task paths never substitute for this check. The validator is a small boundary check, not a workflow engine.
+
+If the constructor, schema, and validator cannot represent an intended cross-task packet consistently, mark that boundary `PROTOCOL_BLOCKED` and stop the affected cross-task action. Do not handcraft a bypass, substitute another packet kind, or relabel the same facts. Unrelated already-authorized work may continue only when it does not depend on the broken boundary for routing, acceptance, or evidence.
 
 ## Accept, integrate, and recover
 

@@ -43,6 +43,20 @@ def delivery_plan_fields() -> dict[str, str]:
     }
 
 
+def delivery_milestone_fields() -> dict[str, str]:
+    fields = delivery_plan_fields()
+    for name in (
+        "READY_SET",
+        "PARALLEL_DISPATCH",
+        "DEPENDENCY_GRAPH",
+        "SHARED_PATH_OWNER",
+    ):
+        fields.pop(name)
+    fields["SUMMARY"] = "S2B-0 reached its frozen checkpoint"
+    fields["MILESTONE"] = "S2B-0 candidate frozen; independent review pending"
+    return fields
+
+
 class PacketConstructorTests(unittest.TestCase):
     def test_delivery_plan_injects_type_and_uses_schema_order(self) -> None:
         packet = CONSTRUCTOR.delivery_plan_packet(**delivery_plan_fields())
@@ -59,6 +73,18 @@ class PacketConstructorTests(unittest.TestCase):
         self.assertTrue(text.startswith("DELIVERY_UPDATE\n"))
         parsed = CONSTRUCTOR.build_packet("delivery_update", **fields)
         self.assertEqual(parsed["TARGET_TASK_ID"], "design-1")
+
+    def test_delivery_milestone_is_constructible_and_valid(self) -> None:
+        packet = CONSTRUCTOR.delivery_milestone_packet(
+            **delivery_milestone_fields()
+        )
+
+        self.assertEqual(packet["UPDATE_TYPE"], "milestone")
+        self.assertEqual(
+            packet["MILESTONE"],
+            "S2B-0 candidate frozen; independent review pending",
+        )
+        self.assertNotIn("READY_SET", packet)
 
     def test_delivery_final_omits_plan_only_fields(self) -> None:
         fields = delivery_plan_fields()
