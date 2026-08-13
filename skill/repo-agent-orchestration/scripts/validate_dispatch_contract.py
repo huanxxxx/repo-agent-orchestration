@@ -72,6 +72,7 @@ FULL_SHA_RE = re.compile(r"^(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64})$")
 MODEL_POLICY_RE = re.compile(
     r"^(?:repo_write_default|repo_review_default|user_explicit):[^<>\s]+/[^<>/\s]+$"
 )
+PROFILE_MODEL_RE = re.compile(r"^(?:[^<>\s]+/[^<>/\s]+)$")
 TASK_MESSAGE_RE = re.compile(r"^task_message:[^<>\s]+$")
 BLOCKED_DELIVERY_RE = re.compile(r"^blocked:[^<>\s].*$")
 TASK_MODES = {"write", "review_root", "review_worktree"}
@@ -315,6 +316,22 @@ def validate_model(kind: str, value: str) -> list[str]:
         "review MODEL_POLICY must be app_default, "
         "repo_review_default:<model>/<reasoning>, or user_explicit:<model>/<reasoning>"
     ]
+
+
+def repository_model_policy(kind: str, value: str) -> str:
+    """Translate a repository profile model value into a packet MODEL_POLICY."""
+    value = value.strip()
+    if value == "app_default":
+        return value
+    if not PROFILE_MODEL_RE.fullmatch(value):
+        raise ValueError(
+            f"{kind} model value must be app_default or <model>/<reasoning>: {value}"
+        )
+    if kind == "write":
+        return f"repo_write_default:{value}"
+    if kind == "review":
+        return f"repo_review_default:{value}"
+    raise ValueError(f"unsupported model policy kind: {kind}")
 
 
 def validate_commit_or_range(value: str) -> bool:

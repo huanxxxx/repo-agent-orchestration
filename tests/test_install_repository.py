@@ -138,6 +138,37 @@ class RepositoryInstallerTests(unittest.TestCase):
             "gpt-5.6-luna/max",
         )
 
+    def test_invalid_write_task_model_is_rejected_at_install(self) -> None:
+        temporary, repo = self.make_repo()
+        self.addCleanup(temporary.cleanup)
+
+        with self.assertRaisesRegex(ValueError, "write task model must be"):
+            INSTALLER.install_repository(repo, self.settings(repo, "executor"))
+
+    def test_invalid_review_task_model_is_rejected_at_install(self) -> None:
+        temporary, repo = self.make_repo()
+        self.addCleanup(temporary.cleanup)
+        settings = INSTALLER.Settings(
+            main_branch="main",
+            worktree_root=repo / ".worktrees",
+            review_task_model="<placeholder>/high",
+        )
+
+        with self.assertRaisesRegex(ValueError, "review task model must be"):
+            INSTALLER.install_repository(repo, settings)
+
+    def test_valid_profile_model_with_slash_is_accepted_at_install(self) -> None:
+        temporary, repo = self.make_repo()
+        self.addCleanup(temporary.cleanup)
+
+        result = INSTALLER.install_repository(
+            repo, self.settings(repo, "gpt-5.6-luna/max")
+        )
+
+        agents = (repo / "AGENTS.md").read_text(encoding="utf-8")
+        self.assertIn("WRITE_TASK_MODEL: gpt-5.6-luna/max", agents)
+        self.assertTrue(result["agents_changed"])
+
     def test_check_reports_drift_without_writing(self) -> None:
         temporary, repo = self.make_repo()
         self.addCleanup(temporary.cleanup)

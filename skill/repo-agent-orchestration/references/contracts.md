@@ -20,6 +20,8 @@ EXTERNAL_GATES: <gates>
 
 Repository configuration is read once by the controller. Do not copy invariant wait policy, root-write policy, or integration policy into every peer-task packet.
 
+`WRITE_TASK_MODEL: <model>/<reasoning>` translates to `MODEL_POLICY: repo_write_default:<model>/<reasoning>` in a write packet, and `REVIEW_TASK_MODEL: <model>/<reasoning>` translates to `MODEL_POLICY: repo_review_default:<model>/<reasoning>` in a review packet. `app_default` stays `app_default`. `user_explicit:<model>/<reasoning>` is reserved for a controller or user runtime override and is not stored as the repository default.
+
 ## Internal subagent handoff
 
 Internal subagents do not cross a user-visible task boundary, so do not give them a branch, worktree, App task, model-binding, or task-report contract. Give only the current-turn facts they need:

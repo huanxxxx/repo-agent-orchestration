@@ -150,6 +150,44 @@ class ContractValidationTests(unittest.TestCase):
         self.assertIn("must be app_default", errors)
         self.assertIn("BASE_COMMIT must be a full", errors)
 
+    def test_repository_model_policy_maps_profile_values_to_packets(self) -> None:
+        self.assertEqual(
+            VALIDATOR.repository_model_policy("write", "app_default"),
+            "app_default",
+        )
+        self.assertEqual(
+            VALIDATOR.repository_model_policy("write", "gpt-5.6-luna/max"),
+            "repo_write_default:gpt-5.6-luna/max",
+        )
+        self.assertEqual(
+            VALIDATOR.repository_model_policy("review", "gpt-5.6-luna/max"),
+            "repo_review_default:gpt-5.6-luna/max",
+        )
+
+    def test_repository_model_policy_output_passes_packet_validation(self) -> None:
+        write_policy = VALIDATOR.repository_model_policy("write", "gpt-5.6-luna/max")
+        review_policy = VALIDATOR.repository_model_policy("review", "gpt-5.6-luna/max")
+        self.assertEqual(
+            self.validate(
+                "write",
+                VALID_WRITE.replace("MODEL_POLICY: app_default", f"MODEL_POLICY: {write_policy}"),
+            ),
+            [],
+        )
+        self.assertEqual(
+            self.validate(
+                "review",
+                VALID_REVIEW.replace("MODEL_POLICY: app_default", f"MODEL_POLICY: {review_policy}"),
+            ),
+            [],
+        )
+
+    def test_repository_model_policy_rejects_invalid_profile_values(self) -> None:
+        for kind in ("write", "review"):
+            with self.subTest(kind=kind):
+                with self.assertRaisesRegex(ValueError, "app_default or <model>/<reasoning>"):
+                    VALIDATOR.repository_model_policy(kind, "bad value")
+
     def test_write_rejects_external_worktree(self) -> None:
         invalid = VALID_WRITE.replace(
             "WORKTREE: C:\\repo\\.worktrees\\write-1", "WORKTREE: C:\\outside"

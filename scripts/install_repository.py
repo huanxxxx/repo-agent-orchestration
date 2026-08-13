@@ -21,6 +21,7 @@ DEFAULT_EXTERNAL_GATES = (
     "merge main; push; deploy; publish; production data; credentials; permissions"
 )
 LEGACY_DEFAULT_WRITE_TASK_MODELS = {"gpt-5.6-luna/max"}
+PROFILE_MODEL_RE = re.compile(r"^(?:[^<>\s]+/[^<>/\s]+)$")
 TEXT_PACKAGE_SUFFIXES = {".md", ".py", ".txt", ".yaml", ".yml", ".toml", ".json"}
 
 
@@ -160,12 +161,30 @@ def render_block(
     )
 
 
+def validate_profile_model(kind: str, value: str) -> str:
+    value = value.strip()
+    if value == "app_default" or PROFILE_MODEL_RE.fullmatch(value):
+        return value
+    raise ValueError(
+        f"{kind} must be app_default or <model>/<reasoning> "
+        f"with no spaces or angle brackets: {value}"
+    )
+
+
 def resolve_write_task_model(explicit: str | None, current: str | None) -> str:
     if explicit:
-        return explicit
-    if not current or current in LEGACY_DEFAULT_WRITE_TASK_MODELS:
-        return "app_default"
-    return current
+        return validate_profile_model("write task model", explicit)
+    value = current or "app_default"
+    if value in LEGACY_DEFAULT_WRITE_TASK_MODELS:
+        value = "app_default"
+    return validate_profile_model("write task model", value)
+
+
+def resolve_review_task_model(explicit: str | None, current: str | None) -> str:
+    value = explicit if explicit else current
+    if not value:
+        value = "app_default"
+    return validate_profile_model("review task model", value)
 
 
 def update_agents_content(existing: str | None, settings: Settings, newline: str) -> str:
@@ -259,6 +278,8 @@ def package_payload(path: Path) -> bytes:
 
 def install_repository(repo_value: Path, settings: Settings, dry_run: bool = False) -> dict[str, object]:
     repo = resolve_repository(repo_value)
+    validate_profile_model("write task model", settings.write_task_model)
+    validate_profile_model("review task model", settings.review_task_model)
     profile_root = primary_worktree_root(repo)
     resolved_worktree_root = settings.worktree_root.resolve()
     try:
@@ -367,8 +388,9 @@ def main() -> int:
         write_task_model=resolve_write_task_model(
             args.write_task_model, current.get("WRITE_TASK_MODEL")
         ),
-        review_task_model=args.review_task_model
-        or current.get("REVIEW_TASK_MODEL", "app_default"),
+        review_task_model=resolve_review_task_model(
+            args.review_task_model, current.get("REVIEW_TASK_MODEL")
+        ),
         shared_integration_paths=args.shared_integration_paths
         or current.get("SHARED_INTEGRATION_PATHS", "none"),
         continuity_policy=args.continuity_policy
