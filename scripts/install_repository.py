@@ -29,6 +29,7 @@ class Settings:
     main_branch: str
     worktree_root: Path
     branch_prefix: str = "codex/"
+    root_worktree_policy: str = "observe_integrate_validate"
     task_host_policy: str = "repository_project_local"
     controller_model_policy: str = "app_current_task"
     write_task_model: str = "app_default"
@@ -110,7 +111,7 @@ def setting_values(settings: Settings) -> tuple[tuple[str, str], ...]:
     return (
         ("ORCHESTRATION_SKILL", "$repo-agent-orchestration"),
         ("MAIN_BRANCH", settings.main_branch),
-        ("ROOT_WORKTREE_POLICY", "observe_integrate_validate"),
+        ("ROOT_WORKTREE_POLICY", settings.root_worktree_policy),
         ("WORKTREE_ROOT", str(settings.worktree_root)),
         ("BRANCH_PREFIX", settings.branch_prefix),
         ("TASK_HOST_POLICY", settings.task_host_policy),
@@ -327,6 +328,9 @@ def main() -> int:
     parser.add_argument("--main-branch")
     parser.add_argument("--worktree-root", type=Path)
     parser.add_argument("--branch-prefix")
+    parser.add_argument("--root-worktree-policy")
+    parser.add_argument("--task-host-policy")
+    parser.add_argument("--controller-model-policy")
     parser.add_argument("--write-task-model")
     parser.add_argument("--review-task-model")
     parser.add_argument("--shared-integration-paths")
@@ -354,8 +358,12 @@ def main() -> int:
         main_branch=args.main_branch or current.get("MAIN_BRANCH") or detect_main_branch(repo),
         worktree_root=worktree_root,
         branch_prefix=args.branch_prefix or current.get("BRANCH_PREFIX", "codex/"),
-        task_host_policy=current.get("TASK_HOST_POLICY", "repository_project_local"),
-        controller_model_policy=current.get("CONTROLLER_MODEL_POLICY", "app_current_task"),
+        root_worktree_policy=args.root_worktree_policy
+        or current.get("ROOT_WORKTREE_POLICY", "observe_integrate_validate"),
+        task_host_policy=args.task_host_policy
+        or current.get("TASK_HOST_POLICY", "repository_project_local"),
+        controller_model_policy=args.controller_model_policy
+        or current.get("CONTROLLER_MODEL_POLICY", "app_current_task"),
         write_task_model=resolve_write_task_model(
             args.write_task_model, current.get("WRITE_TASK_MODEL")
         ),
