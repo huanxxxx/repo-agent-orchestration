@@ -86,25 +86,22 @@ def detect_main_branch(repo: Path) -> str:
     if remote_head.startswith("origin/"):
         return remote_head.removeprefix("origin/")
     for candidate in ("main", "master", "trunk"):
-        if run_git(
-            repo, "show-ref", "--verify", "--quiet", f"refs/heads/{candidate}", check=False
-        ) == "":
-            result = subprocess.run(
-                [
-                    "git",
-                    "-c",
-                    f"safe.directory={repo}",
-                    "-C",
-                    str(repo),
-                    "show-ref",
-                    "--verify",
-                    "--quiet",
-                    f"refs/heads/{candidate}",
-                ],
-                check=False,
-            )
-            if result.returncode == 0:
-                return candidate
+        result = subprocess.run(
+            [
+                "git",
+                "-c",
+                f"safe.directory={repo}",
+                "-C",
+                str(repo),
+                "show-ref",
+                "--verify",
+                "--quiet",
+                f"refs/heads/{candidate}",
+            ],
+            check=False,
+        )
+        if result.returncode == 0:
+            return candidate
     current = run_git(repo, "branch", "--show-current", check=False)
     return current or "main"
 
