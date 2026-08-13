@@ -57,7 +57,7 @@ Treat any worktree created outside the declared repository-local root as an orph
 
 ## Completion and cleanup
 
-Mark a user-visible peer task `PASS_VERIFIED` only after final evidence and controller verification show that acceptance is complete and no blocker, reply, correction, or in-flight operation remains. Archive it immediately after that gate; do not leave it merely labelled “ready to archive.” Keep blocked or correctable peers active.
+Mark a user-visible peer task `PASS_VERIFIED` only after final evidence and verification by its dispatching authority show that acceptance is complete and no blocker, reply, correction, or in-flight operation remains. Archive it immediately after that gate; do not leave it merely labelled “ready to archive.” Keep blocked or correctable peers active.
 
 Receive an internal subagent's final result, confirm it stopped, and release its slot promptly.
 

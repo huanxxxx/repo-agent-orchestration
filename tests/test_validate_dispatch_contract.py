@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import re
 import unittest
 from pathlib import Path
 
@@ -34,8 +35,13 @@ ACTUAL_THREAD_PROJECT_ID: saved-project
 
 VALID_WRITE = rf"""
 TASK_ID: write-1
+ORCHESTRATION_MODE: delivery
+SOURCE_ROLE: delivery_controller
+TARGET_ROLE: peer_writer
+REPORT_TO_TASK_ID: controller-1
+AUTHORITY_BASELINE: user-approved outcome A1-A2
 TASK_ENVIRONMENT: local
-TASK_ARCHIVE_POLICY: controller_after_acceptance
+TASK_ARCHIVE_POLICY: dispatching_authority_after_acceptance
 WORKTREE_ROOT: C:\repo\.worktrees
 WORKTREE: C:\repo\.worktrees\write-1
 BRANCH: codex/write-1
@@ -50,8 +56,13 @@ MODEL_POLICY: app_default
 
 VALID_REVIEW = rf"""
 REVIEW_TASK_ID: review-1
+ORCHESTRATION_MODE: delivery
+REVIEW_CLASS: implementation
+SOURCE_ROLE: delivery_controller
+TARGET_ROLE: peer_reviewer
+REPORT_TO_TASK_ID: controller-1
 TASK_ENVIRONMENT: local
-TASK_ARCHIVE_POLICY: controller_after_acceptance
+TASK_ARCHIVE_POLICY: dispatching_authority_after_acceptance
 TARGET_MODE: existing_worktree
 TARGET_PATH: C:\repo\.worktrees\write-1
 TARGET_COMMIT_OR_RANGE: {FULL_SHA}
@@ -66,6 +77,11 @@ MODEL_POLICY: app_default
 
 VALID_FINAL = """
 TASK_ID: write-1
+ORCHESTRATION_MODE: delivery
+UPDATE_CLASS: implementation
+SOURCE_ROLE: peer_writer
+TARGET_ROLE: delivery_controller
+TARGET_TASK_ID: controller-1
 STATUS: final
 SUMMARY: implementation complete
 EVIDENCE: tests=PASS; commit=abc
@@ -74,6 +90,92 @@ PENDING_ITEMS: controller verification
 DELIVERY: task_message:controller-1
 TARGET_SETTINGS: preserve
 NEXT: controller verifies the candidate
+"""
+
+VALID_DESIGN_HANDOFF = rf"""
+DESIGN_TASK_ID: design-1
+DELIVERY_TASK_ID: delivery-1
+ORCHESTRATION_MODE: architected
+SOURCE_ROLE: design_authority
+TARGET_ROLE: delivery_controller
+REPORT_TO_TASK_ID: design-1
+TASK_ENVIRONMENT: local
+TASK_ARCHIVE_POLICY: dispatching_authority_after_acceptance
+REPOSITORY_ROOT: C:\repo
+DESIGN_CHECKPOINT: {FULL_SHA}
+DESIGN_REVIEW_STATUS: PASS
+DESIGN_REVIEW_EVIDENCE: review-1 PASS against D1-D2
+OBJECTIVE: implement the frozen repository architecture
+AUTHORITATIVE_INPUTS: repository facts and informed user choices
+FROZEN_DECISIONS: D1 identity; D2 balanced entries
+NON_GOALS: deployment and production data
+ACCEPTANCE_BASELINE: D1-D2
+IMPLEMENTATION_BOUNDARY: implement without redesign
+EXTERNAL_GATES: merge main; push; deploy
+DESIGN_REOPEN_RULE: false assumption or boundary change returns to design-1
+MODEL_POLICY: app_default
+"""
+
+VALID_DELIVERY_PLAN = rf"""
+DELIVERY_TASK_ID: delivery-1
+DESIGN_TASK_ID: design-1
+ORCHESTRATION_MODE: architected
+SOURCE_ROLE: delivery_controller
+TARGET_ROLE: design_authority
+TARGET_TASK_ID: design-1
+UPDATE_TYPE: plan
+DESIGN_CHECKPOINT: {FULL_SHA}
+SUMMARY: implementation graph and first ready set frozen
+DESIGN_ALIGNMENT: all milestones map to D1-D2
+EVIDENCE: dependency and ownership checks passed
+RISKS_OR_LIMITS: external gates closed
+PENDING_ITEMS: implementation and review
+READY_SET: ledger; identity
+PARALLEL_DISPATCH: writer-ledger; writer-identity
+DECISION_REQUIRED: no
+DEPENDENCY_GRAPH: ledger and identity precede integration
+SHARED_PATH_OWNER: delivery-1
+DELIVERY: task_message:design-1
+TARGET_SETTINGS: preserve
+NEXT: continue authorized delivery
+"""
+
+VALID_DESIGN_REOPEN = rf"""
+DELIVERY_TASK_ID: delivery-1
+DESIGN_TASK_ID: design-1
+ORCHESTRATION_MODE: architected
+SOURCE_ROLE: delivery_controller
+TARGET_ROLE: design_authority
+TARGET_TASK_ID: design-1
+DESIGN_CHECKPOINT: {FULL_SHA}
+AFFECTED_SCOPE: identity and dependent integration
+CONFLICT: verified platform fact contradicts D1
+EVIDENCE: stable identity field is unavailable
+OPTIONS: revise D1; defer identity
+RECOMMENDATION: revise D1 without weakening privacy
+PAUSED_SCOPE: identity and dependent integration
+UNAFFECTED_WORK: ledger may continue
+DELIVERY: task_message:design-1
+TARGET_SETTINGS: preserve
+NEXT: await design decision for affected scope
+"""
+
+VALID_DESIGN_DECISION = rf"""
+DESIGN_TASK_ID: design-1
+DELIVERY_TASK_ID: delivery-1
+ORCHESTRATION_MODE: architected
+SOURCE_ROLE: design_authority
+TARGET_ROLE: delivery_controller
+TARGET_TASK_ID: delivery-1
+PRIOR_DESIGN_CHECKPOINT: {FULL_SHA}
+DECISION: reopen_rejected
+RATIONALE: evidence does not invalidate D1
+UPDATED_DESIGN_CHECKPOINT: unchanged
+AFFECTED_SCOPE: identity
+AUTHORITY_BOUNDARY: gather evidence; no alternate identity path authorized
+DELIVERY: task_message:delivery-1
+TARGET_SETTINGS: preserve
+NEXT: keep affected scope on hold
 """
 
 
@@ -87,6 +189,10 @@ class ContractValidationTests(unittest.TestCase):
             ("write", VALID_WRITE),
             ("review", VALID_REVIEW),
             ("update", VALID_FINAL),
+            ("design_handoff", VALID_DESIGN_HANDOFF),
+            ("delivery_update", VALID_DELIVERY_PLAN),
+            ("design_reopen", VALID_DESIGN_REOPEN),
+            ("design_decision", VALID_DESIGN_DECISION),
         ):
             with self.subTest(kind=kind):
                 self.assertEqual(self.validate(kind, packet), [])
@@ -185,6 +291,10 @@ class ContractValidationTests(unittest.TestCase):
             VALIDATOR.repository_model_policy("review", "gpt-5.6-luna/max"),
             "repo_review_default:gpt-5.6-luna/max",
         )
+        self.assertEqual(
+            VALIDATOR.repository_model_policy("delivery", "gpt-5.6-sol/high"),
+            "repo_delivery_default:gpt-5.6-sol/high",
+        )
 
     def test_repository_model_policy_output_passes_packet_validation(self) -> None:
         write_policy = VALIDATOR.repository_model_policy("write", "gpt-5.6-luna/max")
@@ -205,7 +315,7 @@ class ContractValidationTests(unittest.TestCase):
         )
 
     def test_repository_model_policy_rejects_invalid_profile_values(self) -> None:
-        for kind in ("write", "review"):
+        for kind in ("write", "review", "delivery"):
             with self.subTest(kind=kind):
                 with self.assertRaisesRegex(ValueError, "app_default or <model>/<reasoning>"):
                     VALIDATOR.repository_model_policy(kind, "bad value")
@@ -231,15 +341,15 @@ class ContractValidationTests(unittest.TestCase):
                     self.validate(kind, invalid),
                 )
 
-    def test_dispatch_requires_controller_owned_archival(self) -> None:
+    def test_dispatch_requires_dispatching_authority_archival(self) -> None:
         for kind, packet in (("write", VALID_WRITE), ("review", VALID_REVIEW)):
             with self.subTest(kind=kind):
                 invalid = packet.replace(
-                    "TASK_ARCHIVE_POLICY: controller_after_acceptance",
-                    "TASK_ARCHIVE_POLICY: child_on_final",
+                    "TASK_ARCHIVE_POLICY: dispatching_authority_after_acceptance",
+                    "TASK_ARCHIVE_POLICY: peer_self_on_final",
                 )
                 self.assertIn(
-                    "TASK_ARCHIVE_POLICY must be controller_after_acceptance",
+                    "TASK_ARCHIVE_POLICY must be dispatching_authority_after_acceptance",
                     self.validate(kind, invalid),
                 )
 
@@ -287,6 +397,11 @@ class ContractValidationTests(unittest.TestCase):
     def test_blocked_delivery_failure_is_valid(self) -> None:
         blocked = """
 TASK_ID: write-1
+ORCHESTRATION_MODE: delivery
+UPDATE_CLASS: implementation
+SOURCE_ROLE: peer_writer
+TARGET_ROLE: delivery_controller
+TARGET_TASK_ID: controller-1
 STATUS: blocked
 SUMMARY: task-message capability unavailable
 EVIDENCE: delivery call failed
@@ -302,8 +417,126 @@ NEXT: recover on the next real controller wake
             "TARGET_SETTINGS: override:gpt-5.6-luna/max",
         )
         self.assertIn(
-            "TARGET_SETTINGS must be preserve; controller-bound reports must omit model and thinking overrides",
+            "TARGET_SETTINGS must be preserve; task-message reports must omit model and thinking overrides",
             self.validate("update", invalid),
+        )
+
+    def test_architected_packets_enforce_authority_direction(self) -> None:
+        invalid_handoff = VALID_DESIGN_HANDOFF.replace(
+            "SOURCE_ROLE: design_authority", "SOURCE_ROLE: delivery_controller"
+        )
+        self.assertIn(
+            "design handoff SOURCE_ROLE must be design_authority",
+            self.validate("design_handoff", invalid_handoff),
+        )
+        invalid_update = VALID_DELIVERY_PLAN.replace(
+            "TARGET_TASK_ID: design-1", "TARGET_TASK_ID: another-design"
+        )
+        errors = self.validate("delivery_update", invalid_update)
+        self.assertIn("TARGET_TASK_ID must equal DESIGN_TASK_ID", errors)
+        self.assertIn("DELIVERY task id must equal TARGET_TASK_ID", errors)
+
+    def test_validator_rejects_unknown_fields_outside_shared_schema(self) -> None:
+        errors = self.validate("delivery_update", VALID_DELIVERY_PLAN + "\nOWNER: design-1\n")
+        self.assertIn("unknown packet fields: OWNER", errors)
+
+    def test_architected_write_and_review_require_design_checkpoint(self) -> None:
+        write = VALID_WRITE.replace(
+            "ORCHESTRATION_MODE: delivery", "ORCHESTRATION_MODE: architected"
+        )
+        review = VALID_REVIEW.replace(
+            "ORCHESTRATION_MODE: delivery", "ORCHESTRATION_MODE: architected"
+        )
+        self.assertIn(
+            "architected write requires DESIGN_CHECKPOINT",
+            self.validate("write", write),
+        )
+        self.assertIn(
+            "architected review requires DESIGN_CHECKPOINT",
+            self.validate("review", review),
+        )
+
+        delivery_write = VALID_WRITE + f"\nDESIGN_CHECKPOINT: {FULL_SHA}\n"
+        delivery_review = VALID_REVIEW + f"\nDESIGN_CHECKPOINT: {FULL_SHA}\n"
+        self.assertIn(
+            "delivery write must not declare DESIGN_CHECKPOINT",
+            self.validate("write", delivery_write),
+        )
+        self.assertIn(
+            "delivery review must not declare DESIGN_CHECKPOINT",
+            self.validate("review", delivery_review),
+        )
+
+    def test_design_review_reports_to_design_authority(self) -> None:
+        review = (
+            VALID_REVIEW.replace(
+                "ORCHESTRATION_MODE: delivery", "ORCHESTRATION_MODE: architected"
+            )
+            .replace("REVIEW_CLASS: implementation", "REVIEW_CLASS: design")
+            .replace(
+                "SOURCE_ROLE: delivery_controller", "SOURCE_ROLE: design_authority"
+            )
+            + f"\nDESIGN_CHECKPOINT: {FULL_SHA}\n"
+        )
+        self.assertEqual(self.validate("review", review), [])
+
+        mismatched = review.replace(
+            f"TARGET_COMMIT_OR_RANGE: {FULL_SHA}",
+            "TARGET_COMMIT_OR_RANGE: " + ("2" * 40),
+        )
+        self.assertIn(
+            "design review TARGET_COMMIT_OR_RANGE must end at DESIGN_CHECKPOINT",
+            self.validate("review", mismatched),
+        )
+
+    def test_architected_reports_require_actual_source_task_ids(self) -> None:
+        for kind, packet, field in (
+            ("delivery_update", VALID_DELIVERY_PLAN, "DELIVERY_TASK_ID"),
+            ("design_reopen", VALID_DESIGN_REOPEN, "DELIVERY_TASK_ID"),
+            ("design_decision", VALID_DESIGN_DECISION, "DESIGN_TASK_ID"),
+            ("update", VALID_FINAL, "TASK_ID"),
+        ):
+            with self.subTest(kind=kind, field=field):
+                invalid = re.sub(rf"(?m)^{field}: .+$", f"{field}: pending", packet)
+                self.assertIn(
+                    f"{field} must identify an actual task",
+                    self.validate(kind, invalid),
+                )
+
+    def test_design_reopen_requires_recommendation_and_paused_scope(self) -> None:
+        for field in ("RECOMMENDATION", "PAUSED_SCOPE"):
+            with self.subTest(field=field):
+                invalid = "\n".join(
+                    line
+                    for line in VALID_DESIGN_REOPEN.splitlines()
+                    if not line.startswith(f"{field}:")
+                )
+                self.assertIn(
+                    f"missing field: {field}",
+                    self.validate("design_reopen", invalid),
+                )
+
+    def test_design_decision_cannot_silently_change_checkpoint(self) -> None:
+        changed_without_reopen = VALID_DESIGN_DECISION.replace(
+            "UPDATED_DESIGN_CHECKPOINT: unchanged",
+            "UPDATED_DESIGN_CHECKPOINT: " + ("2" * 40),
+        )
+        self.assertIn(
+            "only reopen_approved may change UPDATED_DESIGN_CHECKPOINT",
+            self.validate("design_decision", changed_without_reopen),
+        )
+
+        same_checkpoint_reopen = (
+            VALID_DESIGN_DECISION.replace(
+                "DECISION: reopen_rejected", "DECISION: reopen_approved"
+            ).replace(
+                "UPDATED_DESIGN_CHECKPOINT: unchanged",
+                f"UPDATED_DESIGN_CHECKPOINT: {FULL_SHA}",
+            )
+        )
+        self.assertIn(
+            "reopen_approved requires a new UPDATED_DESIGN_CHECKPOINT",
+            self.validate("design_decision", same_checkpoint_reopen),
         )
 
     def test_obsolete_ceremony_fields_are_rejected(self) -> None:

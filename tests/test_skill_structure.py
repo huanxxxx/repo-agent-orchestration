@@ -15,10 +15,13 @@ class SkillStructureTests(unittest.TestCase):
             "SKILL.md",
             "agents/openai.yaml",
             "references/controller.md",
+            "references/architected.md",
             "references/contracts.md",
             "references/continuity.md",
             "references/recovery.md",
             "scripts/validate_dispatch_contract.py",
+            "scripts/packet_schema.py",
+            "scripts/construct_packet.py",
         )
         for relative in required:
             self.assertTrue((SKILL / relative).is_file(), relative)
@@ -38,6 +41,74 @@ class SkillStructureTests(unittest.TestCase):
     def test_default_prompt_names_the_skill(self) -> None:
         metadata = (SKILL / "agents" / "openai.yaml").read_text(encoding="utf-8")
         self.assertIn("$repo-agent-orchestration", metadata)
+
+    def test_architected_mode_separates_design_and_delivery_authority(self) -> None:
+        skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+        architected = (SKILL / "references" / "architected.md").read_text(
+            encoding="utf-8"
+        )
+        controller = (SKILL / "references" / "controller.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("`direct`", skill)
+        self.assertIn("`delivery`", skill)
+        self.assertIn("`architected`", skill)
+        self.assertIn("Treat a proposed solution as input, not proof", architected)
+        self.assertIn("recommend a preferred option", architected)
+        self.assertIn("Do not manufacture objections", architected)
+        self.assertIn("independent design-review PASS", architected)
+        self.assertIn("single repository-root write lease", architected)
+        self.assertIn("Never write the root concurrently", architected)
+        self.assertIn("Do not absorb the design-authority role", controller)
+
+    def test_delivery_controller_proactively_dispatches_ready_work(self) -> None:
+        skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+        architected = (SKILL / "references" / "architected.md").read_text(
+            encoding="utf-8"
+        )
+        controller = (SKILL / "references" / "controller.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("dispatch all ready, non-conflicting peer tasks", skill)
+        self.assertIn("without waiting for a separate user instruction", architected)
+        self.assertIn("does not require a separate user request to parallelize", controller)
+        self.assertIn("Never create duplicate tasks", architected)
+
+    def test_architected_report_chain_is_bidirectional_and_event_driven(self) -> None:
+        architected = (SKILL / "references" / "architected.md").read_text(
+            encoding="utf-8"
+        )
+        contracts = (SKILL / "references" / "contracts.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("delivery controller --DELIVERY_UPDATE", architected)
+        self.assertIn("design authority --DESIGN_HANDOFF", architected)
+        self.assertIn("design authority --DESIGN_DECISION", architected)
+        self.assertIn("DESIGN_REOPEN_REQUEST", contracts)
+        self.assertIn("DECISION_REQUIRED: yes|no", contracts)
+        self.assertIn("does not pause authorized work", contracts)
+        self.assertIn("without waking it merely to acknowledge acceptance", architected)
+
+    def test_packet_constructor_shares_schema_and_stays_pure(self) -> None:
+        contracts = (SKILL / "references" / "contracts.md").read_text(
+            encoding="utf-8"
+        )
+        validator = (SKILL / "scripts" / "validate_dispatch_contract.py").read_text(
+            encoding="utf-8"
+        )
+        constructor = (SKILL / "scripts" / "construct_packet.py").read_text(
+            encoding="utf-8"
+        )
+        schema = (SKILL / "scripts" / "packet_schema.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("from packet_schema import REQUIRED", validator)
+        self.assertIn("from packet_schema import PACKET_SCHEMAS", constructor)
+        self.assertIn('"design_handoff"', schema)
+        self.assertIn('"delivery_update"', schema)
+        self.assertIn('"design_reopen"', schema)
+        self.assertIn('"design_decision"', schema)
+        self.assertIn("It never creates tasks, touches Git", contracts)
 
     def test_installable_skill_has_no_project_docs(self) -> None:
         self.assertFalse((SKILL / "README.md").exists())
@@ -80,9 +151,15 @@ class SkillStructureTests(unittest.TestCase):
         self.assertIn('environment: {type: "local"}', contracts)
         self.assertIn("TASK_ENVIRONMENT: local", contracts)
         self.assertIn("App-managed worktree tasks are forbidden", validator)
-        self.assertIn("TASK_ARCHIVE_POLICY: controller_after_acceptance", contracts)
+        self.assertIn(
+            "TASK_ARCHIVE_POLICY: dispatching_authority_after_acceptance",
+            contracts,
+        )
         self.assertIn("set_thread_archived", controller)
-        self.assertIn("TASK_MODE: write|review_root|review_worktree", contracts)
+        self.assertIn(
+            "TASK_MODE: delivery_controller|write|review_root|review_worktree",
+            contracts,
+        )
         self.assertIn("continue in the same turn", contracts)
         self.assertNotIn("BINDING_STATUS", contracts)
         self.assertNotIn("COMMAND_WORKDIR_POLICY", contracts)
@@ -201,7 +278,8 @@ class SkillStructureTests(unittest.TestCase):
         controller = (SKILL / "references" / "controller.md").read_text(
             encoding="utf-8"
         )
-        self.assertIn("cannot treat its own scope-reopen decision as authority", skill)
+        self.assertIn("only the design authority may change the design baseline", skill)
+        self.assertIn("DESIGN_REOPEN_REQUEST", skill)
         self.assertIn("it may not authorize itself", controller)
         self.assertIn(
             "When the task is `active`, do not send another continuation or correction",
@@ -243,7 +321,10 @@ class SkillStructureTests(unittest.TestCase):
             encoding="utf-8"
         )
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
-        published = "\n".join((skill, controller, contracts, readme)).casefold()
+        demo = (ROOT / "examples" / "demo" / "CODEX_DESKTOP_RUNBOOK.md").read_text(
+            encoding="utf-8"
+        )
+        published = "\n".join((skill, controller, contracts, readme, demo)).casefold()
         self.assertIn("app-created user-visible task is a peer task", published)
         self.assertIn("controller is a coordination role", published)
         self.assertIn("actual creation capability", published)

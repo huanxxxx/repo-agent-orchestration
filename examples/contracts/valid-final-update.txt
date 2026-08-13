@@ -1,4 +1,9 @@
 TASK_ID: write-ledger-core
+ORCHESTRATION_MODE: delivery
+UPDATE_CLASS: implementation
+SOURCE_ROLE: peer_writer
+TARGET_ROLE: delivery_controller
+TARGET_TASK_ID: controller-task-1
 STATUS: final
 SUMMARY: ledger core implementation and focused validation complete
 EVIDENCE: commit=0123456789abcdef0123456789abcdef01234567; tests=PASS

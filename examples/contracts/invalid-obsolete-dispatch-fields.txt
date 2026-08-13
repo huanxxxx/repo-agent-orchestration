@@ -1,6 +1,11 @@
 TASK_ID: write-ledger-core
+ORCHESTRATION_MODE: delivery
+SOURCE_ROLE: delivery_controller
+TARGET_ROLE: peer_writer
+REPORT_TO_TASK_ID: controller-task-1
+AUTHORITY_BASELINE: user-approved ledger outcome
 TASK_ENVIRONMENT: local
-TASK_ARCHIVE_POLICY: controller_after_acceptance
+TASK_ARCHIVE_POLICY: dispatching_authority_after_acceptance
 WORKTREE_ROOT: C:\Projects\ledger\.worktrees
 WORKTREE: C:\Projects\ledger\.worktrees\ledger-core
 BRANCH: codex/ledger-core

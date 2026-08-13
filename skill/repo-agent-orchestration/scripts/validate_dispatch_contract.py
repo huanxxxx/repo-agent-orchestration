@@ -14,70 +14,34 @@ import sys
 from pathlib import Path, PurePosixPath, PureWindowsPath
 
 
-REQUIRED = {
-    "binding": (
-        "TASK_ID",
-        "TASK_MODE",
-        "TASK_ENVIRONMENT",
-        "REPOSITORY_ROOT",
-        "WORKTREE_ROOT",
-        "EXECUTION_PATH",
-        "TASK_PROJECT_ID",
-        "ACTUAL_THREAD_CWD",
-        "ACTUAL_THREAD_PROJECT_ID",
-    ),
-    "write": (
-        "TASK_ID",
-        "TASK_ENVIRONMENT",
-        "TASK_ARCHIVE_POLICY",
-        "WORKTREE_ROOT",
-        "WORKTREE",
-        "BRANCH",
-        "BASE_COMMIT",
-        "OBJECTIVE",
-        "OWNED_PATHS",
-        "DO_NOT_TOUCH",
-        "ACCEPTANCE",
-        "REQUIRED_TESTS",
-        "MODEL_POLICY",
-    ),
-    "review": (
-        "REVIEW_TASK_ID",
-        "TASK_ENVIRONMENT",
-        "TASK_ARCHIVE_POLICY",
-        "TARGET_MODE",
-        "TARGET_PATH",
-        "TARGET_COMMIT_OR_RANGE",
-        "READ_ONLY",
-        "ACCEPTANCE_BASELINE",
-        "THREAT_MODEL",
-        "NON_GOALS",
-        "REVIEW_SCOPE",
-        "ACCEPTANCE",
-        "MODEL_POLICY",
-    ),
-    "update": (
-        "TASK_ID",
-        "STATUS",
-        "SUMMARY",
-        "EVIDENCE",
-        "DELIVERY",
-        "TARGET_SETTINGS",
-        "NEXT",
-    ),
-}
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+from packet_schema import REQUIRED, allowed_fields
 
 FIELD_RE = re.compile(r"^([A-Z][A-Z0-9_]*)\s*[:=]\s*(.*)$")
 FULL_SHA_RE = re.compile(r"^(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64})$")
 MODEL_POLICY_RE = re.compile(
-    r"^(?:repo_write_default|repo_review_default|user_explicit):[^<>\s]+/[^<>/\s]+$"
+    r"^(?:repo_write_default|repo_review_default|repo_delivery_default|user_explicit):[^<>\s]+/[^<>/\s]+$"
 )
 PROFILE_MODEL_RE = re.compile(r"^(?:[^<>\s]+/[^<>/\s]+)$")
 TASK_MESSAGE_RE = re.compile(r"^task_message:[^<>\s]+$")
 BLOCKED_DELIVERY_RE = re.compile(r"^blocked:[^<>\s].*$")
-TASK_MODES = {"write", "review_root", "review_worktree"}
+TASK_MODES = {"delivery_controller", "write", "review_root", "review_worktree"}
 REVIEW_MODES = {"root_readonly", "existing_worktree", "detached_snapshot"}
 STATUSES = {"progress", "blocked", "final"}
+ORCHESTRATION_MODES = {"delivery", "architected"}
+REVIEW_CLASSES = {"design", "implementation"}
+UPDATE_CLASSES = {"design_review", "implementation"}
+DELIVERY_UPDATE_TYPES = {"plan", "milestone", "final"}
+DESIGN_DECISIONS = {
+    "clarify",
+    "continue",
+    "hold",
+    "reopen_approved",
+    "reopen_rejected",
+}
 
 OBSOLETE_DISPATCH_FIELDS = {
     "WORKTREE_POLICY",
@@ -289,6 +253,10 @@ def validate_live(kind: str, fields: dict[str, str]) -> list[str]:
                 require_clean=True,
             )
         )
+    elif kind == "design_handoff":
+        errors.extend(
+            validate_live_worktree("REPOSITORY_ROOT", fields["REPOSITORY_ROOT"])
+        )
     return errors
 
 
@@ -305,6 +273,17 @@ def validate_model(kind: str, value: str) -> list[str]:
         return [
             "write MODEL_POLICY must be app_default, "
             "repo_write_default:<model>/<reasoning>, or user_explicit:<model>/<reasoning>"
+        ]
+    if kind == "delivery":
+        if value == "app_default":
+            return []
+        if MODEL_POLICY_RE.fullmatch(value) and value.startswith(
+            ("repo_delivery_default:", "user_explicit:")
+        ):
+            return []
+        return [
+            "delivery MODEL_POLICY must be app_default, "
+            "repo_delivery_default:<model>/<reasoning>, or user_explicit:<model>/<reasoning>"
         ]
     if value == "app_default":
         return []
@@ -331,6 +310,8 @@ def repository_model_policy(kind: str, value: str) -> str:
         return f"repo_write_default:{value}"
     if kind == "review":
         return f"repo_review_default:{value}"
+    if kind == "delivery":
+        return f"repo_delivery_default:{value}"
     raise ValueError(f"unsupported model policy kind: {kind}")
 
 
@@ -352,30 +333,105 @@ def add_obsolete_errors(
         errors.append("obsolete protocol fields must be removed: " + ", ".join(found))
 
 
+def validate_orchestration_mode(fields: dict[str, str]) -> list[str]:
+    mode = fields.get("ORCHESTRATION_MODE", "")
+    if mode and mode not in ORCHESTRATION_MODES:
+        return ["ORCHESTRATION_MODE must be delivery or architected"]
+    return []
+
+
+def validate_checkpoint(field_name: str, value: str) -> list[str]:
+    if value and not FULL_SHA_RE.fullmatch(value):
+        return [f"{field_name} must be a full 40- or 64-character hex SHA"]
+    return []
+
+
+def validate_concrete_task_id(field_name: str, value: str) -> list[str]:
+    if not value:
+        return []
+    if has_placeholder(value) or value.casefold() in {"none", "null", "pending"}:
+        return [f"{field_name} must identify an actual task"]
+    return []
+
+
+def validate_task_message_target(
+    fields: dict[str, str], *, target_field: str = "TARGET_TASK_ID"
+) -> list[str]:
+    delivery = fields.get("DELIVERY", "")
+    target = fields.get(target_field, "")
+    if delivery and TASK_MESSAGE_RE.fullmatch(delivery):
+        delivered_target = delivery.split(":", 1)[1]
+        if target and delivered_target != target:
+            return [f"DELIVERY task id must equal {target_field}"]
+    return []
+
+
+def validate_target_settings(fields: dict[str, str]) -> list[str]:
+    if fields.get("TARGET_SETTINGS", "").casefold() != "preserve":
+        return [
+            "TARGET_SETTINGS must be preserve; task-message reports must omit model and thinking overrides"
+        ]
+    return []
+
+
+def validate_required_task_message(fields: dict[str, str]) -> list[str]:
+    errors: list[str] = []
+    delivery = fields.get("DELIVERY", "")
+    if delivery and not TASK_MESSAGE_RE.fullmatch(delivery):
+        errors.append("DELIVERY must be task_message:<target-task-id>")
+    errors.extend(validate_task_message_target(fields))
+    errors.extend(validate_target_settings(fields))
+    return errors
+
+
 def validate(kind: str, fields: dict[str, str]) -> list[str]:
     """Validate portable packet shape; use validate_live or the CLI at boundaries."""
     errors: list[str] = []
+    recognized_obsolete: set[str] = set()
+    if kind in {"write", "review", "design_handoff"}:
+        recognized_obsolete.update(OBSOLETE_DISPATCH_FIELDS)
+    if kind in {"update", "delivery_update", "design_reopen", "design_decision"}:
+        recognized_obsolete.update(OBSOLETE_REPORT_FIELDS)
+    unknown = sorted(
+        set(fields) - set(allowed_fields(kind)) - recognized_obsolete
+    )
+    if unknown:
+        errors.append("unknown packet fields: " + ", ".join(unknown))
     for name in REQUIRED[kind]:
         if name not in fields:
             errors.append(f"missing field: {name}")
         elif not fields[name]:
             errors.append(f"empty field: {name}")
 
-    if kind in {"write", "review"}:
+    if kind in {"write", "review", "design_handoff"}:
         add_obsolete_errors(errors, fields, OBSOLETE_DISPATCH_FIELDS)
-    if kind == "update":
+    if kind in {"update", "delivery_update", "design_reopen", "design_decision"}:
         add_obsolete_errors(errors, fields, OBSOLETE_REPORT_FIELDS)
 
-    if kind in {"binding", "write", "review"}:
+    if kind in {"binding", "write", "review", "design_handoff"}:
         if fields.get("TASK_ENVIRONMENT", "").casefold() != "local":
             errors.append(
                 "TASK_ENVIRONMENT must be local; App-managed worktree tasks are forbidden"
             )
-    if kind in {"write", "review"}:
-        if fields.get("TASK_ARCHIVE_POLICY", "").casefold() != "controller_after_acceptance":
+    if kind in {"write", "review", "design_handoff"}:
+        if (
+            fields.get("TASK_ARCHIVE_POLICY", "").casefold()
+            != "dispatching_authority_after_acceptance"
+        ):
             errors.append(
-                "TASK_ARCHIVE_POLICY must be controller_after_acceptance"
+                "TASK_ARCHIVE_POLICY must be dispatching_authority_after_acceptance"
             )
+
+    if kind in {
+        "write",
+        "review",
+        "update",
+        "design_handoff",
+        "delivery_update",
+        "design_reopen",
+        "design_decision",
+    }:
+        errors.extend(validate_orchestration_mode(fields))
 
     if kind == "binding":
         repository_root = fields.get("REPOSITORY_ROOT", "")
@@ -394,14 +450,16 @@ def validate(kind: str, fields: dict[str, str]) -> list[str]:
             if value and has_placeholder(value):
                 errors.append(f"{field_name} must not contain placeholders")
         if mode and mode not in TASK_MODES:
-            errors.append("TASK_MODE must be write, review_root, or review_worktree")
+            errors.append(
+                "TASK_MODE must be delivery_controller, write, review_root, or review_worktree"
+            )
         if repository_root and actual_cwd and normalized_path(repository_root) != normalized_path(actual_cwd):
             errors.append("ACTUAL_THREAD_CWD must equal REPOSITORY_ROOT")
         if repository_root and worktree_root and not is_descendant_path(worktree_root, repository_root):
             errors.append("WORKTREE_ROOT must be below REPOSITORY_ROOT")
-        if mode == "review_root":
+        if mode in {"delivery_controller", "review_root"}:
             if repository_root and execution_path and normalized_path(repository_root) != normalized_path(execution_path):
-                errors.append("review_root EXECUTION_PATH must equal REPOSITORY_ROOT")
+                errors.append(f"{mode} EXECUTION_PATH must equal REPOSITORY_ROOT")
         elif mode in {"write", "review_worktree"}:
             if worktree_root and execution_path and not is_descendant_path(execution_path, worktree_root):
                 errors.append("EXECUTION_PATH must be below WORKTREE_ROOT")
@@ -418,6 +476,29 @@ def validate(kind: str, fields: dict[str, str]) -> list[str]:
             errors.append("ACTUAL_THREAD_PROJECT_ID must equal TASK_PROJECT_ID")
 
     if kind == "write":
+        if fields.get("SOURCE_ROLE") != "delivery_controller":
+            errors.append("write SOURCE_ROLE must be delivery_controller")
+        if fields.get("TARGET_ROLE") != "peer_writer":
+            errors.append("write TARGET_ROLE must be peer_writer")
+        errors.extend(
+            validate_concrete_task_id(
+                "REPORT_TO_TASK_ID", fields.get("REPORT_TO_TASK_ID", "")
+            )
+        )
+        if fields.get("AUTHORITY_BASELINE") and has_placeholder(
+            fields["AUTHORITY_BASELINE"]
+        ):
+            errors.append("AUTHORITY_BASELINE must not contain placeholders")
+        design_checkpoint = fields.get("DESIGN_CHECKPOINT", "")
+        if fields.get("ORCHESTRATION_MODE") == "architected":
+            if not design_checkpoint:
+                errors.append("architected write requires DESIGN_CHECKPOINT")
+            else:
+                errors.extend(
+                    validate_checkpoint("DESIGN_CHECKPOINT", design_checkpoint)
+                )
+        elif design_checkpoint:
+            errors.append("delivery write must not declare DESIGN_CHECKPOINT")
         root = fields.get("WORKTREE_ROOT", "")
         worktree = fields.get("WORKTREE", "")
         for field_name, value in (("WORKTREE_ROOT", root), ("WORKTREE", worktree)):
@@ -435,6 +516,37 @@ def validate(kind: str, fields: dict[str, str]) -> list[str]:
                 errors.append(f"{name} must not contain placeholders")
 
     if kind == "review":
+        review_class = fields.get("REVIEW_CLASS", "")
+        if review_class and review_class not in REVIEW_CLASSES:
+            errors.append("REVIEW_CLASS must be design or implementation")
+        if fields.get("TARGET_ROLE") != "peer_reviewer":
+            errors.append("review TARGET_ROLE must be peer_reviewer")
+        if review_class == "design":
+            if fields.get("ORCHESTRATION_MODE") != "architected":
+                errors.append("design review requires ORCHESTRATION_MODE=architected")
+            if fields.get("SOURCE_ROLE") != "design_authority":
+                errors.append("design review SOURCE_ROLE must be design_authority")
+        elif review_class == "implementation" and fields.get(
+            "SOURCE_ROLE"
+        ) != "delivery_controller":
+            errors.append(
+                "implementation review SOURCE_ROLE must be delivery_controller"
+            )
+        errors.extend(
+            validate_concrete_task_id(
+                "REPORT_TO_TASK_ID", fields.get("REPORT_TO_TASK_ID", "")
+            )
+        )
+        design_checkpoint = fields.get("DESIGN_CHECKPOINT", "")
+        if fields.get("ORCHESTRATION_MODE") == "architected":
+            if not design_checkpoint:
+                errors.append("architected review requires DESIGN_CHECKPOINT")
+            else:
+                errors.extend(
+                    validate_checkpoint("DESIGN_CHECKPOINT", design_checkpoint)
+                )
+        elif design_checkpoint:
+            errors.append("delivery review must not declare DESIGN_CHECKPOINT")
         mode = fields.get("TARGET_MODE", "")
         target = fields.get("TARGET_PATH", "")
         if mode and mode not in REVIEW_MODES:
@@ -448,6 +560,17 @@ def validate(kind: str, fields: dict[str, str]) -> list[str]:
         commit_or_range = fields.get("TARGET_COMMIT_OR_RANGE", "")
         if commit_or_range and not validate_commit_or_range(commit_or_range):
             errors.append("TARGET_COMMIT_OR_RANGE must be a full SHA or full-SHA range")
+        if review_class == "design":
+            design_checkpoint = fields.get("DESIGN_CHECKPOINT", "")
+            target_checkpoint = re.split(r"\.\.\.?", commit_or_range)[-1]
+            if (
+                FULL_SHA_RE.fullmatch(design_checkpoint)
+                and FULL_SHA_RE.fullmatch(target_checkpoint)
+                and design_checkpoint.casefold() != target_checkpoint.casefold()
+            ):
+                errors.append(
+                    "design review TARGET_COMMIT_OR_RANGE must end at DESIGN_CHECKPOINT"
+                )
         for name in (
             "ACCEPTANCE_BASELINE",
             "THREAT_MODEL",
@@ -464,8 +587,232 @@ def validate(kind: str, fields: dict[str, str]) -> list[str]:
     model_policy = fields.get("MODEL_POLICY", "")
     if kind in {"write", "review"} and model_policy:
         errors.extend(validate_model(kind, model_policy))
+    if kind == "design_handoff" and model_policy:
+        errors.extend(validate_model("delivery", model_policy))
+
+    if kind == "design_handoff":
+        if fields.get("ORCHESTRATION_MODE") != "architected":
+            errors.append("design handoff requires ORCHESTRATION_MODE=architected")
+        if fields.get("SOURCE_ROLE") != "design_authority":
+            errors.append("design handoff SOURCE_ROLE must be design_authority")
+        if fields.get("TARGET_ROLE") != "delivery_controller":
+            errors.append("design handoff TARGET_ROLE must be delivery_controller")
+        design_task_id = fields.get("DESIGN_TASK_ID", "")
+        delivery_task_id = fields.get("DELIVERY_TASK_ID", "")
+        report_to = fields.get("REPORT_TO_TASK_ID", "")
+        errors.extend(validate_concrete_task_id("DESIGN_TASK_ID", design_task_id))
+        if delivery_task_id.casefold() != "pending":
+            errors.extend(
+                validate_concrete_task_id("DELIVERY_TASK_ID", delivery_task_id)
+            )
+        errors.extend(validate_concrete_task_id("REPORT_TO_TASK_ID", report_to))
+        if design_task_id and report_to and design_task_id != report_to:
+            errors.append("REPORT_TO_TASK_ID must equal DESIGN_TASK_ID")
+        repository_root = fields.get("REPOSITORY_ROOT", "")
+        if repository_root and not is_absolute_path(repository_root):
+            errors.append("REPOSITORY_ROOT must be absolute")
+        errors.extend(
+            validate_checkpoint(
+                "DESIGN_CHECKPOINT", fields.get("DESIGN_CHECKPOINT", "")
+            )
+        )
+        if fields.get("DESIGN_REVIEW_STATUS", "").casefold() != "pass":
+            errors.append("DESIGN_REVIEW_STATUS must be PASS")
+        for name in (
+            "DESIGN_REVIEW_EVIDENCE",
+            "OBJECTIVE",
+            "AUTHORITATIVE_INPUTS",
+            "FROZEN_DECISIONS",
+            "NON_GOALS",
+            "ACCEPTANCE_BASELINE",
+            "IMPLEMENTATION_BOUNDARY",
+            "EXTERNAL_GATES",
+            "DESIGN_REOPEN_RULE",
+        ):
+            if fields.get(name) and has_placeholder(fields[name]):
+                errors.append(f"{name} must not contain placeholders")
+
+    if kind == "delivery_update":
+        if fields.get("ORCHESTRATION_MODE") != "architected":
+            errors.append("delivery update requires ORCHESTRATION_MODE=architected")
+        if fields.get("SOURCE_ROLE") != "delivery_controller":
+            errors.append("delivery update SOURCE_ROLE must be delivery_controller")
+        if fields.get("TARGET_ROLE") != "design_authority":
+            errors.append("delivery update TARGET_ROLE must be design_authority")
+        design_task_id = fields.get("DESIGN_TASK_ID", "")
+        delivery_task_id = fields.get("DELIVERY_TASK_ID", "")
+        target_task_id = fields.get("TARGET_TASK_ID", "")
+        errors.extend(validate_concrete_task_id("DESIGN_TASK_ID", design_task_id))
+        errors.extend(
+            validate_concrete_task_id("DELIVERY_TASK_ID", delivery_task_id)
+        )
+        errors.extend(validate_concrete_task_id("TARGET_TASK_ID", target_task_id))
+        if design_task_id and target_task_id and design_task_id != target_task_id:
+            errors.append("TARGET_TASK_ID must equal DESIGN_TASK_ID")
+        errors.extend(
+            validate_checkpoint(
+                "DESIGN_CHECKPOINT", fields.get("DESIGN_CHECKPOINT", "")
+            )
+        )
+        update_type = fields.get("UPDATE_TYPE", "")
+        if update_type and update_type not in DELIVERY_UPDATE_TYPES:
+            errors.append("UPDATE_TYPE must be plan, milestone, or final")
+        if fields.get("DECISION_REQUIRED", "").casefold() not in {"yes", "no"}:
+            errors.append("DECISION_REQUIRED must be yes or no")
+        if update_type == "plan":
+            for name in (
+                "READY_SET",
+                "PARALLEL_DISPATCH",
+                "DEPENDENCY_GRAPH",
+                "SHARED_PATH_OWNER",
+            ):
+                if not fields.get(name):
+                    errors.append(f"delivery plan missing field: {name}")
+        if update_type == "milestone" and not fields.get("MILESTONE"):
+            errors.append("delivery milestone missing field: MILESTONE")
+        if update_type == "final" and fields.get(
+            "DECISION_REQUIRED", ""
+        ).casefold() != "yes":
+            errors.append("delivery final requires DECISION_REQUIRED=yes")
+        for name in (
+            "SUMMARY",
+            "DESIGN_ALIGNMENT",
+            "EVIDENCE",
+            "RISKS_OR_LIMITS",
+            "PENDING_ITEMS",
+            "READY_SET",
+            "PARALLEL_DISPATCH",
+            "DEPENDENCY_GRAPH",
+            "SHARED_PATH_OWNER",
+            "MILESTONE",
+            "NEXT",
+        ):
+            if fields.get(name) and has_placeholder(fields[name]):
+                errors.append(f"{name} must not contain placeholders")
+        errors.extend(validate_required_task_message(fields))
+
+    if kind == "design_reopen":
+        if fields.get("ORCHESTRATION_MODE") != "architected":
+            errors.append("design reopen requires ORCHESTRATION_MODE=architected")
+        if fields.get("SOURCE_ROLE") != "delivery_controller":
+            errors.append("design reopen SOURCE_ROLE must be delivery_controller")
+        if fields.get("TARGET_ROLE") != "design_authority":
+            errors.append("design reopen TARGET_ROLE must be design_authority")
+        design_task_id = fields.get("DESIGN_TASK_ID", "")
+        delivery_task_id = fields.get("DELIVERY_TASK_ID", "")
+        target_task_id = fields.get("TARGET_TASK_ID", "")
+        errors.extend(validate_concrete_task_id("DESIGN_TASK_ID", design_task_id))
+        errors.extend(
+            validate_concrete_task_id("DELIVERY_TASK_ID", delivery_task_id)
+        )
+        errors.extend(validate_concrete_task_id("TARGET_TASK_ID", target_task_id))
+        if design_task_id and target_task_id and design_task_id != target_task_id:
+            errors.append("TARGET_TASK_ID must equal DESIGN_TASK_ID")
+        errors.extend(
+            validate_checkpoint(
+                "DESIGN_CHECKPOINT", fields.get("DESIGN_CHECKPOINT", "")
+            )
+        )
+        for name in (
+            "AFFECTED_SCOPE",
+            "CONFLICT",
+            "EVIDENCE",
+            "OPTIONS",
+            "RECOMMENDATION",
+            "PAUSED_SCOPE",
+            "UNAFFECTED_WORK",
+        ):
+            if fields.get(name) and has_placeholder(fields[name]):
+                errors.append(f"{name} must not contain placeholders")
+        errors.extend(validate_required_task_message(fields))
+
+    if kind == "design_decision":
+        if fields.get("ORCHESTRATION_MODE") != "architected":
+            errors.append("design decision requires ORCHESTRATION_MODE=architected")
+        if fields.get("SOURCE_ROLE") != "design_authority":
+            errors.append("design decision SOURCE_ROLE must be design_authority")
+        if fields.get("TARGET_ROLE") != "delivery_controller":
+            errors.append("design decision TARGET_ROLE must be delivery_controller")
+        delivery_task_id = fields.get("DELIVERY_TASK_ID", "")
+        design_task_id = fields.get("DESIGN_TASK_ID", "")
+        target_task_id = fields.get("TARGET_TASK_ID", "")
+        errors.extend(validate_concrete_task_id("DESIGN_TASK_ID", design_task_id))
+        errors.extend(validate_concrete_task_id("DELIVERY_TASK_ID", delivery_task_id))
+        errors.extend(validate_concrete_task_id("TARGET_TASK_ID", target_task_id))
+        if delivery_task_id and target_task_id and delivery_task_id != target_task_id:
+            errors.append("TARGET_TASK_ID must equal DELIVERY_TASK_ID")
+        errors.extend(
+            validate_checkpoint(
+                "PRIOR_DESIGN_CHECKPOINT",
+                fields.get("PRIOR_DESIGN_CHECKPOINT", ""),
+            )
+        )
+        decision = fields.get("DECISION", "")
+        if decision and decision not in DESIGN_DECISIONS:
+            errors.append(
+                "DECISION must be clarify, continue, hold, "
+                "reopen_approved, or reopen_rejected"
+            )
+        updated = fields.get("UPDATED_DESIGN_CHECKPOINT", "")
+        if decision == "reopen_approved":
+            errors.extend(validate_checkpoint("UPDATED_DESIGN_CHECKPOINT", updated))
+            prior = fields.get("PRIOR_DESIGN_CHECKPOINT", "")
+            if FULL_SHA_RE.fullmatch(updated) and updated.casefold() == prior.casefold():
+                errors.append(
+                    "reopen_approved requires a new UPDATED_DESIGN_CHECKPOINT"
+                )
+        elif updated and updated != "unchanged":
+            errors.append(
+                "only reopen_approved may change UPDATED_DESIGN_CHECKPOINT"
+            )
+        for name in (
+            "RATIONALE",
+            "AFFECTED_SCOPE",
+            "AUTHORITY_BOUNDARY",
+            "NEXT",
+        ):
+            if fields.get(name) and has_placeholder(fields[name]):
+                errors.append(f"{name} must not contain placeholders")
+        errors.extend(validate_required_task_message(fields))
 
     if kind == "update":
+        errors.extend(validate_concrete_task_id("TASK_ID", fields.get("TASK_ID", "")))
+        update_class = fields.get("UPDATE_CLASS", "")
+        if update_class and update_class not in UPDATE_CLASSES:
+            errors.append("UPDATE_CLASS must be design_review or implementation")
+        source_role = fields.get("SOURCE_ROLE", "")
+        target_role = fields.get("TARGET_ROLE", "")
+        if update_class == "design_review":
+            if fields.get("ORCHESTRATION_MODE") != "architected":
+                errors.append("design review update requires ORCHESTRATION_MODE=architected")
+            if source_role != "peer_reviewer":
+                errors.append("design review update SOURCE_ROLE must be peer_reviewer")
+            if target_role != "design_authority":
+                errors.append("design review update TARGET_ROLE must be design_authority")
+        elif update_class == "implementation":
+            if source_role not in {"peer_reviewer", "peer_writer"}:
+                errors.append(
+                    "implementation update SOURCE_ROLE must be peer_writer or peer_reviewer"
+                )
+            if target_role != "delivery_controller":
+                errors.append(
+                    "implementation update TARGET_ROLE must be delivery_controller"
+                )
+        errors.extend(
+            validate_concrete_task_id(
+                "TARGET_TASK_ID", fields.get("TARGET_TASK_ID", "")
+            )
+        )
+        design_checkpoint = fields.get("DESIGN_CHECKPOINT", "")
+        if fields.get("ORCHESTRATION_MODE") == "architected":
+            if not design_checkpoint:
+                errors.append("architected update requires DESIGN_CHECKPOINT")
+            else:
+                errors.extend(
+                    validate_checkpoint("DESIGN_CHECKPOINT", design_checkpoint)
+                )
+        elif design_checkpoint:
+            errors.append("delivery update must not declare DESIGN_CHECKPOINT")
         status = fields.get("STATUS", "")
         if status and status not in STATUSES:
             errors.append("STATUS must be progress, blocked, or final")
@@ -474,16 +821,15 @@ def validate(kind: str, fields: dict[str, str]) -> list[str]:
         blocked_delivery = bool(delivery and BLOCKED_DELIVERY_RE.fullmatch(delivery))
         if delivery and not direct and not blocked_delivery:
             errors.append(
-                "DELIVERY must be task_message:<controller-task-id> or blocked:<reason>"
+                "DELIVERY must be task_message:<target-task-id> or blocked:<reason>"
             )
         if blocked_delivery and status != "blocked":
             errors.append("blocked DELIVERY requires STATUS=blocked")
         if status and status != "blocked" and not direct:
-            errors.append("progress and final DELIVERY must use task_message:<controller-task-id>")
-        if fields.get("TARGET_SETTINGS", "").casefold() != "preserve":
-            errors.append(
-                "TARGET_SETTINGS must be preserve; controller-bound reports must omit model and thinking overrides"
-            )
+            errors.append("progress and final DELIVERY must use task_message:<target-task-id>")
+        if direct:
+            errors.extend(validate_task_message_target(fields))
+        errors.extend(validate_target_settings(fields))
         if status == "final":
             if fields.get("EVIDENCE", "").casefold() == "none":
                 errors.append("final EVIDENCE must include commands or artifacts")
@@ -492,6 +838,15 @@ def validate(kind: str, fields: dict[str, str]) -> list[str]:
                     errors.append(f"final report missing field: {name}")
                 elif not fields[name]:
                     errors.append(f"final report empty field: {name}")
+        for name in (
+            "SUMMARY",
+            "EVIDENCE",
+            "RISKS_OR_LIMITS",
+            "PENDING_ITEMS",
+            "NEXT",
+        ):
+            if fields.get(name) and has_placeholder(fields[name]):
+                errors.append(f"{name} must not contain placeholders")
 
     return errors
 

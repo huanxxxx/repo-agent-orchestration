@@ -36,6 +36,7 @@ class Settings:
     root_worktree_policy: str = "observe_integrate_validate"
     task_host_policy: str = "repository_project_local"
     controller_model_policy: str = "app_current_task"
+    delivery_controller_model: str = "app_default"
     write_task_model: str = "app_default"
     review_task_model: str = "app_default"
     shared_integration_paths: str = "none"
@@ -120,6 +121,7 @@ def setting_values(settings: Settings) -> tuple[tuple[str, str], ...]:
         ("BRANCH_PREFIX", settings.branch_prefix),
         ("TASK_HOST_POLICY", settings.task_host_policy),
         ("CONTROLLER_MODEL_POLICY", settings.controller_model_policy),
+        ("DELIVERY_CONTROLLER_MODEL", settings.delivery_controller_model),
         ("WRITE_TASK_MODEL", settings.write_task_model),
         ("REVIEW_TASK_MODEL", settings.review_task_model),
         ("SHARED_INTEGRATION_PATHS", settings.shared_integration_paths),
@@ -139,10 +141,11 @@ def render_block(
         values = tuple((key, value) for key, value in values if key in include_keys)
     body = newline.join(f"{key}: {value}" for key, value in values)
     activation = (
-        "- Use the repository-local `$repo-agent-orchestration` Skill when work needs "
-        "independent task ownership, formal review, parallel task dispatch, cross-turn "
-        "handoffs or recovery, integration, or closure; keep bounded same-task collaboration "
-        "inside the current task."
+        "- Use the repository-local `$repo-agent-orchestration` Skill to choose direct, "
+        "delivery, or architected mode when work changes architecture, data contracts, core "
+        "workflows, or product boundaries, or needs independent task ownership, formal review, "
+        "parallel dispatch, cross-turn recovery, integration, or closure; keep bounded "
+        "same-task collaboration inside the current task."
     )
     failure = (
         "- If the Skill or a capability required for an independently scoped task is "
@@ -194,6 +197,15 @@ def resolve_review_task_model(explicit: str | None, current: str | None) -> str:
     if not value:
         value = "app_default"
     return validate_profile_model("review task model", value)
+
+
+def resolve_delivery_controller_model(
+    explicit: str | None, current: str | None
+) -> str:
+    value = explicit if explicit else current
+    if not value:
+        value = "app_default"
+    return validate_profile_model("delivery controller model", value)
 
 
 def update_agents_content(existing: str | None, settings: Settings, newline: str) -> str:
@@ -295,6 +307,9 @@ def install_repository(repo_value: Path, settings: Settings, dry_run: bool = Fal
     )
     validate_profile_model("write task model", settings.write_task_model)
     validate_profile_model("review task model", settings.review_task_model)
+    validate_profile_model(
+        "delivery controller model", settings.delivery_controller_model
+    )
     profile_root = primary_worktree_root(repo)
     resolved_worktree_root = settings.worktree_root.resolve()
     try:
@@ -367,6 +382,7 @@ def main() -> int:
     parser.add_argument("--root-worktree-policy")
     parser.add_argument("--task-host-policy", choices=TASK_HOST_POLICIES)
     parser.add_argument("--controller-model-policy", choices=CONTROLLER_MODEL_POLICIES)
+    parser.add_argument("--delivery-controller-model")
     parser.add_argument("--write-task-model")
     parser.add_argument("--review-task-model")
     parser.add_argument("--shared-integration-paths")
@@ -402,6 +418,10 @@ def main() -> int:
             or current.get("TASK_HOST_POLICY", "repository_project_local"),
             controller_model_policy=args.controller_model_policy
             or current.get("CONTROLLER_MODEL_POLICY", "app_current_task"),
+            delivery_controller_model=resolve_delivery_controller_model(
+                args.delivery_controller_model,
+                current.get("DELIVERY_CONTROLLER_MODEL"),
+            ),
             write_task_model=resolve_write_task_model(
                 args.write_task_model, current.get("WRITE_TASK_MODEL")
             ),

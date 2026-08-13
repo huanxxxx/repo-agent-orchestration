@@ -16,6 +16,10 @@ CASES = {
     "valid-write-luna-max.txt": ("write", ()),
     "valid-review.txt": ("review", ()),
     "valid-final-update.txt": ("update", ()),
+    "valid-design-handoff.txt": ("design_handoff", ()),
+    "valid-delivery-plan.txt": ("delivery_update", ()),
+    "valid-design-reopen.txt": ("design_reopen", ()),
+    "valid-design-decision.txt": ("design_decision", ()),
     "invalid-projectless.txt": (
         "binding",
         ("TASK_PROJECT_ID must identify", "ACTUAL_THREAD_CWD must equal REPOSITORY_ROOT"),

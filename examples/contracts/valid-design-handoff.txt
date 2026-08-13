@@ -1,0 +1,21 @@
+DESIGN_TASK_ID: design-task-1
+DELIVERY_TASK_ID: delivery-task-1
+ORCHESTRATION_MODE: architected
+SOURCE_ROLE: design_authority
+TARGET_ROLE: delivery_controller
+REPORT_TO_TASK_ID: design-task-1
+TASK_ENVIRONMENT: local
+TASK_ARCHIVE_POLICY: dispatching_authority_after_acceptance
+REPOSITORY_ROOT: C:\Projects\ledger
+DESIGN_CHECKPOINT: 1111111111111111111111111111111111111111
+DESIGN_REVIEW_STATUS: PASS
+DESIGN_REVIEW_EVIDENCE: review-task-1 PASS against D1-D4
+OBJECTIVE: deliver a stable multi-module ledger architecture
+AUTHORITATIVE_INPUTS: repository contracts and informed user choices
+FROZEN_DECISIONS: D1 balanced journal; D2 explicit identity fence
+NON_GOALS: deployment and production migration
+ACCEPTANCE_BASELINE: D1-D4
+IMPLEMENTATION_BOUNDARY: implement frozen D1-D4 without redesign
+EXTERNAL_GATES: merge main; push; deploy; production data
+DESIGN_REOPEN_RULE: false assumption or required boundary change returns to design-task-1
+MODEL_POLICY: app_default

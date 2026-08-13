@@ -16,8 +16,8 @@ Use this runbook only on a disposable demonstration repository. It exercises the
 3. Create two repository-local Git worktrees and two visible write tasks. Create each visible task in the saved project with explicit App environment `local`; never select or default to App `worktree`. Omit model overrides for `WRITE_TASK_MODEL: app_default`; submit an explicit model through real task parameters only after the destination host advertises it.
 4. Give each task conditional authority in its initial instruction: run the fast route gate first and continue in the same turn when it passes. Each command must use its exact execution path.
 5. Freeze one candidate and create a visible read-only review task against that exact worktree and commit. Also exercise either a short `root_readonly` review or an on-demand `detached_snapshot` review.
-6. Require blocked and final reports to use `DELIVERY: task_message:<controller-task-id>` and `TARGET_SETTINGS: preserve`. Confirm the task-message call omits `model` and `thinking` and succeeds before the child emits its local final.
-7. Have the controller verify the real diff, staged paths, tests, findings, and evidence limits before integration. After acceptance and with no correction or in-flight operation, require the controller to archive the child task and record the successful archive receipt.
+6. Require blocked and final reports to use `DELIVERY: task_message:<target-task-id>` and `TARGET_SETTINGS: preserve`. Confirm the task-message call omits `model` and `thinking` and succeeds before the peer emits its local final.
+7. Have the delivery controller verify the real diff, staged paths, tests, findings, and evidence limits before integration. After acceptance and with no correction or in-flight operation, require the dispatching authority to archive the peer task and record the successful archive receipt.
 8. Create one read-only route-check task with `projectless` or an escaping execution path. Confirm rejection and that no write authority is sent.
 
 ## Evidence to retain

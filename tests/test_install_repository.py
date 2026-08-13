@@ -109,10 +109,13 @@ class RepositoryInstallerTests(unittest.TestCase):
         self.assertIn("TASK_HOST_POLICY: repository_project_local", agents)
         self.assertIn(f"WORKTREE_ROOT: {repo / '.worktrees'}", agents)
         self.assertIn("WRITE_TASK_MODEL: app_default", agents)
+        self.assertIn("DELIVERY_CONTROLLER_MODEL: app_default", agents)
         self.assertIn("CONTINUITY_POLICY: none", agents)
         self.assertIn(
             "Use the repository-local `$repo-agent-orchestration` Skill", agents
         )
+        self.assertIn("choose direct, delivery, or architected mode", agents)
+        self.assertIn("changes architecture, data contracts", agents)
         self.assertIn("independent task ownership", agents)
         self.assertIn("do not collapse it into current-task execution", agents)
 
@@ -147,6 +150,7 @@ class RepositoryInstallerTests(unittest.TestCase):
             main_branch="main",
             worktree_root=repo / ".worktrees",
             write_task_model="custom-executor/high",
+            delivery_controller_model="custom-delivery/high",
             review_task_model="custom-review/medium",
             shared_integration_paths="docs/status.md",
             continuity_policy="repository_defined:docs/status.md",
@@ -165,6 +169,7 @@ class RepositoryInstallerTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
         self.assertEqual((repo / "AGENTS.md").read_text(encoding="utf-8"), before)
         self.assertIn("CONTINUITY_POLICY: repository_defined:docs/status.md", before)
+        self.assertIn("DELIVERY_CONTROLLER_MODEL: custom-delivery/high", before)
 
     def test_cli_upgrade_migrates_legacy_luna_default_to_app_default(self) -> None:
         temporary, repo = self.make_repo()
@@ -214,6 +219,18 @@ class RepositoryInstallerTests(unittest.TestCase):
         )
 
         with self.assertRaisesRegex(ValueError, "review task model must be"):
+            INSTALLER.install_repository(repo, settings)
+
+    def test_invalid_delivery_controller_model_is_rejected_at_install(self) -> None:
+        temporary, repo = self.make_repo()
+        self.addCleanup(temporary.cleanup)
+        settings = INSTALLER.Settings(
+            main_branch="main",
+            worktree_root=repo / ".worktrees",
+            delivery_controller_model="bad value",
+        )
+
+        with self.assertRaisesRegex(ValueError, "delivery controller model must be"):
             INSTALLER.install_repository(repo, settings)
 
     def test_valid_profile_model_with_slash_is_accepted_at_install(self) -> None:
@@ -429,6 +446,31 @@ class RepositoryInstallerTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 2)
         self.assertIn("write task model must be", result.stderr)
+        self.assertNotIn("Traceback", result.stderr)
+        self.assertFalse((repo / "AGENTS.md").exists())
+
+    def test_cli_rejects_invalid_delivery_model_without_traceback(self) -> None:
+        temporary, repo = self.make_repo()
+        self.addCleanup(temporary.cleanup)
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-B",
+                str(INSTALLER_PATH),
+                "--repo",
+                str(repo),
+                "--delivery-controller-model",
+                "bad value",
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("delivery controller model must be", result.stderr)
         self.assertNotIn("Traceback", result.stderr)
         self.assertFalse((repo / "AGENTS.md").exists())
 

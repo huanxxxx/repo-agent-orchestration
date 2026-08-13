@@ -1,0 +1,15 @@
+DESIGN_TASK_ID: design-task-1
+DELIVERY_TASK_ID: delivery-task-1
+ORCHESTRATION_MODE: architected
+SOURCE_ROLE: design_authority
+TARGET_ROLE: delivery_controller
+TARGET_TASK_ID: delivery-task-1
+PRIOR_DESIGN_CHECKPOINT: 1111111111111111111111111111111111111111
+DECISION: reopen_rejected
+RATIONALE: current evidence does not invalidate D2 and the proposed workaround crosses privacy scope
+UPDATED_DESIGN_CHECKPOINT: unchanged
+AFFECTED_SCOPE: identity-fence
+AUTHORITY_BOUNDARY: continue evidence collection; no alternate identity path authorized
+DELIVERY: task_message:delivery-task-1
+TARGET_SETTINGS: preserve
+NEXT: keep affected scope on hold and continue independent ready work

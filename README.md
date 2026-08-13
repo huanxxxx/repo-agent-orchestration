@@ -2,9 +2,9 @@
 
 ### A controllable, repository-native Ultra-style workflow for Codex
 
-**The controller plans and accepts. Current-task subagents collaborate in place. Independent peer tasks own isolated worktrees and reviews.**
+**Choose the lightest useful mode: direct work, controller-led delivery, or independent design authority plus parallel delivery.**
 
-Repo Agent Orchestration is a lightweight Codex Skill for coordinating multi-agent repository work through explicit role separation, model routing, on-demand Git worktrees, optional repository continuity packages, independent review, direct reports, and controller-owned acceptance.
+Repo Agent Orchestration is a lightweight Codex Skill for coordinating multi-agent repository work through explicit authority, model routing, on-demand Git worktrees, optional repository continuity packages, independent review, direct reports, and evidence-based acceptance.
 
 Codex already knows how to use agents. This project focuses on the harder engineering questions: who may write, where they may write, which model is submitted for the task, how completion is proven, and who may integrate the result.
 
@@ -32,38 +32,39 @@ This Skill turns those failure modes into explicit contracts and fail-closed gat
 
 | Role | Responsibility | Default policy |
 |---|---|---|
-| Controller | Plan, route, decide, accept, integrate, and close | Current Codex task selection |
+| Design authority | Freeze the professional global design, decide reopen requests, and accept final design consistency in `architected` mode | Current Codex task selection |
+| Delivery controller | Plan dependencies, proactively dispatch ready work, adjudicate implementation findings, integrate, and report back | Same task in `delivery`; App default or explicit repository binding in `architected` |
 | Peer write task | Implement one independently accepted change | App default unless repository or user explicitly binds a supported model |
 | Peer review task | Review one frozen candidate without writing | App default unless repository or user overrides it |
 | Internal subagent | Bounded current-turn retrieval or non-overlapping contribution | Inherits the current task path; never owns a branch or worktree |
 
-The installer defaults write and review tasks to `app_default`, which omits model overrides and lets the destination host select a compatible model. An explicit repository or user binding is used only after the host advertises that model. Model names remain repository configuration, not a promise that every Codex surface exposes the same catalog or echoes the effective runtime model; never infer availability only from the controller model family.
+The installer defaults architected delivery controllers, writers, and reviewers to `app_default`, which omits model overrides and lets the destination host select a compatible model. An explicit repository or user binding is used only after the host advertises that model. Model names remain repository configuration, not a promise that every Codex surface exposes the same catalog or echoes the effective runtime model; never infer availability only from the current authority model family.
 
 ## Workflow
 
 ```text
-                         +----------------------+
-                         | Controller           |
-                         | Plan / Route / Gate  |
-                         | Verify / Integrate   |
-                         +----------+-----------+
-                                    |
-                     readiness audit and contracts
-                   +----------------+----------------+
-                   |                |                |
-           +-------v-------+ +------v--------+ +-----v----------+
-           | Write task A  | | Write task B | | Read-only      |
-           | Worktree A    | | Worktree B   | | reviewer       |
-           +-------+-------+ +------+--------+ +-----+----------+
-                   |                |                |
-                   +----------------+----------------+
-                                    |
-                         frozen candidate + evidence
-                                    |
-                         controller acceptance gate
+                  +--------------------------+
+                  | Design authority         |
+                  | Freeze / Reopen / Accept |
+                  +------------+-------------+
+                               |
+                     DESIGN_HANDOFF / reports
+                               |
+                  +------------v-------------+
+                  | Delivery controller      |
+                  | Plan / Dispatch / Merge  |
+                  +------------+-------------+
+                               |
+                    ready-set parallel dispatch
+                 +-------------+-------------+
+                 |             |             |
+          +------v------+ +----v--------+ +--v-----------+
+          | Writer A    | | Writer B    | | Reviewer     |
+          | Worktree A  | | Worktree B  | | Read-only    |
+          +-------------+ +-------------+ +--------------+
 ```
 
-Every App-created user-visible task is a peer, even when another task dispatched it; controller is a coordination role, not runtime parentage. Every peer write task owns one branch, one repository-local worktree, and one writable ownership boundary. Internal subagents are participants inside one current task: they inherit its path, receive non-overlapping scopes, return within the current turn, and create no tree of their own. A peer task is justified by independent acceptance, cross-turn waiting, model binding, recovery, or formal review—not by agent count alone. Candidate review reuses the frozen implementation tree while its writer is paused; long or historical review gets an on-demand detached snapshot only when a stable filesystem is useful.
+This diagram shows `architected` mode. Ordinary `delivery` collapses design and delivery authority into the current controller; `direct` creates no peer tasks. Every App-created user-visible task is still a runtime peer, even when another task dispatched it: authority arrows are not App parentage. Every peer write task owns one branch, one repository-local worktree, and one writable ownership boundary. Internal subagents are participants inside one current task: they inherit its path, receive non-overlapping scopes, return within the current turn, and create no tree of their own. A peer task is justified by independent acceptance, cross-turn waiting, model binding, recovery, or formal review—not by agent count alone. Candidate review reuses the frozen implementation tree while its writer is paused; long or historical review gets an on-demand detached snapshot only when a stable filesystem is useful.
 
 When a repository defines an execution package or equivalent continuity entry, the Skill keeps it separate from both the App task and Git worktree. It stores durable objective, scope, state, acceptance, recovery, and next-step facts; repository-specific tiers, paths, templates, and scaffolding stay in the repository. Clean worktrees use their current HEAD as the recovery anchor, and prechange snapshots remain explicit rather than ceremonial.
 
@@ -82,7 +83,7 @@ The installer:
 1. requires the exact absolute Git repository root;
 2. copies the Skill to `.agents/skills/repo-agent-orchestration`;
 3. creates or idempotently updates one marked block in the root `AGENTS.md`;
-4. writes an explicit instruction to use the Skill when work needs independent task ownership, formal review, parallel task dispatch, cross-turn recovery, integration, or closure;
+4. writes an explicit instruction to use the Skill for architecture-sensitive work or when delivery needs independent task ownership, formal review, parallel dispatch, cross-turn recovery, integration, or closure;
 5. preserves existing repository configuration outside the managed block;
 6. excludes `__pycache__` and `.pyc` artifacts.
 
@@ -100,7 +101,7 @@ python scripts/install_repository.py --repo /absolute/path/to/repository --check
 
 On upgrade, omitted CLI options preserve values already present in the managed `AGENTS.md` block, except the former installer default `gpt-5.6-luna/max`, which migrates automatically to `app_default`. Defaults are used only when a value does not yet exist. Pass an explicit CLI value only when deliberately binding a repository to a supported model.
 
-The installer accepts `--main-branch`, `--worktree-root`, `--branch-prefix`, `--root-worktree-policy`, `--task-host-policy`, `--controller-model-policy`, `--write-task-model`, `--review-task-model`, `--shared-integration-paths`, `--continuity-policy`, and `--external-gates`. The fixed protocol fields currently accept only `TASK_HOST_POLICY: repository_project_local` and `CONTROLLER_MODEL_POLICY: app_current_task`. Model values must be `app_default` or `<model>/<reasoning>`; invalid values are rejected before any write. Operational failures print a structured JSON error and exit nonzero instead of a traceback.
+The installer accepts `--main-branch`, `--worktree-root`, `--branch-prefix`, `--root-worktree-policy`, `--task-host-policy`, `--controller-model-policy`, `--delivery-controller-model`, `--write-task-model`, `--review-task-model`, `--shared-integration-paths`, `--continuity-policy`, and `--external-gates`. The fixed protocol fields currently accept only `TASK_HOST_POLICY: repository_project_local` and `CONTROLLER_MODEL_POLICY: app_current_task`. Model values must be `app_default` or `<model>/<reasoning>`; invalid values are rejected before any write. Operational failures print a structured JSON error and exit nonzero instead of a traceback.
 
 The repository profile remains configurable:
 
@@ -111,6 +112,7 @@ WORKTREE_ROOT: <absolute repo-local worktree root>
 BRANCH_PREFIX: codex/
 TASK_HOST_POLICY: repository_project_local
 CONTROLLER_MODEL_POLICY: app_current_task
+DELIVERY_CONTROLLER_MODEL: app_default|<explicit model>/<reasoning>
 WRITE_TASK_MODEL: app_default|<explicit model>/<reasoning>
 REVIEW_TASK_MODEL: app_default
 SHARED_INTEGRATION_PATHS: <repository-specific paths>
@@ -160,7 +162,15 @@ python skill/repo-agent-orchestration/scripts/validate_dispatch_contract.py \
   --kind update examples/contracts/valid-final-update.txt
 ```
 
-Supported kinds are `binding`, `write`, `review`, and `update`. Direct CLI checks for `binding`, `write`, and `review` are live: synthetic example paths are intentionally rejected unless they currently exist and match the Git worktree registry, branch, commit, and clean-state contract. `scripts/validate_examples.py` performs the portable static example matrix.
+Supported kinds are `binding`, `write`, `review`, `update`, `design_handoff`, `delivery_update`, `design_reopen`, and `design_decision`. Direct CLI checks for route packets are live: synthetic example paths are intentionally rejected unless they currently exist and match the Git worktree registry, branch, commit, and clean-state contract. `scripts/validate_examples.py` performs the portable static example matrix.
+
+For new packets, prefer the pure constructor before the boundary validator:
+
+```powershell
+python skill/repo-agent-orchestration/scripts/construct_packet.py --kind design_reopen fields.json
+```
+
+The constructor shares its declarative schema with the validator and only generates statically valid packet data. It does not create tasks, touch Git, send messages, wait, or archive anything. The ordinary `delivery` mode remains available; use the optional `architected` mode when repository policy or task facts require a separate design authority, delivery controller, and independent execution/review layer.
 
 ## Compatibility and evidence limits
 
@@ -185,12 +195,12 @@ OpenAI's desktop worktree feature uses Codex-managed worktrees and is documented
 - Windows, extended Windows, and POSIX paths are normalized lexically before containment checks; nonexistent paths are supported and `..` escapes fail closed.
 - Every repository command must use the exact execution path.
 - Review selects the lightest safe target: root, frozen candidate, or detached snapshot.
-- Worker or reviewer PASS remains evidence, not controller acceptance.
-- A peer task's local final is not a delivered controller report; blocked and final reports use direct peer-to-peer task-message delivery.
-- Controller-bound reports preserve the controller's task settings: workers omit `model` and `thinking`, which otherwise override the destination task.
+- Worker or reviewer PASS remains evidence, not acceptance by the contracted authority.
+- A peer task's local final is not a delivered authority report; blocked and final reports use direct peer-to-peer task-message delivery.
+- Task-message reports preserve destination settings: senders omit `model` and `thinking`, which otherwise override the destination task.
 - Visible repository tasks explicitly use App environment `local`; isolation comes from the repository-local execution worktree, never an App-managed worktree.
 - A queued App worktree setup or worktree-creation receipt is a failed peer route, not a task to wait on or recover as if it had started.
-- Accepted peer tasks are archived explicitly by the controller; a peer `final` is delivery, not archival.
+- Accepted peer tasks are archived explicitly by the authority that dispatched them; a peer `final` is delivery, not archival.
 - Repository continuity packages are optional durable fact anchors, never task-message channels, authorization tokens, or workflow engines.
 - A clean task worktree uses its HEAD as the recovery anchor; prechange snapshots require an explicit request or an authorized risky rewrite of task-owned tracked changes.
 - Coherent task-owned output is committed locally before a cross-turn pause, ownership handoff, formal review, or final; unsafe mixed ownership is reported precisely instead of staged.

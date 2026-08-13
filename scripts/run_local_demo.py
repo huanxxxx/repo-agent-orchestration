@@ -59,8 +59,13 @@ def write_packet(worktree_root: Path, worktree: Path, branch: str, head: str) ->
     task_name = branch.removeprefix("codex/")
     return f"""
 TASK_ID: {task_name}
+ORCHESTRATION_MODE: delivery
+SOURCE_ROLE: delivery_controller
+TARGET_ROLE: peer_writer
+REPORT_TO_TASK_ID: demo-controller-thread
+AUTHORITY_BASELINE: A1-A2 local demo baseline
 TASK_ENVIRONMENT: local
-TASK_ARCHIVE_POLICY: controller_after_acceptance
+TASK_ARCHIVE_POLICY: dispatching_authority_after_acceptance
 WORKTREE_ROOT: {worktree_root}
 WORKTREE: {worktree}
 BRANCH: {branch}
@@ -125,8 +130,13 @@ def run_demo() -> dict[str, object]:
         backend_branch, backend_path = workers["backend"]
         review = f"""
 REVIEW_TASK_ID: review-backend
+ORCHESTRATION_MODE: delivery
+REVIEW_CLASS: implementation
+SOURCE_ROLE: delivery_controller
+TARGET_ROLE: peer_reviewer
+REPORT_TO_TASK_ID: demo-controller-thread
 TASK_ENVIRONMENT: local
-TASK_ARCHIVE_POLICY: controller_after_acceptance
+TASK_ARCHIVE_POLICY: dispatching_authority_after_acceptance
 TARGET_MODE: existing_worktree
 TARGET_PATH: {backend_path}
 TARGET_COMMIT_OR_RANGE: {head}
@@ -140,6 +150,11 @@ MODEL_POLICY: app_default
 """
         final_update = f"""
 TASK_ID: write-backend
+ORCHESTRATION_MODE: delivery
+UPDATE_CLASS: implementation
+SOURCE_ROLE: peer_writer
+TARGET_ROLE: delivery_controller
+TARGET_TASK_ID: demo-controller-thread
 STATUS: final
 SUMMARY: local demo complete
 EVIDENCE: commit={head}; local_demo=PASS
