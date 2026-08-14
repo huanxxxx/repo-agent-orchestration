@@ -892,12 +892,19 @@ def validate(kind: str, fields: dict[str, str]) -> list[str]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--kind", choices=sorted(REQUIRED), required=True)
-    parser.add_argument("contract", type=Path)
+    parser.add_argument(
+        "contract",
+        help="UTF-8 packet path, or - to read the packet from stdin",
+    )
     parser.add_argument("--json", action="store_true", dest="as_json")
     args = parser.parse_args()
 
     try:
-        text = args.contract.read_text(encoding="utf-8")
+        text = (
+            sys.stdin.read()
+            if args.contract == "-"
+            else Path(args.contract).read_text(encoding="utf-8")
+        )
     except OSError as exc:
         print(f"cannot read contract: {exc}", file=sys.stderr)
         return 2

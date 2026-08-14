@@ -1,77 +1,84 @@
 ---
 name: repo-agent-orchestration
-description: Coordinate repository work across direct, delivery, or architected modes using an independent design authority when needed, a delivery controller, bounded same-task internal subagents, and peer write or review tasks. Use for architecture and design governance, multi-step implementation, proactive parallel dispatch, Git worktree isolation, durable repository continuity packages, independent review, explicit model routing, task handoffs, recovery, integration, or closure.
+description: Coordinate repository work in direct, delivery, or architected mode using bounded internal subagents, peer tasks, repository-local worktrees, validated packets, independent review, and lightweight recovery.
 ---
 
 # Repository Agent Orchestration
 
-Keep the product mainline primary and the coordination protocol small.
+Keep the product mainline primary. Pay coordination cost only when a real task boundary needs it.
 
-## Authority
+## Start once; wake lightly
 
-1. Read the repository `AGENTS.md` and only the active continuity-package material needed for the task.
-2. Treat user instructions and repository facts as authoritative. Keep model defaults, product boundaries, shared paths, and external gates in the repository.
-3. Resolve the lightest orchestration mode from repository policy and task facts. Repository-local task tiers keep their repository-defined meaning.
-4. In `delivery`, the delivery controller owns planning, routing, verification, integration, and closure. In `architected`, separate design authority from delivery control; peer writers implement and peer reviewers review without writing.
-5. Never turn local evidence into deployment or production authority.
+At task start, read repository `AGENTS.md`, resolve the mode/role, read repository configuration once, and run the fast route gate once per task/runtime binding. Record task/project id, cwd/execution path, acceptance baseline, and report destination. PASS grants the packet's conditional authority to continue in the same turn.
 
-## Choose the orchestration mode
+On later wakes, including after compaction, reuse proven facts. Do not reload the Skill bundle, profile, route gate, or unchanged continuity unless task/project/cwd/execution-path identity, Skill version, or authority changed or became ambiguous. Normal task commits do not invalidate the route; new write/review packets live-check their own branch/HEAD. Consume one wake-causing event, read only changed hot state, act, and yield.
+
+Load references progressively:
+
+- [architected.md](references/architected.md): select/operate `architected`;
+- [controller.md](references/controller.md): controller readiness, parallelism, acceptance, closure;
+- [contracts.md](references/contracts.md): first use or failure of a packet kind;
+- [continuity.md](references/continuity.md): repository-opted durable package or post-PASS closeout;
+- [recovery.md](references/recovery.md): takeover, silence, wrong route, mixed ownership, cleanup.
+
+For routine dispatch, do not inspect protocol source, enumerate unrelated tool schemas, load executor-only Skills, or walk implementation source. Use the CLI; writers load implementation instructions. Inspect deeper only for planning, acceptance, adjudication, recovery, or a protocol defect.
+
+## Choose authority
 
 | Mode | Use |
 |---|---|
-| `direct` | Short answers, bounded current-task work, or ordinary read-only analysis with no independent acceptance boundary |
-| `delivery` | A frozen or straightforward outcome that needs independent implementation, review, recovery, or parallel delivery |
-| `architected` | New or changed architecture, data contracts, core workflows, product boundaries, multiple implementation packages, material direction choices, or an explicitly requested independent design authority |
+| `direct` | Short current-task work or read-only analysis with no independent acceptance boundary |
+| `delivery` | A frozen or straightforward outcome needing independent implementation, review, recovery, or parallel delivery |
+| `architected` | New/changing architecture, data contracts, core workflows, product boundaries, multiple implementation packages, material direction choices, or an explicitly requested design authority |
 
-Do not infer that every multi-file change needs design authority. Conversely, do not collapse an `architected` task into an ordinary controller because a prompt calls the controller “lead” or “designer.” Read [references/architected.md](references/architected.md) for the three-layer authority, professional design judgment, proactive parallel delivery, and report chain.
+Repository-local tiers keep their repository-defined meaning. In `delivery`, the controller owns the accepted outcome and delivery. In `architected`, the design authority owns direction and final design consistency; the delivery controller owns implementation planning and delivery; peers implement or review. In this mode, only the design authority may change the design baseline, through `DESIGN_REOPEN_REQUEST` and `DESIGN_DECISION`.
 
 ## Choose the lightest route
 
-| Work | Route | Worktree |
-|---|---|---|
-| Short current-turn lookup or comparison | Current task or internal subagent | Inherit the current execution path; create none |
-| Bounded current-turn decomposition inside an already authorized task | Internal subagent | Inherit the current execution path; create none |
-| Independently acceptable, cross-turn, separately recoverable, or explicitly model-bound implementation | User-visible peer write task | One repository-local worktree for that task |
-| Review of a frozen implementation candidate | User-visible peer review task | Reuse the candidate worktree read-only while its writer is paused |
-| Short review of a stable committed root | User-visible peer review task | None |
-| Long, cross-turn, test-running, or historical review | User-visible peer review task | Controller creates an on-demand detached snapshot |
+- Keep bounded current-turn lookup/comparison/non-overlapping slices in the current task or an internal subagent; inherit the exact path and create no worktree.
+- Use a peer write task for independently acceptable, cross-turn, separately recoverable, or explicitly model-bound implementation; give it one repository-local worktree.
+- Use a peer review task for formal review: stable root needs none, a frozen candidate reuses its paused writer tree read-only, and only a long/test-running/historical review gets a detached snapshot.
 
-An App-created user-visible task is a peer task even when a controller dispatches it. The controller is a coordination role, not its runtime parent. Only a same-task internal subagent has a parent/subagent relationship: it inherits the current task's authority and exact execution path, must return in the current turn, and must not own an independent milestone, branch, worktree, formal verdict, or recovery lifecycle. It may write only when the current task already has write authority and gives it non-overlapping owned paths. Classify by the actual creation capability, not by words such as helper, delegated, or child. More agents alone never justify more worktrees.
+An App-created user-visible task is a peer task. Route by the actual creation capability. Only an internal subagent has a same-task parent/subagent relationship; it returns this turn, inherits the current authority/path, and owns no independent milestone, verdict, model, recovery, branch, or tree. More agents alone never justify more worktrees. Different peer write tasks never share a writable worktree.
 
-Read [references/controller.md](references/controller.md) when acting as delivery controller or deciding parallelism. Read [references/contracts.md](references/contracts.md) and use the pure packet constructor before dispatching a task or sending a task report. Read [references/continuity.md](references/continuity.md) only when repository policy defines an execution package, task package, ADR bundle, or equivalent durable recovery entry.
+## Dispatch and execute
 
-## Keep implementation bounded
+1. Create peers only for separate acceptance, wait, model, branch, recovery, or formal review. After authorization, dispatch all ready, non-conflicting peer tasks within capacity; do not await another parallelism instruction or split coupled work to fill slots.
+2. Require the smallest change that satisfies `OBJECTIVE`, `ACCEPTANCE`, and `REQUIRED_TESTS`. Every changed path must have a concrete acceptance justification. Once the required acceptance and tests pass, stop implementation; no speculative feature, abstraction, alternate path, refactor, or hardening.
+3. Give a ready writer one local branch/tree and exclusive paths. Internal subagents inherit it; that task verifies and commits the combined checkpoint. Reject projectless/foreign-project tasks. Create peers in the saved project with `environment: {type: "local"}` and the repository-local execution path, never an App-managed tree.
+4. Make one creation call per logical dispatch. An empty, ambiguous, timed-out, queued worktree setup, `clientThreadId`-only, or unparseable receipt is a phantom task/unknown outcome and never authorizes an immediate second creation call. Reconcile inventory on a later real wake.
+5. For `app_default`, omit `model` and `thinking`. Explicit bindings use actual task parameters only after host discovery; prompt text is not binding. Reports must omit `model` and `thinking` and preserve destination settings.
+6. Use the exact execution path. The CLI proves required paths currently exist and match Git registry, branch, and commit. Root status is compared with its baseline, not forced clean.
+7. Before a cross-turn pause, ownership handoff, formal review, or `final`, verify and locally commit coherent owned output. Never stage another owner's files; if unsafe, preserve and report exact dirty paths and recovery action.
 
-A write task implements the smallest change that satisfies its `OBJECTIVE` and `ACCEPTANCE`. Do not add features, reusable abstractions, alternate execution paths, platform-wide refactors, or speculative hardening unless they are required by the accepted outcome. Every changed path must have a concrete acceptance justification. If acceptance appears to require architecture or scope expansion, stop and request reauthorization before crossing the current boundary. Once the required acceptance and tests pass, stop implementation; report extra hardening only as a non-blocking observation.
+## Cross a task boundary once
 
-## Dispatch without ceremony
+For a new outgoing packet, stream its JSON fields to one command:
 
-1. Create an independent peer task only when the outcome can be accepted separately or needs its own cross-turn wait, model binding, branch, recovery boundary, or formal review. Otherwise keep bounded collaboration inside the current task.
-2. Once implementation is authorized, compute the dependency-ready set after every decision-relevant event and dispatch all ready, non-conflicting peer tasks within available capacity. Do not wait for the user to repeat a parallelism instruction. Do not split coupled work merely to create more tasks.
-3. Give each peer write task one branch, one repository-local worktree, and one exclusive write boundary. Internal subagents inherit that worktree and receive disjoint paths; they never create another branch or worktree. Different peer write tasks never share a writable worktree. Create a worktree only when its owning task is ready.
-4. Reject projectless or foreign-project tasks. Host every user-visible peer task in the saved repository project with an explicit App environment of `local`; never request an App-managed worktree. Keep the repository-local worktree only as the task's explicit execution path. Make one creation call per logical dispatch in a controller turn. An empty, ambiguous, timed-out, unparseable, queued-worktree, or `clientThreadId`-only receipt means the outcome is unknown or the route failed; it never authorizes an immediate second creation call. End the turn and reconcile the task list before any later retry.
-5. Resolve the destination model policy before task creation. For `app_default`, omit `model` and `thinking` so the task host selects a compatible default. For an explicit repository or user binding, confirm that the destination host advertises the requested model, then submit it through the real creation or continuation parameters only for that task. Prompt text alone is not model binding; never infer compatibility from the controller model name.
-6. Put conditional execution authority in the initial task: first perform the fast route gate; if it passes, continue the work in the same turn. If it fails, write nothing and report `blocked`. Do not require a binding-only turn followed by a second authorization turn.
-7. Require every repository command to use the exact execution path. Compare the repository-root status with its recorded baseline; do not require an unrelated user-owned root to be clean.
-8. Before a cross-turn pause, ownership handoff, formal review, or `final`, create a local checkpoint commit for every coherent task-owned change set after proportional verification. Internal subagents return their paths and evidence to the owning current task; that task verifies and commits the combined checkpoint instead of allowing concurrent commits on one branch. If ownership is mixed or the change cannot be committed safely, leave it untouched and report the exact dirty paths and reason.
-9. Require direct task-message delivery for `blocked` and `final` reports. A report targets the contracted authority role, so its task-message call must omit `model` and `thinking`; those parameters mutate the destination task rather than describe the sender. `progress` is optional and is used only when it contains a new decision-relevant fact.
-10. Before continuing a peer task, inspect its current top-level runtime status. `idle` or `notLoaded` means no live turn even if a persisted historical row still says `inProgress`; record that stale metadata, but do not page history, block, interrupt, or ask the user to stop it. When the task is `active`, do not send another continuation or correction; use only the product's current active-turn evidence for stop, steer, and multi-in-flight recovery. An urgent HOLD must be followed by confirmation that the current runtime is no longer active.
-11. After dispatching or continuing a peer task, perform any product-required startup wait at most once to detect immediate failure or confirm that the peer started. An ordinary active, progress, or timeout result is not authority to wait again: end the controller turn. Resume on a delivered task message, a real one-shot checkpoint, a blocker/input signal, a user status request, or another acceptance event. Do not poll recursively or invent an immediate check that cannot detect later silence.
+```text
+python scripts/construct_packet.py --kind <kind> --live -
+```
 
-Treat each App wake as one bounded event batch. Process the report or decision that caused the wake plus only already-delivered facts needed for the same atomic decision, finish its synchronous routing actions, and end the authority turn. Future peer activity must cause a later wake; it is not a reason to keep either authority online.
+This constructs, statically/live validates, and emits only on PASS. Do not create temporary packet files or invoke the validator afterward. Stream an incoming raw packet once to:
 
-Run `scripts/validate_dispatch_contract.py` on dispatch, route, and report packets when the packet crosses a task boundary. For dispatch and route packets, the CLI also proves that required paths currently exist and match the live Git worktree registry, branch, and commit; remembered task paths never substitute for this check. The validator is a small boundary check, not a workflow engine.
+```text
+python scripts/validate_dispatch_contract.py --kind <kind> -
+```
 
-If the constructor, schema, and validator cannot represent an intended cross-task packet consistently, mark that boundary `PROTOCOL_BLOCKED` and stop the affected cross-task action. Do not handcraft a bypass, substitute another packet kind, or relabel the same facts. Unrelated already-authorized work may continue only when it does not depend on the broken boundary for routing, acceptance, or evidence.
+The validator is a boundary check, not a workflow engine. An inexpressible boundary is `PROTOCOL_BLOCKED`: do not handcraft, relabel, or continue its dependent action.
 
-## Accept, integrate, and recover
+## Process one event and yield
 
-Freeze the acceptance baseline, bounded threat model, and non-goals before review. A reviewer evaluates that baseline; it does not create new acceptance criteria or silently widen the threat model. Every blocking finding must cite a frozen acceptance ID and reproducible evidence. Severity describes impact, not scope or authority. A delivery controller may adjudicate implementation details inside the frozen outcome, but in `architected` mode only the design authority may change the design baseline. Route a required boundary change through `DESIGN_REOPEN_REQUEST`; do not treat a local scope-reopen classification as authority.
+Treat each App wake as one bounded event batch. Process its event plus already-delivered facts required for the same decision. Before continuing a peer, use current top-level runtime status: `idle` or `notLoaded` means no live turn despite stale `inProgress` history. When the task is `active`, do not send another continuation or correction.
 
-Treat worker or reviewer PASS/FAIL as evidence. The delivery controller adjudicates implementation findings before routing corrections, then verifies the actual diff or reviewed commit, required checks, evidence limits, and unresolved findings before integration. State the proven scope: focused checks do not prove the full repository, a protected environment, or production behavior. A correction review keeps the same baseline and checks accepted findings plus regressions. If two consecutive reviews introduce new accepted blockers, stop automatic correction and audit scope drift before another writer cycle. In `architected` mode, send final delivery evidence to the design authority for design-consistency acceptance. Keep merge, push, deployment, publication, production data, credentials, and permissions behind their own gates.
+Perform a product-required startup wait at most once after create/continue. Active, progress, or timeout means end the controller turn. Resume only on a delivered report, real one-shot checkpoint, blocker/input, user status request, or acceptance event; never poll for future activity.
 
-After PASS, do not reopen review merely because a rolling-handoff or status closeout moves HEAD. Keep the reviewed checkpoint distinct from the later continuity checkpoint. A closeout is `continuity_only` only when it records the existing verdict, current state, next action, or recovery coordinates without changing implementation, normative design or contracts, acceptance, non-goals, or verdict-bearing evidence. The authority holding the repository-root write lease verifies the allowlisted diff and commits it without dispatching a peer reviewer; any substantive change follows the normal reopen and review path.
+## Accept and close
 
-After a peer task is accepted and has no correction or in-flight operation, archive it through the App task API and confirm success. Do not confuse the peer's `final` with archival, and do not archive before acceptance.
+Freeze the acceptance baseline, bounded threat model, and non-goals. Reviewers cite a criterion and reproducible evidence; they do not invent acceptance. The controller adjudicates, verifies the diff/commit/checks, and states limits: focused checks do not prove the full repository, protected environments, or production behavior. Two correction rounds with new blockers trigger scope-drift audit, not an automatic third.
 
-Read [references/recovery.md](references/recovery.md) only for a silent task, takeover, wrong route, dirty ownership, recovery anchor, or cleanup. A clean task worktree already has its HEAD as a recovery anchor; never manufacture a snapshot commit merely because work begins. Retain a task, package, or worktree only while it has recovery value.
+In `architected`, final evidence returns to design authority. Merge, push, deploy, publish, production data, credentials, and permissions keep separate gates.
+
+After PASS, do not reopen review merely because rolling handoff moves HEAD. Keep the reviewed checkpoint distinct from the later continuity checkpoint. A `continuity_only` closeout changes no implementation, normative design/contracts, acceptance, non-goals, findings, or verdict evidence; root-write authority verifies/commits it without review.
+
+Archive an accepted peer only after correction/in-flight work ends and confirm it. Final, archive, worktree removal, integration, push, and deploy are separate. A clean task-tree HEAD is already a recovery anchor.

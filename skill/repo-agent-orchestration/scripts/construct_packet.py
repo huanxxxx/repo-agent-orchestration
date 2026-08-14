@@ -15,7 +15,7 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from packet_schema import PACKET_SCHEMAS, REQUIRED, allowed_fields, packet_header
-from validate_dispatch_contract import validate
+from validate_dispatch_contract import validate, validate_live
 
 
 def _string_value(value: Any) -> str:
@@ -100,6 +100,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--kind", choices=sorted(PACKET_SCHEMAS), required=True)
     parser.add_argument(
+        "--live",
+        action="store_true",
+        help="also verify current filesystem and Git facts before emitting the packet",
+    )
+    parser.add_argument(
         "fields_json",
         help="UTF-8 JSON object path, or - to read the object from stdin",
     )
@@ -114,6 +119,14 @@ def main() -> int:
     except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
         print(f"INVALID packet input: {exc}", file=sys.stderr)
         return 2
+
+    if args.live:
+        errors = validate_live(args.kind, packet)
+        if errors:
+            print(f"INVALID live {args.kind} packet", file=sys.stderr)
+            for error in errors:
+                print(f"- {error}", file=sys.stderr)
+            return 1
 
     print(serialize_packet(args.kind, packet), end="")
     return 0

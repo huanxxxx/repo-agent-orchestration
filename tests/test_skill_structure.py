@@ -110,6 +110,30 @@ class SkillStructureTests(unittest.TestCase):
         self.assertIn('"design_decision"', schema)
         self.assertIn("It never creates tasks, touches Git", contracts)
 
+    def test_hot_path_is_bounded_and_markdown_has_a_size_budget(self) -> None:
+        skill_path = SKILL / "SKILL.md"
+        markdown = (skill_path,) + tuple((SKILL / "references").glob("*.md"))
+        skill = skill_path.read_text(encoding="utf-8")
+        controller = (SKILL / "references" / "controller.md").read_text(
+            encoding="utf-8"
+        )
+        constructor = (SKILL / "scripts" / "construct_packet.py").read_text(
+            encoding="utf-8"
+        )
+        validator = (
+            SKILL / "scripts" / "validate_dispatch_contract.py"
+        ).read_text(encoding="utf-8")
+
+        self.assertLessEqual(skill_path.stat().st_size, 8_200)
+        self.assertLessEqual(sum(path.stat().st_size for path in markdown), 42_000)
+        self.assertIn("once per task/runtime binding", skill)
+        self.assertIn("Do not reload the Skill bundle", skill)
+        self.assertIn("Do not create temporary packet files", skill)
+        self.assertIn("Do not reread the full Skill/reference bundle", controller)
+        self.assertIn("executor-only domain Skills", controller)
+        self.assertIn('"--live"', constructor)
+        self.assertIn('args.contract == "-"', validator)
+
     def test_installable_skill_has_no_project_docs(self) -> None:
         self.assertFalse((SKILL / "README.md").exists())
         self.assertFalse((SKILL / "LICENSE").exists())

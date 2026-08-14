@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import importlib.util
+import json
+import subprocess
 import sys
 import unittest
 from pathlib import Path
@@ -128,6 +130,63 @@ class PacketConstructorTests(unittest.TestCase):
             "archive_task",
         }
         self.assertTrue(forbidden.isdisjoint(vars(CONSTRUCTOR)))
+
+    def test_cli_streams_json_through_static_and_live_validation(self) -> None:
+        fields = delivery_plan_fields()
+        fields["UPDATE_TYPE"] = "plan"
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-B",
+                str(CONSTRUCTOR_PATH),
+                "--kind",
+                "delivery_update",
+                "--live",
+                "-",
+            ],
+            input=json.dumps(fields),
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(result.stdout.startswith("DELIVERY_UPDATE\n"))
+        self.assertIn("UPDATE_TYPE: plan", result.stdout)
+
+    def test_cli_live_validation_fails_closed(self) -> None:
+        fields = {
+            "TASK_ID": "writer-1",
+            "TASK_MODE": "write",
+            "TASK_ENVIRONMENT": "local",
+            "REPOSITORY_ROOT": r"C:\repo",
+            "WORKTREE_ROOT": r"C:\repo\.worktrees",
+            "EXECUTION_PATH": r"C:\repo\.worktrees\missing",
+            "TASK_PROJECT_ID": "project-1",
+            "ACTUAL_THREAD_CWD": r"C:\repo",
+            "ACTUAL_THREAD_PROJECT_ID": "project-1",
+        }
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-B",
+                str(CONSTRUCTOR_PATH),
+                "--kind",
+                "binding",
+                "--live",
+                "-",
+            ],
+            input=json.dumps(fields),
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("INVALID live binding packet", result.stderr)
+        self.assertIn("REPOSITORY_ROOT does not exist", result.stderr)
 
 
 if __name__ == "__main__":

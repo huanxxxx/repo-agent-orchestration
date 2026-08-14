@@ -166,13 +166,13 @@ python skill/repo-agent-orchestration/scripts/validate_dispatch_contract.py \
 
 Supported kinds are `binding`, `write`, `review`, `update`, `design_handoff`, `delivery_update`, `design_reopen`, and `design_decision`. Direct CLI checks for route packets are live: synthetic example paths are intentionally rejected unless they currently exist and match the Git worktree registry, branch, commit, and clean-state contract. `scripts/validate_examples.py` performs the portable static example matrix.
 
-For new packets, prefer the pure constructor before the boundary validator:
+For a new outgoing packet, stream JSON fields through the constructor's single boundary command. `--live` combines construction, static validation, and live route/Git validation, so no temporary packet or second validator call is needed:
 
 ```powershell
-python skill/repo-agent-orchestration/scripts/construct_packet.py --kind design_reopen fields.json
+Get-Content -Raw fields.json | python skill/repo-agent-orchestration/scripts/construct_packet.py --kind design_reopen --live -
 ```
 
-The constructor shares its declarative schema with the validator and only generates statically valid packet data. It does not create tasks, touch Git, send messages, wait, or archive anything. The ordinary `delivery` mode remains available; use the optional `architected` mode when repository policy or task facts require a separate design authority, delivery controller, and independent execution/review layer.
+Incoming packet text can likewise be streamed to `validate_dispatch_contract.py --kind <kind> -`. The constructor shares its declarative schema with the validator and does not create tasks, touch Git, send messages, wait, or archive anything. The ordinary `delivery` mode remains available; use the optional `architected` mode when repository policy or task facts require a separate design authority, delivery controller, and independent execution/review layer.
 
 ## Compatibility and evidence limits
 
@@ -210,6 +210,8 @@ OpenAI's desktop worktree feature uses Codex-managed worktrees and is documented
 - Write tasks make the smallest acceptance-satisfying change and stop when acceptance passes; unrequested architecture, alternate paths, and hardening require a separately authorized scope.
 - A product-required peer startup wait occurs at most once; ordinary active, progress, or timeout results end the controller turn instead of starting another wait.
 - Each authority wake processes one bounded event batch and ends; future peer events must wake a new turn rather than extending a polling session.
+- The route gate and repository profile are read once per stable task binding; later wakes reuse them and load only changed hot state.
+- Routine outgoing packets use one streamed constructor/live-validation command instead of temporary files and duplicate validation calls.
 - Constructor, schema, or validator contradictions fail closed as `PROTOCOL_BLOCKED`; packet kinds cannot be relabelled to bypass the failed boundary.
 - Merge, push, deployment, publication, production data, credentials, and permissions remain separate gates.
 

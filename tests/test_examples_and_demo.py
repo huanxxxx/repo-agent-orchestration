@@ -61,6 +61,35 @@ class PublishedExamplesTests(unittest.TestCase):
         self.assertIn("WORKTREE_ROOT does not exist", result.stdout)
         self.assertIn("WORKTREE does not exist", result.stdout)
 
+    def test_validator_accepts_packet_from_stdin(self) -> None:
+        contract = (
+            ROOT / "examples" / "contracts" / "valid-final-update.txt"
+        ).read_text(encoding="utf-8")
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-B",
+                str(
+                    ROOT
+                    / "skill"
+                    / "repo-agent-orchestration"
+                    / "scripts"
+                    / "validate_dispatch_contract.py"
+                ),
+                "--kind",
+                "update",
+                "-",
+            ],
+            input=contract,
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+        self.assertIn("VALID live update contract", result.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()
