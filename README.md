@@ -64,7 +64,7 @@ The installer defaults architected delivery controllers, writers, and reviewers 
           +-------------+ +-------------+ +--------------+
 ```
 
-This diagram shows `architected` mode. Ordinary `delivery` collapses design and delivery authority into the current controller; `direct` creates no peer tasks. Every App-created user-visible task is still a runtime peer, even when another task dispatched it: authority arrows are not App parentage. Every peer write task owns one branch, one repository-local worktree, and one writable ownership boundary. Internal subagents are participants inside one current task: they inherit its path, receive non-overlapping scopes, return within the current turn, and create no tree of their own. A peer task is justified by independent acceptance, cross-turn waiting, model binding, recovery, or formal review—not by agent count alone. Candidate review reuses the frozen implementation tree while its writer is paused; long or historical review gets an on-demand detached snapshot only when a stable filesystem is useful.
+This diagram shows `architected` mode. Ordinary `delivery` collapses design and delivery authority into the current controller; `direct` creates no peer tasks. Every App-created user-visible task is still a runtime peer, even when another task dispatched it: authority arrows are not App parentage. Every peer write task owns one branch, one repository-local worktree, and one writable ownership boundary. Internal subagents are participants inside one current task: they inherit its path, receive non-overlapping scopes, return within the current turn, and create no tree of their own. A peer task is justified by independent acceptance, cross-turn waiting, model binding, recovery, or formal review—not by agent count alone. Candidate review reuses the frozen implementation tree while its writer is paused; long or historical review gets an on-demand detached snapshot only when a stable filesystem is useful. Design authority dispatches design reviewers directly; delivery controllers dispatch only implementation reviewers.
 
 When a repository defines an execution package or equivalent continuity entry, the Skill keeps it separate from both the App task and Git worktree. It stores durable objective, scope, state, acceptance, recovery, and next-step facts; repository-specific tiers, paths, templates, and scaffolding stay in the repository. Clean worktrees use their current HEAD as the recovery anchor, and prechange snapshots remain explicit rather than ceremonial.
 
@@ -197,6 +197,7 @@ OpenAI's desktop worktree feature uses Codex-managed worktrees and is documented
 - Windows, extended Windows, and POSIX paths are normalized lexically before containment checks; nonexistent paths are supported and `..` escapes fail closed.
 - Every repository command must use the exact execution path.
 - Review selects the lightest safe target: root, frozen candidate, or detached snapshot.
+- Review is delta-first with an explicit context/check/expansion budget; full review requires a recorded reason.
 - Worker or reviewer PASS remains evidence, not acceptance by the contracted authority.
 - A peer task's local final is not a delivered authority report; blocked and final reports use direct peer-to-peer task-message delivery.
 - Task-message reports preserve destination settings: senders omit `model` and `thinking`, which otherwise override the destination task.
@@ -208,7 +209,7 @@ OpenAI's desktop worktree feature uses Codex-managed worktrees and is documented
 - A clean task worktree uses its HEAD as the recovery anchor; prechange snapshots require an explicit request or an authorized risky rewrite of task-owned tracked changes.
 - Coherent task-owned output is committed locally before a cross-turn pause, ownership handoff, formal review, or final; unsafe mixed ownership is reported precisely instead of staged.
 - Write tasks make the smallest acceptance-satisfying change and stop when acceptance passes; unrequested architecture, alternate paths, and hardening require a separately authorized scope.
-- A product-required peer startup wait occurs at most once; ordinary active, progress, or timeout results end the controller turn instead of starting another wait.
+- A confirmed task id completes dispatch without a startup wait; any product-required confirmation occurs at most once.
 - Each authority wake processes one bounded event batch and ends; future peer events must wake a new turn rather than extending a polling session.
 - The route gate and repository profile are read once per stable task binding; later wakes reuse them and load only changed hot state.
 - Routine outgoing packets use one streamed constructor/live-validation command instead of temporary files and duplicate validation calls.

@@ -22,11 +22,11 @@ Every App-created user-visible task is a peer. The controller is a coordination 
 
 Create one repository-local branch/worktree only after its peer is ready. Validate its path, base, branch, registry entry, and status using the one-command packet path in [contracts.md](contracts.md). Never treat a remembered task path as current proof.
 
-For review, prefer `root_readonly` for a short stable-root review, `existing_worktree` for a frozen candidate, and an on-demand `detached_snapshot` for long, test-running, or historical review. Pause a writer while its frozen worktree is reviewed. The reviewer creates no tree.
+For review, prefer `root_readonly` for a short stable-root review, `existing_worktree` for a frozen candidate, and an on-demand `detached_snapshot` for long, test-running, or historical review. Pause a writer while its frozen worktree is reviewed. The reviewer creates no tree. Design review is dispatched only by design authority.
 
 For `app_default`, omit task model settings. For an explicit binding, use the host's advertised model catalog instead of guessing from the controller model name; submit it through real creation parameters and treat it as unverified until the host echoes the effective model.
 
-Make exactly one creation call per logical dispatch per controller turn. Target the saved project explicitly with `target: {type: "project", projectId, environment: {type: "local"}}`. Projectless, foreign-project, queued-worktree, App-managed-worktree, or `clientThreadId`-only outcomes are invalid routes. Empty, ambiguous, timed-out, or unparseable receipts mean `creation outcome unknown`; end the turn. On the next real wake, list tasks and reconcile by source, project, objective, worktree, branch, and base before any retry.
+Make exactly one creation call per logical dispatch per controller turn. Target the saved project explicitly with `target: {type: "project", projectId, environment: {type: "local"}}`. A confirmed task id completes dispatch and needs no wait merely to become active. Projectless, foreign-project, queued-worktree, App-managed-worktree, or `clientThreadId`-only outcomes are invalid routes. Empty, ambiguous, timed-out, or unparseable receipts mean `creation outcome unknown`; end the turn. On the next real wake, list tasks and reconcile by source, project, objective, worktree, branch, and base before any retry.
 
 Put the packet and conditional execution authority in the initial instruction. The peer runs its route gate and, on PASS, continues in the same turn; do not add a binding-only round trip.
 
@@ -40,7 +40,7 @@ The task-start route gate and repository-profile read are once per task binding.
 4. Build and live-validate one outgoing packet in the single constructor call; send it once.
 5. Complete synchronous acceptance, dispatch, correction, integration, or reporting, then End the controller turn.
 
-Do not keep the controller alive to observe a peer. After creation/continuation, a product-required startup wait may occur once. An active/progress/timeout result must not trigger a second wait. Do not call recursive waits or invent immediate snapshots as future silence checks.
+Do not keep the controller alive to observe a peer. Use one startup wait only when the product explicitly requires confirmation beyond its creation receipt. An active/progress/timeout result must not trigger a second wait. Do not call recursive waits or invent immediate snapshots as future silence checks.
 
 Before continuing/correcting, inspect current top-level runtime status once. `idle` and `notLoaded` mean no live turn; persisted historical turn rows are not a live-turn inventory. Record stale metadata but do not block, archive/restore, interrupt, or ask the user to stop a historical turn. If the task is `active`, do not send a plain `continue`. Use current active-turn evidence to steer/stop; if current active-turn evidence identifies more than one live turn, recover all of them. Confirm an urgent HOLD actually stopped the runtime before rerouting.
 
@@ -54,7 +54,7 @@ In `architected`, report only the initial plan, decision-relevant milestones, re
 
 ## Review, integrate, close
 
-Freeze acceptance IDs, threat model, and non-goals. Require each blocker to map to one criterion and reproducible evidence. The controller classifies it as accepted blocker, non-blocking observation, or scope reopen. Severity alone never grants scope. Correction review keeps the same baseline; after two rounds introducing new accepted blockers, perform a scope-drift audit before more implementation.
+Freeze acceptance IDs, threat model, and non-goals. Default to `delta` on the exact range: scope changed paths/direct clauses and budget context/checks/expand_if. Reuse exact-checkpoint evidence; independent judgment is not a full rerun. `full` requires a reason. The prompt is route capsule plus packet. Do not append duplicate lineage, package reads, or test matrices. Correction review is delta-only unless the baseline reopens. Findings map criteria to evidence. Severity alone never grants scope. After two rounds with new blockers, perform a scope-drift audit.
 
 Verify the actual diff/commit, owned paths, checks, evidence limits, unresolved findings, and root-baseline drift. Passing acceptance is the stop condition. In `architected`, send final evidence with `DECISION_REQUIRED: yes`; design consistency remains with the design authority.
 

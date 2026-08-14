@@ -50,6 +50,7 @@ PACKET_SCHEMAS: dict[str, dict[str, tuple[str, ...] | str]] = {
             "REVIEW_TASK_ID",
             "ORCHESTRATION_MODE",
             "REVIEW_CLASS",
+            "REVIEW_DEPTH",
             "SOURCE_ROLE",
             "TARGET_ROLE",
             "REPORT_TO_TASK_ID",
@@ -63,10 +64,11 @@ PACKET_SCHEMAS: dict[str, dict[str, tuple[str, ...] | str]] = {
             "THREAT_MODEL",
             "NON_GOALS",
             "REVIEW_SCOPE",
+            "REVIEW_BUDGET",
             "ACCEPTANCE",
             "MODEL_POLICY",
         ),
-        "optional": ("DESIGN_CHECKPOINT",),
+        "optional": ("FULL_REVIEW_REASON", "DESIGN_CHECKPOINT"),
     },
     "update": {
         "header": "TASK_UPDATE",
@@ -188,7 +190,7 @@ PACKET_SCHEMAS: dict[str, dict[str, tuple[str, ...] | str]] = {
             "TARGET_SETTINGS",
             "NEXT",
         ),
-        "optional": (),
+        "optional": ("DESIGN_REVIEW_EVIDENCE",),
     },
 }
 

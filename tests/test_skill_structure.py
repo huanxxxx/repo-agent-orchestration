@@ -403,6 +403,37 @@ class SkillStructureTests(unittest.TestCase):
         self.assertIn("existing_worktree", contracts)
         self.assertIn("detached_snapshot", contracts)
 
+    def test_review_is_delta_first_and_design_review_is_not_proxied(self) -> None:
+        skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+        architected = (SKILL / "references" / "architected.md").read_text(
+            encoding="utf-8"
+        )
+        controller = (SKILL / "references" / "controller.md").read_text(
+            encoding="utf-8"
+        )
+        contracts = (SKILL / "references" / "contracts.md").read_text(
+            encoding="utf-8"
+        )
+        schema = (SKILL / "scripts" / "packet_schema.py").read_text(
+            encoding="utf-8"
+        )
+        validator = (SKILL / "scripts" / "validate_dispatch_contract.py").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("Review the exact delta by default", skill)
+        self.assertIn("independent design-review PASS", architected)
+        self.assertIn("delivery never proxies it", contracts)
+        self.assertIn("Correction review is delta-only", controller)
+        self.assertIn("Do not append duplicate lineage", controller)
+        self.assertIn("REVIEW_DEPTH: delta|full", contracts)
+        self.assertIn("`REVIEW_BUDGET` uses `context=", contracts)
+        self.assertIn("FULL_REVIEW_REASON", contracts)
+        self.assertIn('"REVIEW_DEPTH"', schema)
+        self.assertIn('"REVIEW_BUDGET"', schema)
+        self.assertIn("REVIEW_PACKET_CHAR_LIMITS", validator)
+        self.assertIn("reopen_approved requires DESIGN_REVIEW_EVIDENCE", validator)
+
     def test_review_contract_freezes_acceptance_and_stops_scope_drift(self) -> None:
         skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
         contracts = (SKILL / "references" / "contracts.md").read_text(
@@ -414,7 +445,7 @@ class SkillStructureTests(unittest.TestCase):
         validator = (SKILL / "scripts" / "validate_dispatch_contract.py").read_text(
             encoding="utf-8"
         )
-        self.assertIn("Freeze the acceptance baseline", skill)
+        self.assertIn("Freeze acceptance", skill)
         self.assertIn("ACCEPTANCE_BASELINE:", contracts)
         self.assertIn("THREAT_MODEL:", contracts)
         self.assertIn("NON_GOALS:", contracts)

@@ -1,6 +1,7 @@
 REVIEW_TASK_ID: review-ledger-core
 ORCHESTRATION_MODE: delivery
 REVIEW_CLASS: implementation
+REVIEW_DEPTH: delta
 SOURCE_ROLE: delivery_controller
 TARGET_ROLE: peer_reviewer
 REPORT_TO_TASK_ID: controller-task-1
@@ -8,11 +9,12 @@ TASK_ENVIRONMENT: local
 TASK_ARCHIVE_POLICY: dispatching_authority_after_acceptance
 TARGET_MODE: existing_worktree
 TARGET_PATH: C:\Projects\ledger\.worktrees\ledger-core
-TARGET_COMMIT_OR_RANGE: 0123456789abcdef0123456789abcdef01234567
+TARGET_COMMIT_OR_RANGE: fedcba9876543210fedcba9876543210fedcba98..0123456789abcdef0123456789abcdef01234567
 READ_ONLY: true
 ACCEPTANCE_BASELINE: A1 ledger entries balance; A2 focused regression checks pass
 THREAT_MODEL: repository inputs and failures named by A1-A2
 NON_GOALS: unrelated hardening and new accounting features
 REVIEW_SCOPE: inspect the frozen ledger candidate
+REVIEW_BUDGET: context=changed ledger paths and A1-A2 clauses; checks=reuse exact-checkpoint writer evidence and run the balance sentinel; expand_if=a mapped A1-A2 contradiction requires one named dependency
 ACCEPTANCE: PASS when A1-A2 have no mapped blocker
 MODEL_POLICY: app_default

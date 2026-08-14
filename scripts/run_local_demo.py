@@ -132,6 +132,7 @@ def run_demo() -> dict[str, object]:
 REVIEW_TASK_ID: review-backend
 ORCHESTRATION_MODE: delivery
 REVIEW_CLASS: implementation
+REVIEW_DEPTH: full
 SOURCE_ROLE: delivery_controller
 TARGET_ROLE: peer_reviewer
 REPORT_TO_TASK_ID: demo-controller-thread
@@ -145,8 +146,10 @@ ACCEPTANCE_BASELINE: A1 backend demo behavior; A2 contracted checks pass
 THREAT_MODEL: repository inputs and failures named by A1-A2
 NON_GOALS: unrelated hardening and new protocol design
 REVIEW_SCOPE: frozen backend demo candidate
+REVIEW_BUDGET: context=demo candidate and A1-A2 clauses; checks=static contract validation only; expand_if=the demo route contradicts A1-A2
 ACCEPTANCE: PASS when A1-A2 have no mapped blocker
 MODEL_POLICY: app_default
+FULL_REVIEW_REASON: local demo exercises first acceptance without an implementation delta
 """
         final_update = f"""
 TASK_ID: write-backend

@@ -20,6 +20,8 @@ VALIDATOR = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(VALIDATOR)
 
 FULL_SHA = "0123456789abcdef0123456789abcdef01234567"
+BASE_SHA = "fedcba9876543210fedcba9876543210fedcba98"
+NEW_SHA = "2222222222222222222222222222222222222222"
 
 VALID_BINDING = r"""
 TASK_ID: write-1
@@ -58,6 +60,7 @@ VALID_REVIEW = rf"""
 REVIEW_TASK_ID: review-1
 ORCHESTRATION_MODE: delivery
 REVIEW_CLASS: implementation
+REVIEW_DEPTH: delta
 SOURCE_ROLE: delivery_controller
 TARGET_ROLE: peer_reviewer
 REPORT_TO_TASK_ID: controller-1
@@ -65,12 +68,13 @@ TASK_ENVIRONMENT: local
 TASK_ARCHIVE_POLICY: dispatching_authority_after_acceptance
 TARGET_MODE: existing_worktree
 TARGET_PATH: C:\repo\.worktrees\write-1
-TARGET_COMMIT_OR_RANGE: {FULL_SHA}
+TARGET_COMMIT_OR_RANGE: {BASE_SHA}..{FULL_SHA}
 READ_ONLY: true
 ACCEPTANCE_BASELINE: A1 focused behavior; A2 required regression checks
 THREAT_MODEL: repository inputs and failures named by A1-A2
 NON_GOALS: unrelated hardening and new protocol design
 REVIEW_SCOPE: inspect the frozen candidate
+REVIEW_BUDGET: context=changed paths and A1-A2 clauses; checks=reuse exact-checkpoint writer evidence and run the ledger-balance sentinel; expand_if=a mapped A1-A2 contradiction requires one named dependency
 ACCEPTANCE: PASS when A1-A2 have no mapped blocker
 MODEL_POLICY: app_default
 """
@@ -420,7 +424,7 @@ class ContractValidationTests(unittest.TestCase):
 
     def test_review_rejects_ambiguous_history_and_writable_fields(self) -> None:
         invalid = VALID_REVIEW.replace(
-            f"TARGET_COMMIT_OR_RANGE: {FULL_SHA}",
+            f"TARGET_COMMIT_OR_RANGE: {BASE_SHA}..{FULL_SHA}",
             f"TARGET_COMMIT_OR_RANGE: full history through {FULL_SHA}",
         ) + "\nOWNED_PATHS: src/**\n"
         errors = "\n".join(self.validate("review", invalid))
@@ -443,6 +447,59 @@ class ContractValidationTests(unittest.TestCase):
         self.assertIn(
             "ACCEPTANCE_BASELINE must not contain placeholders",
             self.validate("review", invalid),
+        )
+
+    def test_delta_review_requires_exact_range_and_structured_budget(self) -> None:
+        single_commit = VALID_REVIEW.replace(
+            f"TARGET_COMMIT_OR_RANGE: {BASE_SHA}..{FULL_SHA}",
+            f"TARGET_COMMIT_OR_RANGE: {FULL_SHA}",
+        )
+        self.assertIn(
+            "delta review requires an exact full-SHA range",
+            self.validate("review", single_commit),
+        )
+
+        incomplete_budget = VALID_REVIEW.replace(
+            "REVIEW_BUDGET: context=changed paths and A1-A2 clauses; checks=reuse exact-checkpoint writer evidence and run the ledger-balance sentinel; expand_if=a mapped A1-A2 contradiction requires one named dependency",
+            "REVIEW_BUDGET: context=changed paths only",
+        )
+        self.assertIn(
+            "REVIEW_BUDGET must declare context=, checks=, and expand_if=",
+            self.validate("review", incomplete_budget),
+        )
+
+        oversized = VALID_REVIEW.replace(
+            "REVIEW_SCOPE: inspect the frozen candidate",
+            "REVIEW_SCOPE: " + ("x" * 5_000),
+        )
+        self.assertTrue(
+            any("delta review packet exceeds 5000 characters" in error for error in self.validate("review", oversized))
+        )
+
+    def test_full_review_requires_reason_and_delta_forbids_it(self) -> None:
+        full_without_reason = VALID_REVIEW.replace(
+            "REVIEW_DEPTH: delta", "REVIEW_DEPTH: full"
+        )
+        self.assertIn(
+            "full review requires FULL_REVIEW_REASON",
+            self.validate("review", full_without_reason),
+        )
+
+        full = full_without_reason + "\nFULL_REVIEW_REASON: first acceptance of a new cross-cutting baseline\n"
+        self.assertEqual(self.validate("review", full), [])
+
+        oversized_full = full.replace(
+            "REVIEW_SCOPE: inspect the frozen candidate",
+            "REVIEW_SCOPE: " + ("x" * 9_000),
+        )
+        self.assertTrue(
+            any("full review packet exceeds 9000 characters" in error for error in self.validate("review", oversized_full))
+        )
+
+        delta_with_reason = VALID_REVIEW + "\nFULL_REVIEW_REASON: unnecessary full rerun\n"
+        self.assertIn(
+            "delta review must not declare FULL_REVIEW_REASON",
+            self.validate("review", delta_with_reason),
         )
 
     def test_final_requires_direct_delivery_and_evidence(self) -> None:
@@ -527,21 +584,29 @@ NEXT: recover on the next real controller wake
         )
 
     def test_design_review_reports_to_design_authority(self) -> None:
-        review = (
+        proxied = (
             VALID_REVIEW.replace(
                 "ORCHESTRATION_MODE: delivery", "ORCHESTRATION_MODE: architected"
             )
             .replace("REVIEW_CLASS: implementation", "REVIEW_CLASS: design")
+            + f"\nDESIGN_CHECKPOINT: {FULL_SHA}\n"
+        )
+        self.assertIn(
+            "design review SOURCE_ROLE must be design_authority",
+            self.validate("review", proxied),
+        )
+
+        review = (
+            proxied
             .replace(
                 "SOURCE_ROLE: delivery_controller", "SOURCE_ROLE: design_authority"
             )
-            + f"\nDESIGN_CHECKPOINT: {FULL_SHA}\n"
         )
         self.assertEqual(self.validate("review", review), [])
 
         mismatched = review.replace(
-            f"TARGET_COMMIT_OR_RANGE: {FULL_SHA}",
-            "TARGET_COMMIT_OR_RANGE: " + ("2" * 40),
+            f"TARGET_COMMIT_OR_RANGE: {BASE_SHA}..{FULL_SHA}",
+            f"TARGET_COMMIT_OR_RANGE: {BASE_SHA}..{NEW_SHA}",
         )
         self.assertIn(
             "design review TARGET_COMMIT_OR_RANGE must end at DESIGN_CHECKPOINT",
@@ -597,6 +662,34 @@ NEXT: recover on the next real controller wake
             "reopen_approved requires a new UPDATED_DESIGN_CHECKPOINT",
             self.validate("design_decision", same_checkpoint_reopen),
         )
+
+        approved_without_review = (
+            VALID_DESIGN_DECISION.replace(
+                "DECISION: reopen_rejected", "DECISION: reopen_approved"
+            ).replace(
+                "UPDATED_DESIGN_CHECKPOINT: unchanged",
+                f"UPDATED_DESIGN_CHECKPOINT: {NEW_SHA}",
+            )
+        )
+        self.assertIn(
+            "reopen_approved requires DESIGN_REVIEW_EVIDENCE",
+            self.validate("design_decision", approved_without_review),
+        )
+
+        unpassed = approved_without_review + "\nDESIGN_REVIEW_EVIDENCE: review-2 remains pending\n"
+        self.assertIn(
+            "reopen_approved DESIGN_REVIEW_EVIDENCE must record PASS",
+            self.validate("design_decision", unpassed),
+        )
+
+        substring_only = approved_without_review + "\nDESIGN_REVIEW_EVIDENCE: review-2 bypass marker\n"
+        self.assertIn(
+            "reopen_approved DESIGN_REVIEW_EVIDENCE must record PASS",
+            self.validate("design_decision", substring_only),
+        )
+
+        approved = approved_without_review + "\nDESIGN_REVIEW_EVIDENCE: review-2 PASS against the frozen delta\n"
+        self.assertEqual(self.validate("design_decision", approved), [])
 
     def test_obsolete_ceremony_fields_are_rejected(self) -> None:
         write = VALID_WRITE + "\nCONTROLLER_AFTER_DISPATCH: event_driven_yield\nNO_REPORT_CHECK_AFTER: current_turn_once\n"

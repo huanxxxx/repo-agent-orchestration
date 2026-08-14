@@ -30,6 +30,7 @@ TASK_MESSAGE_RE = re.compile(r"^task_message:[^<>\s]+$")
 BLOCKED_DELIVERY_RE = re.compile(r"^blocked:[^<>\s].*$")
 TASK_MODES = {"delivery_controller", "write", "review_root", "review_worktree"}
 REVIEW_MODES = {"root_readonly", "existing_worktree", "detached_snapshot"}
+REVIEW_DEPTHS = {"delta", "full"}
 STATUSES = {"progress", "blocked", "final"}
 ORCHESTRATION_MODES = {"delivery", "architected"}
 REVIEW_CLASSES = {"design", "implementation"}
@@ -62,6 +63,8 @@ DELIVERY_PLAN_FIELDS = (
     "DEPENDENCY_GRAPH",
     "SHARED_PATH_OWNER",
 )
+REVIEW_BUDGET_PARTS = ("context=", "checks=", "expand_if=")
+REVIEW_PACKET_CHAR_LIMITS = {"delta": 5_000, "full": 9_000}
 
 
 def obsolete_fields(kind: str) -> set[str]:
@@ -355,6 +358,10 @@ def validate_commit_or_range(value: str) -> bool:
     return bool(FULL_SHA_RE.fullmatch(left) and FULL_SHA_RE.fullmatch(right))
 
 
+def packet_char_count(fields: dict[str, str]) -> int:
+    return sum(len(name) + len(value) + 3 for name, value in fields.items())
+
+
 def add_obsolete_errors(
     errors: list[str], fields: dict[str, str], obsolete: set[str]
 ) -> None:
@@ -540,8 +547,11 @@ def validate(kind: str, fields: dict[str, str]) -> list[str]:
 
     if kind == "review":
         review_class = fields.get("REVIEW_CLASS", "")
+        review_depth = fields.get("REVIEW_DEPTH", "")
         if review_class and review_class not in REVIEW_CLASSES:
             errors.append("REVIEW_CLASS must be design or implementation")
+        if review_depth and review_depth not in REVIEW_DEPTHS:
+            errors.append("REVIEW_DEPTH must be delta or full")
         if fields.get("TARGET_ROLE") != "peer_reviewer":
             errors.append("review TARGET_ROLE must be peer_reviewer")
         if review_class == "design":
@@ -583,6 +593,29 @@ def validate(kind: str, fields: dict[str, str]) -> list[str]:
         commit_or_range = fields.get("TARGET_COMMIT_OR_RANGE", "")
         if commit_or_range and not validate_commit_or_range(commit_or_range):
             errors.append("TARGET_COMMIT_OR_RANGE must be a full SHA or full-SHA range")
+        if review_depth == "delta" and ".." not in commit_or_range:
+            errors.append("delta review requires an exact full-SHA range")
+        full_review_reason = fields.get("FULL_REVIEW_REASON", "")
+        if review_depth == "full" and not full_review_reason:
+            errors.append("full review requires FULL_REVIEW_REASON")
+        if review_depth == "delta" and full_review_reason:
+            errors.append("delta review must not declare FULL_REVIEW_REASON")
+        review_budget = fields.get("REVIEW_BUDGET", "")
+        if review_budget:
+            budget_folded = review_budget.casefold()
+            missing_parts = [
+                part for part in REVIEW_BUDGET_PARTS if part not in budget_folded
+            ]
+            if missing_parts:
+                errors.append(
+                    "REVIEW_BUDGET must declare context=, checks=, and expand_if="
+                )
+        limit = REVIEW_PACKET_CHAR_LIMITS.get(review_depth)
+        if limit is not None and packet_char_count(fields) > limit:
+            errors.append(
+                f"{review_depth} review packet exceeds {limit} characters; "
+                "reference exact paths and criterion ids instead of restating history"
+            )
         if review_class == "design":
             design_checkpoint = fields.get("DESIGN_CHECKPOINT", "")
             target_checkpoint = re.split(r"\.\.\.?", commit_or_range)[-1]
@@ -599,6 +632,8 @@ def validate(kind: str, fields: dict[str, str]) -> list[str]:
             "THREAT_MODEL",
             "NON_GOALS",
             "REVIEW_SCOPE",
+            "REVIEW_BUDGET",
+            "FULL_REVIEW_REASON",
             "ACCEPTANCE",
         ):
             if fields.get(name) and has_placeholder(fields[name]):
@@ -799,10 +834,21 @@ def validate(kind: str, fields: dict[str, str]) -> list[str]:
                 errors.append(
                     "reopen_approved requires a new UPDATED_DESIGN_CHECKPOINT"
                 )
+            design_review_evidence = fields.get("DESIGN_REVIEW_EVIDENCE", "")
+            if not design_review_evidence:
+                errors.append("reopen_approved requires DESIGN_REVIEW_EVIDENCE")
+            elif has_placeholder(design_review_evidence):
+                errors.append("DESIGN_REVIEW_EVIDENCE must not contain placeholders")
+            elif not re.search(r"\bPASS\b", design_review_evidence, re.IGNORECASE):
+                errors.append("reopen_approved DESIGN_REVIEW_EVIDENCE must record PASS")
         elif updated and updated != "unchanged":
             errors.append(
                 "only reopen_approved may change UPDATED_DESIGN_CHECKPOINT"
             )
+        elif fields.get("DESIGN_REVIEW_EVIDENCE") and has_placeholder(
+            fields["DESIGN_REVIEW_EVIDENCE"]
+        ):
+            errors.append("DESIGN_REVIEW_EVIDENCE must not contain placeholders")
         for name in (
             "RATIONALE",
             "AFFECTED_SCOPE",

@@ -57,7 +57,7 @@ Required fields, in emitted order:
 ```text
 binding: TASK_ID, TASK_MODE, TASK_ENVIRONMENT, REPOSITORY_ROOT, WORKTREE_ROOT, EXECUTION_PATH, TASK_PROJECT_ID, ACTUAL_THREAD_CWD, ACTUAL_THREAD_PROJECT_ID
 write: TASK_ID, ORCHESTRATION_MODE, SOURCE_ROLE, TARGET_ROLE, REPORT_TO_TASK_ID, AUTHORITY_BASELINE, TASK_ENVIRONMENT, TASK_ARCHIVE_POLICY, WORKTREE_ROOT, WORKTREE, BRANCH, BASE_COMMIT, OBJECTIVE, OWNED_PATHS, DO_NOT_TOUCH, ACCEPTANCE, REQUIRED_TESTS, MODEL_POLICY
-review: REVIEW_TASK_ID, ORCHESTRATION_MODE, REVIEW_CLASS, SOURCE_ROLE, TARGET_ROLE, REPORT_TO_TASK_ID, TASK_ENVIRONMENT, TASK_ARCHIVE_POLICY, TARGET_MODE, TARGET_PATH, TARGET_COMMIT_OR_RANGE, READ_ONLY, ACCEPTANCE_BASELINE, THREAT_MODEL, NON_GOALS, REVIEW_SCOPE, ACCEPTANCE, MODEL_POLICY
+review: REVIEW_TASK_ID, ORCHESTRATION_MODE, REVIEW_CLASS, REVIEW_DEPTH, SOURCE_ROLE, TARGET_ROLE, REPORT_TO_TASK_ID, TASK_ENVIRONMENT, TASK_ARCHIVE_POLICY, TARGET_MODE, TARGET_PATH, TARGET_COMMIT_OR_RANGE, READ_ONLY, ACCEPTANCE_BASELINE, THREAT_MODEL, NON_GOALS, REVIEW_SCOPE, REVIEW_BUDGET, ACCEPTANCE, MODEL_POLICY
 update: TASK_ID, ORCHESTRATION_MODE, UPDATE_CLASS, SOURCE_ROLE, TARGET_ROLE, TARGET_TASK_ID, STATUS, SUMMARY, EVIDENCE, DELIVERY, TARGET_SETTINGS, NEXT
 design_handoff: DESIGN_TASK_ID, DELIVERY_TASK_ID, ORCHESTRATION_MODE, SOURCE_ROLE, TARGET_ROLE, REPORT_TO_TASK_ID, TASK_ENVIRONMENT, TASK_ARCHIVE_POLICY, REPOSITORY_ROOT, DESIGN_CHECKPOINT, DESIGN_REVIEW_STATUS, DESIGN_REVIEW_EVIDENCE, OBJECTIVE, AUTHORITATIVE_INPUTS, FROZEN_DECISIONS, NON_GOALS, ACCEPTANCE_BASELINE, IMPLEMENTATION_BOUNDARY, EXTERNAL_GATES, DESIGN_REOPEN_RULE, MODEL_POLICY
 delivery_update: DELIVERY_TASK_ID, DESIGN_TASK_ID, ORCHESTRATION_MODE, SOURCE_ROLE, TARGET_ROLE, TARGET_TASK_ID, UPDATE_TYPE, DESIGN_CHECKPOINT, SUMMARY, DESIGN_ALIGNMENT, EVIDENCE, RISKS_OR_LIMITS, PENDING_ITEMS, DECISION_REQUIRED, DELIVERY, TARGET_SETTINGS, NEXT
@@ -65,7 +65,7 @@ design_reopen: DELIVERY_TASK_ID, DESIGN_TASK_ID, ORCHESTRATION_MODE, SOURCE_ROLE
 design_decision: DESIGN_TASK_ID, DELIVERY_TASK_ID, ORCHESTRATION_MODE, SOURCE_ROLE, TARGET_ROLE, TARGET_TASK_ID, PRIOR_DESIGN_CHECKPOINT, DECISION, RATIONALE, UPDATED_DESIGN_CHECKPOINT, AFFECTED_SCOPE, AUTHORITY_BOUNDARY, DELIVERY, TARGET_SETTINGS, NEXT
 ```
 
-Optional fields are schema-defined: `DESIGN_CHECKPOINT` on architected write/review/update packets; `RISKS_OR_LIMITS` and `PENDING_ITEMS` on non-final updates; and plan/milestone variant fields on `delivery_update`.
+Optional fields are schema-defined, including `FULL_REVIEW_REASON` for full review and `DESIGN_REVIEW_EVIDENCE` for `reopen_approved`; existing architected, non-final, and plan/milestone fields remain conditional.
 
 ## Fixed boundary values
 
@@ -74,6 +74,7 @@ TASK_ENVIRONMENT: local
 TASK_ARCHIVE_POLICY: dispatching_authority_after_acceptance
 TASK_MODE: delivery_controller|write|review_root|review_worktree
 TARGET_MODE: root_readonly|existing_worktree|detached_snapshot
+REVIEW_DEPTH: delta|full
 STATUS: progress|blocked|final
 MODEL_POLICY: app_default|repo_write_default:<model>/<reasoning>|repo_review_default:<model>/<reasoning>|repo_delivery_default:<model>/<reasoning>|user_explicit:<model>/<reasoning>
 TARGET_SETTINGS: preserve
@@ -101,7 +102,7 @@ For write packets, `SOURCE_ROLE: delivery_controller`, `TARGET_ROLE: peer_writer
 
 ## Review semantics
 
-Review is `READ_ONLY: true`. Freeze:
+Review is `READ_ONLY: true` and delta-first. Freeze:
 
 ```text
 ACCEPTANCE_BASELINE: <criterion ids and source>
@@ -109,7 +110,11 @@ THREAT_MODEL: <bounded risks>
 NON_GOALS: <excluded outcomes>
 ```
 
-`REVIEW_CLASS: design` reports to the design authority; `implementation` reports to the delivery controller. A blocking finding cites a frozen criterion and reproducible evidence. A review packet does not grant scope to change acceptance, threat model, non-goals, implementation, Git state, or external systems.
+`delta` requires an exact SHA range. `REVIEW_SCOPE` lists changed paths/clauses. `REVIEW_BUDGET` uses `context=...; checks=...; expand_if=...`. Reuse exact-checkpoint evidence unless rerun is acceptance. Expand once on its cited criterion. Delta caps at 5,000 characters.
+
+`full` requires `FULL_REVIEW_REASON`, caps at 9,000 characters, and is only for new, cross-cutting, irreversible, or explicit baselines. Corrections are delta unless the baseline reopens.
+
+Prompt equals route capsule plus packet: no duplicated lineage, package reads, global status, or test matrices. `design` belongs to design authority; `implementation` to delivery. Review is read-only and cannot expand scope.
 
 ## Architected packet semantics
 
@@ -117,9 +122,9 @@ NON_GOALS: <excluded outcomes>
 
 `DELIVERY_UPDATE` uses `UPDATE_TYPE: plan|milestone|final` and `DECISION_REQUIRED: yes|no`. A plan contains ready set, parallel dispatch, dependency graph, and shared-path owner; a milestone contains only the decision-relevant milestone; final requires `DECISION_REQUIRED: yes`. An informational `DECISION_REQUIRED: no` does not pause authorized work.
 
-`DESIGN_REOPEN_REQUEST` pauses affected/dependent scope and proves what unaffected work may continue. `DESIGN_DECISION` is `clarify|continue|hold|reopen_approved|reopen_rejected`; only `reopen_approved` introduces a new design checkpoint.
+`DESIGN_REOPEN_REQUEST` pauses affected scope. Design authority creates design review; delivery never proxies it. Pending review needs no interim decision. Only `reopen_approved` adds a checkpoint and requires PASS evidence; other decisions are `clarify|continue|hold|reopen_rejected`.
 
-Constructor or validator failure marks only that dependent boundary `PROTOCOL_BLOCKED`. Do not relabel the same content as another update type or generic packet, handcraft a bypass, or treat local classification as authority.
+Constructor or validator failure marks only that dependent boundary `PROTOCOL_BLOCKED`. Do not relabel the same content; source role, packet kind, and task id are immutable. Do not handcraft a bypass or treat local classification as authority.
 
 ## Report and checkpoint semantics
 
