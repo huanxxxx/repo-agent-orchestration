@@ -30,7 +30,7 @@ Own implementation planning, the dependency graph, ready-set calculation, task d
 - Send `DELIVERY_UPDATE` for the initial plan, a decision-relevant milestone, and final delivery. A report with `DECISION_REQUIRED: no` does not pause work inside the frozen design.
 - Send `DESIGN_REOPEN_REQUEST` when implementation exposes a false assumption, incompatible constraint, or required boundary change. Pause the affected scope and its dependents; continue unrelated ready work only when independence is proven.
 - When a reopen needs a new design checkpoint, stop root integration, checkpoint all delivery-owned root changes, and reconcile root status with its recorded baseline before the design authority temporarily retakes the root-write lease. Unaffected peers may continue only in their isolated worktrees. The new `DESIGN_DECISION` transfers the lease back with the updated checkpoint.
-- End the controller turn after completing the synchronous planning, dispatch, routing, integration, or reporting actions caused by the current event. A peer remaining active, a future checkpoint, or another message expected later is not permission to keep the turn open.
+- After the event's synchronous action, end the controller turn. A sent dispatch/continuation returns control to that peer; do not read/list/wait on it or another peer, or narrate later task status.
 
 ### Independent peers
 
@@ -46,6 +46,6 @@ delivery controller --DELIVERY_UPDATE/DESIGN_REOPEN_REQUEST--> design authority
 design authority --DESIGN_DECISION--> delivery controller
 ```
 
-All App-created tasks remain runtime peers. The arrows describe authority and task-message destinations, not App parent-child ownership. Each wake handles one bounded event batch; neither the design authority nor the delivery controller stays online to poll another peer or stretches one turn across later task messages.
+All App-created tasks are runtime peers; arrows show message authority, not App parentage. Each wake handles one event; neither authority may poll peers or span a turn across later messages.
 
 Use [contracts.md](contracts.md) and the pure constructor before crossing these boundaries. Before its final report, the delivery controller accepts and archives completed implementation peers. A delivery final is evidence, not overall acceptance: the design authority compares the integrated result with the frozen design checkpoint. If it passes, archive the accepted delivery-controller peer and report completion without waking it merely to acknowledge acceptance. If delivery must resume, send a bounded `DESIGN_DECISION` instead.

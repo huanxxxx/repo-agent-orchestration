@@ -301,8 +301,23 @@ class SkillStructureTests(unittest.TestCase):
         self.assertIn("successful delivery completes dispatch", skill)
         self.assertIn("inert route fingerprint", controller)
         self.assertIn("not a continuation/correction or startup wait", controller)
+        self.assertIn("Successful delivery ends the sender turn", skill)
+        self.assertIn("or inspect another peer while handling one report", skill)
+        self.assertIn(
+            "After any successful send, end the turn; never read/list/wait on its target or another peer",
+            controller,
+        )
+        self.assertIn("absent from the wake-causing message", controller)
+        self.assertIn(
+            "The sole exception is one product-required startup wait after a new task's first dispatch",
+            controller,
+        )
         self.assertIn("must not trigger a second wait", controller)
         self.assertIn("Do not call recursive waits", controller)
+        self.assertIn(
+            "A sent dispatch/continuation returns control to that peer",
+            (SKILL / "references" / "architected.md").read_text(encoding="utf-8"),
+        )
         self.assertNotIn("CONTROLLER_AFTER_DISPATCH", contracts)
         self.assertNotIn("current_turn_once", contracts)
         self.assertIn("OBSOLETE_DISPATCH_FIELDS", validator)
@@ -356,7 +371,7 @@ class SkillStructureTests(unittest.TestCase):
         self.assertIn("DESIGN_REOPEN_REQUEST", skill)
         self.assertIn("it may not authorize itself", controller)
         self.assertIn(
-            "When the task is `active`, do not send another continuation or correction",
+            "`active` forbids another continuation or correction",
             skill,
         )
         self.assertIn(
@@ -375,7 +390,7 @@ class SkillStructureTests(unittest.TestCase):
         recovery = (SKILL / "references" / "recovery.md").read_text(
             encoding="utf-8"
         )
-        self.assertIn("current top-level runtime status", skill)
+        self.assertIn("current top-level status", skill)
         self.assertIn("`idle` or `notLoaded` means no live turn", skill)
         self.assertIn(
             "persisted historical turn rows are not a live-turn inventory", controller

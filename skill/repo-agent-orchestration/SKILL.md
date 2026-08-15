@@ -69,9 +69,9 @@ The validator is a boundary check, not a workflow engine. An inexpressible bound
 
 ## Process one event and yield
 
-Treat each App wake as one bounded event batch. Process its event plus already-delivered facts required for the same decision. Before continuing a peer, use current top-level runtime status: `idle` or `notLoaded` means no live turn despite stale `inProgress` history. When the task is `active`, do not send another continuation or correction.
+Treat each App wake as one bounded event batch. Process only its event and already-delivered facts needed for the same decision. Before continuing a peer, check current top-level status once: `idle` or `notLoaded` means no live turn despite stale `inProgress` history; `active` forbids another continuation or correction.
 
-Successful packet delivery needs no wait. A product-required startup wait at most once may follow dispatch/continue; active, progress, or timeout means end the controller turn. Resume only on a delivered report, checkpoint, blocker/input, user request, or acceptance; never poll.
+Successful delivery ends the sender turn except one new-task startup check. Do not read/list/wait on the target, narrate its progress, or inspect another peer while handling one report. A product-required startup wait at most once may follow only a new task's first dispatch; active, progress, or timeout means end the controller turn. Resume only on an inbound task message, user request, or acceptance action; never poll.
 
 ## Accept and close
 

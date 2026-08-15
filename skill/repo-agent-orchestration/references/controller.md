@@ -40,7 +40,7 @@ The task-start route gate and repository-profile read are once per task binding.
 4. Build and live-validate one outgoing packet in the single constructor call; send it once.
 5. Complete synchronous acceptance, dispatch, correction, integration, or reporting, then End the controller turn.
 
-Do not keep the controller alive to observe a peer. Use one startup wait only when the product explicitly requires confirmation beyond its creation receipt. An active/progress/timeout result must not trigger a second wait. Do not call recursive waits or invent immediate snapshots as future silence checks.
+After any successful send, end the turn; never read/list/wait on its target or another peer, or narrate progress absent from the wake-causing message. The sole exception is one product-required startup wait after a new task's first dispatch; active/progress/timeout ends the turn and must not trigger a second wait. Do not call recursive waits or use snapshots as silence checks.
 
 Before continuing/correcting, inspect current top-level runtime status once. `idle` and `notLoaded` mean no live turn; persisted historical turn rows are not a live-turn inventory. Record stale metadata but do not block, archive/restore, interrupt, or ask the user to stop a historical turn. If the task is `active`, do not send a plain `continue`. Use current active-turn evidence to steer/stop; if current active-turn evidence identifies more than one live turn, recover all of them. Confirm an urgent HOLD actually stopped the runtime before rerouting.
 
