@@ -26,9 +26,9 @@ For review, prefer `root_readonly` for a short stable-root review, `existing_wor
 
 For `app_default`, omit task model settings. For an explicit binding, use the host's advertised model catalog instead of guessing from the controller model name; submit it through real creation parameters and treat it as unverified until the host echoes the effective model.
 
-Make exactly one creation call per logical dispatch per controller turn. Target the saved project explicitly with `target: {type: "project", projectId, environment: {type: "local"}}`. A confirmed task id completes dispatch and needs no wait merely to become active. Projectless, foreign-project, queued-worktree, App-managed-worktree, or `clientThreadId`-only outcomes are invalid routes. Empty, ambiguous, timed-out, or unparseable receipts mean `creation outcome unknown`; end the turn. On the next real wake, list tasks and reconcile by source, project, objective, worktree, branch, and base before any retry.
+Make exactly one creation call per dispatch. Target the saved project with `target: {type: "project", projectId, environment: {type: "local"}}`. A task id completes creation only. Reject projectless, foreign-project, queued-worktree, App-managed-worktree, and `clientThreadId`-only routes. An empty, ambiguous, timed-out, or unparseable receipt means `creation outcome unknown`; end the turn. On real wake, list tasks and reconcile by source, project, objective, worktree, branch, and base before retrying.
 
-Put the packet and conditional execution authority in the initial instruction. The peer runs its route gate and, on PASS, continues in the same turn; do not add a binding-only round trip.
+Packets need the returned id. Create with an inert route fingerprint and no authority, then validate/send one id-bound packet. It is dispatch, not a continuation/correction or startup wait; receipt completes dispatch. If delivery fails/is unknown, retain id/packet, do not recreate, and reconcile next wake. Peer executes only after route PASS.
 
 ## Wake fast path
 
@@ -48,7 +48,7 @@ Before continuing/correcting, inspect current top-level runtime status once. `id
 
 Do not strand completed work only in a dirty worktree. Before a cross-turn pause, ownership handoff, formal review, or final, verify exact owned paths and create a local checkpoint commit. Internal subagents return paths/evidence; the owning task makes the combined commit. Mixed ownership stays unstaged and is reported exactly.
 
-Ordinary reports use direct task-message delivery with `TARGET_SETTINGS: preserve`; omit `model` and `thinking` because they are destination overrides. `progress` is optional and carries a new decision fact without ending the peer turn. `blocked` and `final` return control to the contracted authority. A writer final names the checkpoint; a delivery failure becomes a local blocked report recoverable on the next real wake.
+`progress`, `blocked`, and `final` must use direct task-message with `TARGET_SETTINGS: preserve`. Task failure is not delivery failure. `progress` carries a decision fact; delivered terminal reports return control, and writer final names the checkpoint. A failed call leaves the packet undelivered; keep it plus a local failure note for next-wake recovery.
 
 In `architected`, report only the initial plan, decision-relevant milestones, reopen requests, and final evidence. `DECISION_REQUIRED: no` does not pause authorized work. A delivery controller may adjudicate implementation inside the frozen baseline, but it may not authorize itself to change the design; send `DESIGN_REOPEN_REQUEST` and pause only affected/dependent scope.
 

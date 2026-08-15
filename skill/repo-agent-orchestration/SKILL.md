@@ -46,7 +46,7 @@ An App-created user-visible task is a peer task. Route by the actual creation ca
 1. Create peers only for separate acceptance, wait, model, branch, recovery, or formal review. After authorization, dispatch all ready, non-conflicting peer tasks within capacity; do not await another parallelism instruction or split coupled work to fill slots.
 2. Require the smallest change that satisfies `OBJECTIVE`, `ACCEPTANCE`, and `REQUIRED_TESTS`. Every changed path must have a concrete acceptance justification. Once the required acceptance and tests pass, stop implementation; no speculative feature, abstraction, alternate path, refactor, or hardening.
 3. Give a ready writer one local branch/tree and exclusive paths. Internal subagents inherit it; that task verifies and commits the combined checkpoint. Reject projectless/foreign-project tasks. Create peers in the saved project with `environment: {type: "local"}` and the repository-local execution path, never an App-managed tree.
-4. Make one creation call per logical dispatch. A confirmed task id completes dispatch; do not wait for activity. An empty, ambiguous, timed-out, queued worktree setup, `clientThreadId`-only, or unparseable receipt is a phantom task/unknown outcome and never authorizes an immediate second creation call. Reconcile on a later real wake.
+4. Make one creation call per logical dispatch. A task id completes creation only; successful delivery completes dispatch. If id follows, create an inert peer and send one id-bound packet. Do not wait. An empty, ambiguous, timed-out, queued worktree setup, `clientThreadId`-only, or unparseable receipt is a phantom task and never authorizes an immediate second creation call; reconcile on real wake.
 5. For `app_default`, omit `model` and `thinking`. Explicit bindings use actual task parameters only after host discovery; prompt text is not binding. Reports must omit `model` and `thinking` and preserve destination settings.
 6. Use the exact execution path. The CLI proves required paths currently exist and match Git registry, branch, and commit. Root status is compared with its baseline, not forced clean.
 7. Before a cross-turn pause, ownership handoff, formal review, or `final`, verify and locally commit coherent owned output. Never stage another owner's files; if unsafe, preserve and report exact dirty paths and recovery action.
@@ -71,7 +71,7 @@ The validator is a boundary check, not a workflow engine. An inexpressible bound
 
 Treat each App wake as one bounded event batch. Process its event plus already-delivered facts required for the same decision. Before continuing a peer, use current top-level runtime status: `idle` or `notLoaded` means no live turn despite stale `inProgress` history. When the task is `active`, do not send another continuation or correction.
 
-A confirmed task id needs no wait. A product-required startup wait at most once may follow create/continue; active, progress, or timeout means end the controller turn. Resume only on a report, real checkpoint, blocker/input, user status request, or acceptance event; never poll.
+Successful packet delivery needs no wait. A product-required startup wait at most once may follow dispatch/continue; active, progress, or timeout means end the controller turn. Resume only on a delivered report, checkpoint, blocker/input, user request, or acceptance; never poll.
 
 ## Accept and close
 

@@ -510,7 +510,7 @@ class ContractValidationTests(unittest.TestCase):
         self.assertIn("DELIVERY must be task_message", errors)
         self.assertIn("final EVIDENCE must include", errors)
 
-    def test_blocked_delivery_failure_is_valid(self) -> None:
+    def test_blocked_requires_direct_delivery(self) -> None:
         blocked = """
 TASK_ID: write-1
 ORCHESTRATION_MODE: delivery
@@ -525,7 +525,15 @@ DELIVERY: blocked:task_message_unavailable
 TARGET_SETTINGS: preserve
 NEXT: recover on the next real controller wake
 """
-        self.assertEqual(self.validate("update", blocked), [])
+        self.assertIn(
+            "DELIVERY must be task_message:<target-task-id>",
+            self.validate("update", blocked),
+        )
+        delivered = blocked.replace(
+            "DELIVERY: blocked:task_message_unavailable",
+            "DELIVERY: task_message:controller-1",
+        )
+        self.assertEqual(self.validate("update", delivered), [])
 
     def test_report_rejects_controller_model_override(self) -> None:
         invalid = VALID_FINAL.replace(

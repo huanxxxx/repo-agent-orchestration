@@ -94,7 +94,7 @@ It inherits the current task's authority/path and returns this turn. Separate ac
 
 ## Route and write semantics
 
-The initial peer instruction contains its dispatch plus conditional authority: run `binding` first and continue in the same turn on PASS; on failure, write nothing and report blocked. The task-start binding is not repeated on later wakes unless its task/project/cwd/execution-path facts changed or became ambiguous. Normal commits do not invalidate binding; each new write/review packet live-checks its contracted branch/HEAD.
+Packets need the returned task id. Create an inert `AWAIT_FORMAL_DISPATCH` fingerprint with no authority, then validate/send one id-bound packet; receipt completes dispatch, with no placeholders. The peer must run `binding` and continue in the same turn on PASS; otherwise write nothing and report blocked. Repeat only if identity changes. Commits do not invalidate binding; each packet live-checks branch/HEAD.
 
 For write packets, `SOURCE_ROLE: delivery_controller`, `TARGET_ROLE: peer_writer`, and `REPORT_TO_TASK_ID` identifies the controller. `OWNED_PATHS` grants locations only. Passing acceptance is the stop condition: implement the smallest sufficient result, then map each acceptance condition to its changed paths and evidence. Architecture/scope expansion is a blocker requiring the owning authority.
 
@@ -132,4 +132,4 @@ Constructor or validator failure marks only that dependent boundary `PROTOCOL_BL
 
 For a write-task `final`, `EVIDENCE` names the local checkpoint commit and maps acceptance to paths/checks; `RISKS_OR_LIMITS` and `PENDING_ITEMS` are mandatory. Before a planned pause or handoff, commit each coherent owned unit. If unsafe, report blocked with the exact dirty paths, ownership reason, and recovery action; do not stage another owner's work.
 
-`DELIVERY` is `task_message:<TARGET_TASK_ID>` except a local delivery failure, which is `blocked:<reason>`. `TARGET_SETTINGS: preserve` means task-message calls omit `model` and `thinking`; those are destination-thread overrides. Validate, send once, confirm delivery, then end the sender turn. If delivery fails, preserve the local blocked report for recovery on the next real wake.
+`DELIVERY` must be `task_message:<TARGET_TASK_ID>` for every status; task failure is not delivery failure. `TARGET_SETTINGS: preserve` omits destination-thread overrides. Validate/send once; confirm, then end the turn. A failed call delivered nothing: keep the packet plus a local `DELIVERY_FAILURE: <reason>` note outside it; never claim receipt.

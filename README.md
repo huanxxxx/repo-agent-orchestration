@@ -68,7 +68,7 @@ This diagram shows `architected` mode. Ordinary `delivery` collapses design and 
 
 When a repository defines an execution package or equivalent continuity entry, the Skill keeps it separate from both the App task and Git worktree. It stores durable objective, scope, state, acceptance, recovery, and next-step facts; repository-specific tiers, paths, templates, and scaffolding stay in the repository. Clean worktrees use their current HEAD as the recovery anchor, and prechange snapshots remain explicit rather than ceremonial.
 
-Task startup is one phase: the initial instruction performs a fast route gate and continues in the same turn when it passes. A route mismatch fails before the first write; there is no mandatory binding-only turn followed by a second authorization turn.
+Task startup is one logical dispatch with two transport steps because the formal packet requires the actual id returned by creation. The creation instruction is inert and grants no execution authority; after the receipt, the dispatcher immediately sends one validated id-bound packet. Its receipt completes dispatch, and the peer performs the fast route gate and continues on PASS without a startup wait.
 
 ## Install into a repository
 
@@ -199,7 +199,7 @@ OpenAI's desktop worktree feature uses Codex-managed worktrees and is documented
 - Review selects the lightest safe target: root, frozen candidate, or detached snapshot.
 - Review is delta-first with an explicit context/check/expansion budget; full review requires a recorded reason.
 - Worker or reviewer PASS remains evidence, not acceptance by the contracted authority.
-- A peer task's local final is not a delivered authority report; blocked and final reports use direct peer-to-peer task-message delivery.
+- A peer task's local output is not a delivered authority report; progress, blocked, and final reports use direct peer-to-peer task-message delivery.
 - Task-message reports preserve destination settings: senders omit `model` and `thinking`, which otherwise override the destination task.
 - Visible repository tasks explicitly use App environment `local`; isolation comes from the repository-local execution worktree, never an App-managed worktree.
 - A queued App worktree setup or worktree-creation receipt is a failed peer route, not a task to wait on or recover as if it had started.
@@ -209,7 +209,7 @@ OpenAI's desktop worktree feature uses Codex-managed worktrees and is documented
 - A clean task worktree uses its HEAD as the recovery anchor; prechange snapshots require an explicit request or an authorized risky rewrite of task-owned tracked changes.
 - Coherent task-owned output is committed locally before a cross-turn pause, ownership handoff, formal review, or final; unsafe mixed ownership is reported precisely instead of staged.
 - Write tasks make the smallest acceptance-satisfying change and stop when acceptance passes; unrequested architecture, alternate paths, and hardening require a separately authorized scope.
-- A confirmed task id completes dispatch without a startup wait; any product-required confirmation occurs at most once.
+- A confirmed task id completes creation only; successful delivery of its id-bound formal packet completes dispatch without a startup wait.
 - Each authority wake processes one bounded event batch and ends; future peer events must wake a new turn rather than extending a polling session.
 - The route gate and repository profile are read once per stable task binding; later wakes reuse them and load only changed hot state.
 - Routine outgoing packets use one streamed constructor/live-validation command instead of temporary files and duplicate validation calls.

@@ -27,7 +27,6 @@ MODEL_POLICY_RE = re.compile(
 )
 PROFILE_MODEL_RE = re.compile(r"^(?:[^<>\s]+/[^<>/\s]+)$")
 TASK_MESSAGE_RE = re.compile(r"^task_message:[^<>\s]+$")
-BLOCKED_DELIVERY_RE = re.compile(r"^blocked:[^<>\s].*$")
 TASK_MODES = {"delivery_controller", "write", "review_root", "review_worktree"}
 REVIEW_MODES = {"root_readonly", "existing_worktree", "detached_snapshot"}
 REVIEW_DEPTHS = {"delta", "full"}
@@ -900,20 +899,7 @@ def validate(kind: str, fields: dict[str, str]) -> list[str]:
         status = fields.get("STATUS", "")
         if status and status not in STATUSES:
             errors.append("STATUS must be progress, blocked, or final")
-        delivery = fields.get("DELIVERY", "")
-        direct = bool(delivery and TASK_MESSAGE_RE.fullmatch(delivery))
-        blocked_delivery = bool(delivery and BLOCKED_DELIVERY_RE.fullmatch(delivery))
-        if delivery and not direct and not blocked_delivery:
-            errors.append(
-                "DELIVERY must be task_message:<target-task-id> or blocked:<reason>"
-            )
-        if blocked_delivery and status != "blocked":
-            errors.append("blocked DELIVERY requires STATUS=blocked")
-        if status and status != "blocked" and not direct:
-            errors.append("progress and final DELIVERY must use task_message:<target-task-id>")
-        if direct:
-            errors.extend(validate_task_message_target(fields))
-        errors.extend(validate_target_settings(fields))
+        errors.extend(validate_required_task_message(fields))
         if status == "final":
             if fields.get("EVIDENCE", "").casefold() == "none":
                 errors.append("final EVIDENCE must include commands or artifacts")

@@ -297,11 +297,26 @@ class SkillStructureTests(unittest.TestCase):
         )
         self.assertIn("end the controller turn", skill)
         self.assertIn("startup wait at most once", skill)
+        self.assertIn("A task id completes creation only", skill)
+        self.assertIn("successful delivery completes dispatch", skill)
+        self.assertIn("inert route fingerprint", controller)
+        self.assertIn("not a continuation/correction or startup wait", controller)
         self.assertIn("must not trigger a second wait", controller)
         self.assertIn("Do not call recursive waits", controller)
         self.assertNotIn("CONTROLLER_AFTER_DISPATCH", contracts)
         self.assertNotIn("current_turn_once", contracts)
         self.assertIn("OBSOLETE_DISPATCH_FIELDS", validator)
+
+    def test_blocked_reports_cannot_masquerade_as_delivery_failures(self) -> None:
+        contracts = (SKILL / "references" / "contracts.md").read_text(
+            encoding="utf-8"
+        )
+        validator = (SKILL / "scripts" / "validate_dispatch_contract.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("task failure is not delivery failure", contracts)
+        self.assertIn("DELIVERY_FAILURE: <reason>", contracts)
+        self.assertNotIn("BLOCKED_DELIVERY_RE", validator)
 
     def test_authorities_yield_after_events_and_fail_closed_on_protocol_errors(self) -> None:
         skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
