@@ -75,7 +75,7 @@ Successful delivery ends the sender turn. Do not inspect its target or another p
 
 ## Accept and close
 
-Freeze acceptance, threat model, and non-goals. Review the exact delta by default: changed paths, named clauses, focused checks, and exact-checkpoint evidence reuse. Full context or full-suite reruns need an explicit reason. Findings cite a criterion and reproducible evidence; reviewers do not invent acceptance. The controller adjudicates and verifies diff, commit, checks, and evidence limits. State limits: focused checks do not prove the full repository, protected environments, or production behavior. Two correction rounds with new blockers trigger scope-drift audit, not an automatic third.
+Freeze acceptance, threat model, and non-goals. Review the exact delta by default: changed paths/clauses, focused checks, and checkpoint evidence. Full context/suite needs a reason. Corrections reuse the original eligible reviewer; `fresh` means a new range/judgment, not a new task. Findings cite criteria and evidence; reviewers never invent acceptance. Controller verifies diff, commit, checks, and evidence limits; focused checks do not prove the full repository, protected systems, or production behavior. Two rounds with new blockers trigger scope-drift audit, not an automatic third.
 
 In `architected`, final evidence returns to design authority. Merge, push, deploy, publish, production data, credentials, and permissions keep separate gates.
 

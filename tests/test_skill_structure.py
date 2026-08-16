@@ -358,6 +358,7 @@ class SkillStructureTests(unittest.TestCase):
         self.assertIn("Call `create_thread` once per dispatch", controller)
         self.assertIn("creation outcome unknown", controller)
         self.assertIn("then reconcile source, project, objective", controller)
+        self.assertIn("never embed `<codex_delegation>`", controller)
 
     def test_scope_reopen_and_active_peer_turns_fail_closed(self) -> None:
         skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
@@ -472,8 +473,12 @@ class SkillStructureTests(unittest.TestCase):
         self.assertIn("Review the exact delta by default", skill)
         self.assertIn("independent design-review PASS", architected)
         self.assertIn("delivery never proxies it", contracts)
-        self.assertIn("Correction review is delta-only", controller)
-        self.assertIn("Do not append duplicate lineage", controller)
+        self.assertIn("Correction stays delta-only", controller)
+        self.assertIn("reuse the original `idle`/`notLoaded` reviewer", controller)
+        self.assertIn("`fresh` means a new range/judgment, not a new task", controller)
+        self.assertIn("one compact `send_message_to_thread` packet", controller)
+        self.assertIn("do not resend binding", controller)
+        self.assertIn("conflict/second opinion is explicit", controller)
         self.assertIn("REVIEW_DEPTH: delta|full", contracts)
         self.assertIn("`REVIEW_BUDGET` uses `context=", contracts)
         self.assertIn("FULL_REVIEW_REASON", contracts)

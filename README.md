@@ -211,6 +211,7 @@ OpenAI's desktop worktree feature uses Codex-managed worktrees and is documented
 - Write tasks make the smallest acceptance-satisfying change and stop when acceptance passes; unrequested architecture, alternate paths, and hardening require a separately authorized scope.
 - A confirmed task id completes creation only; successful delivery of its id-bound formal packet completes dispatch without a startup wait.
 - Internal-agent tools (`spawn_agent`, internal send/follow-up, and `wait_agent`) cannot create, carry, or stand in for a peer task; unavailable App peer routing fails closed.
+- Correction review reuses the original idle reviewer by default; a fresh range and judgment do not require a fresh task. App task tools receive raw prompts/packets without a hand-written delegation envelope.
 - Each authority wake processes one bounded event batch and ends; future peer events must wake a new turn rather than extending a polling session.
 - The route gate and repository profile are read once per stable task binding; later wakes reuse them and load only changed hot state.
 - Routine outgoing packets use one streamed constructor/live-validation command instead of temporary files and duplicate validation calls.

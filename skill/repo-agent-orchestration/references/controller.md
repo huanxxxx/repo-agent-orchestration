@@ -28,7 +28,7 @@ For `app_default`, omit task model settings. For an explicit binding, use the ho
 
 Call `create_thread` once per dispatch in the saved project with `environment: {type: "local"}`. Its id proves creation only. Reject projectless, foreign-project, queued/App-managed-worktree, and `clientThreadId`-only routes. Empty/ambiguous/timed-out/unparseable means `creation outcome unknown`: end the turn, then reconcile source, project, objective, tree, branch, and base. Unavailable/failed App routing is `PROTOCOL_BLOCKED`; never fall back to `spawn_agent`.
 
-Send one id-bound packet to the returned App task id with `send_message_to_thread`; its receipt proves dispatch. Create inert first; this is not continuation/correction or a startup wait. On failed/unknown delivery, retain id/packet for next-wake reconciliation; never recreate or substitute an internal agent. Peer starts only after route PASS.
+Create inert first: not continuation/correction or a startup wait. Send one raw id-bound packet via `send_message_to_thread`; App adds framing, so never embed `<codex_delegation>`. Failure/unknown: retain id/packet, reconcile next wake, never recreate/substitute. Start after route PASS.
 
 ## Wake fast path
 
@@ -54,7 +54,7 @@ In `architected`, report only the initial plan, decision-relevant milestones, re
 
 ## Review, integrate, close
 
-Freeze acceptance IDs, threat model, and non-goals. Default to `delta` on the exact range: scope changed paths/direct clauses and budget context/checks/expand_if. Reuse exact-checkpoint evidence; independent judgment is not a full rerun. `full` requires a reason. The prompt is route capsule plus packet. Do not append duplicate lineage, package reads, or test matrices. Correction review is delta-only unless the baseline reopens. Findings map criteria to evidence. Severity alone never grants scope. After two rounds with new blockers, perform a scope-drift audit.
+Freeze acceptance IDs/threat/non-goals. `delta` uses exact range/paths/clauses/checks, `expand_if`, reusable evidence; `full` needs a reason. Severity alone never grants scope. Correction stays delta-only unless baseline reopens. If binding/class/model unchanged, reuse the original `idle`/`notLoaded` reviewer: `fresh` means a new range/judgment, not a new task. Send one compact `send_message_to_thread` packet: findings, paths, closure checks; reference baseline and do not resend binding. Create new only if original unavailable/archived, routing changed, conflict/second opinion is explicit, or baseline reopened. Map criteria/evidence; two new-blocker rounds trigger scope-drift audit.
 
 Verify the actual diff/commit, owned paths, checks, evidence limits, unresolved findings, and root-baseline drift. Passing acceptance is the stop condition. In `architected`, send final evidence with `DECISION_REQUIRED: yes`; design consistency remains with the design authority.
 
