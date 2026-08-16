@@ -80,7 +80,7 @@ MODEL_POLICY: app_default|repo_write_default:<model>/<reasoning>|repo_review_def
 TARGET_SETTINGS: preserve
 ```
 
-App peer creation must target the saved project with `environment: {type: "local"}`. An internal subagent does not cross a user-visible boundary; give only:
+App peers use saved-project `create_thread` with `environment: {type: "local"}`, then `send_message_to_thread`; `spawn_agent` ids are never peer `TASK_ID`s. Give internal subagents only:
 
 ```text
 EXECUTION_PATH: inherit_current
@@ -90,7 +90,7 @@ DO_NOT_TOUCH: <sibling scopes>
 RETURN: current_turn
 ```
 
-It inherits the current task's authority/path and returns this turn. Separate acceptance, model binding, cross-turn waiting, formal review, or recovery requires a peer packet.
+They inherit authority/path and return this turn. Separate acceptance/model/wait/review/recovery needs an App peer; failed/unavailable routing is `PROTOCOL_BLOCKED`, never an internal substitute.
 
 ## Route and write semantics
 

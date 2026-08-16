@@ -14,7 +14,7 @@ For each candidate, ask whether authority and dependencies are ready, writes are
 
 Dispatch every ready, non-conflicting peer within capacity; this does not require a separate user request to parallelize. Record the concrete dependency, shared write, acceptance coupling, or external gate behind serialization. Recompute only after a decision-relevant event.
 
-Every App-created user-visible task is a peer. The controller is a coordination role, not its runtime parent. A same-task internal subagent inherits the exact current execution path, returns this turn, and may write only within non-overlapping paths already owned by the parent; it must not create another branch or worktree.
+Every App-created user-visible task is a peer. Use `create_thread`, then `send_message_to_thread`; the controller is a coordination role, not its runtime parent. Internal tools—`spawn_agent`, `send_input`, agent send/follow-up, `wait_agent`—inherit the current path, return this turn, stay in parent-owned paths, and get no peer packet/tree/branch. Their id is never a peer `TASK_ID`; if synchronous return is unsuitable, use a peer.
 
 `OWNED_PATHS` says where a task may write, not that any change there is acceptable. Require the smallest sufficient implementation and a mapping from each acceptance condition to changed paths and evidence. Boundary expansion is `blocked`, not permission to redesign.
 
@@ -26,9 +26,9 @@ For review, prefer `root_readonly` for a short stable-root review, `existing_wor
 
 For `app_default`, omit task model settings. For an explicit binding, use the host's advertised model catalog instead of guessing from the controller model name; submit it through real creation parameters and treat it as unverified until the host echoes the effective model.
 
-Make exactly one creation call per dispatch. Target the saved project with `target: {type: "project", projectId, environment: {type: "local"}}`. A task id completes creation only. Reject projectless, foreign-project, queued-worktree, App-managed-worktree, and `clientThreadId`-only routes. An empty, ambiguous, timed-out, or unparseable receipt means `creation outcome unknown`; end the turn. On real wake, list tasks and reconcile by source, project, objective, worktree, branch, and base before retrying.
+Call `create_thread` once per dispatch in the saved project with `environment: {type: "local"}`. Its id proves creation only. Reject projectless, foreign-project, queued/App-managed-worktree, and `clientThreadId`-only routes. Empty/ambiguous/timed-out/unparseable means `creation outcome unknown`: end the turn, then reconcile source, project, objective, tree, branch, and base. Unavailable/failed App routing is `PROTOCOL_BLOCKED`; never fall back to `spawn_agent`.
 
-Packets need the returned id. Create with an inert route fingerprint and no authority, then validate/send one id-bound packet. It is dispatch, not a continuation/correction or startup wait; receipt completes dispatch. If delivery fails/is unknown, retain id/packet, do not recreate, and reconcile next wake. Peer executes only after route PASS.
+Send one id-bound packet to the returned App task id with `send_message_to_thread`; its receipt proves dispatch. Create inert first; this is not continuation/correction or a startup wait. On failed/unknown delivery, retain id/packet for next-wake reconciliation; never recreate or substitute an internal agent. Peer starts only after route PASS.
 
 ## Wake fast path
 
@@ -40,7 +40,7 @@ The task-start route gate and repository-profile read are once per task binding.
 4. Build and live-validate one outgoing packet in the single constructor call; send it once.
 5. Complete synchronous acceptance, dispatch, correction, integration, or reporting, then End the controller turn.
 
-After any successful send, end the turn; never read/list/wait on its target or another peer, or narrate progress absent from the wake-causing message. The sole exception is one product-required startup wait after a new task's first dispatch; active/progress/timeout ends the turn and must not trigger a second wait. Do not call recursive waits or use snapshots as silence checks.
+After any successful send, end the turn; never inspect its target or another peer. Only a product-required first-dispatch `wait_threads` may run once; never call `wait_agent` for a peer. Any result ends the turn. No recursive waits or silence snapshots.
 
 Before continuing/correcting, inspect current top-level runtime status once. `idle` and `notLoaded` mean no live turn; persisted historical turn rows are not a live-turn inventory. Record stale metadata but do not block, archive/restore, interrupt, or ask the user to stop a historical turn. If the task is `active`, do not send a plain `continue`. Use current active-turn evidence to steer/stop; if current active-turn evidence identifies more than one live turn, recover all of them. Confirm an urgent HOLD actually stopped the runtime before rerouting.
 

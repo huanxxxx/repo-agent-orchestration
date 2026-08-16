@@ -35,18 +35,18 @@ Repository tiers keep local meanings. In `delivery`, the controller owns the out
 
 ## Choose the lightest route
 
-- Keep bounded current-turn lookup/comparison/non-overlapping slices in the current task or an internal subagent; inherit the exact path and create no worktree.
-- Use a peer write task for independently acceptable, cross-turn, separately recoverable, or explicitly model-bound implementation; give it one repository-local worktree.
+- Keep bounded current-turn slices here or in an internal subagent; inherit the path, create no worktree, and return this turn.
+- Use a peer writer for independently acceptable, cross-turn, recoverable, or model-bound work; give it one repository-local worktree.
 - Use a peer review task for formal review: stable root needs none, a frozen candidate reuses its paused writer tree read-only, and only a long/test-running/historical review gets a detached snapshot.
 
-An App-created user-visible task is a peer task. Route by the actual creation capability. Only an internal subagent has a same-task parent/subagent relationship; it returns this turn, inherits path/authority, and owns no independent milestone, verdict, model, recovery, branch, or tree. More agents alone never justify more worktrees. Different peer write tasks never share a writable worktree.
+An App-created user-visible task is a peer task. Its actual creation capability is `create_thread`; deliver via `send_message_to_thread`. `spawn_agent` creates only the same-task parent/subagent relationship; its id is never a peer `TASK_ID`. `send_input`, agent send/follow-up, and `wait_agent` are internal-only: inherit path/authority, return this turn, and get no formal packet, acceptance, checkpoint, model, recovery, branch, or tree. If synchronous return is unsuitable, use a peer. More agents alone never justify more worktrees; different peer write tasks never share one.
 
 ## Dispatch and execute
 
 1. Create peers only for separate acceptance, wait, model, branch, recovery, or formal review. After authorization, dispatch all ready, non-conflicting peer tasks within capacity; do not await another parallelism instruction or split coupled work to fill slots.
 2. Require the smallest change that satisfies `OBJECTIVE`, `ACCEPTANCE`, and `REQUIRED_TESTS`. Every changed path must have a concrete acceptance justification. Once the required acceptance and tests pass, stop implementation; no speculative feature, abstraction, alternate path, refactor, or hardening.
 3. Give a ready writer one local branch/tree and exclusive paths. Internal subagents inherit it; that task verifies and commits the combined checkpoint. Reject projectless/foreign-project tasks. Create peers in the saved project with `environment: {type: "local"}` and the repository-local execution path, never an App-managed tree.
-4. Make one creation call per logical dispatch. A task id completes creation only; successful delivery completes dispatch. If id follows, create an inert peer and send one id-bound packet. Do not wait. An empty, ambiguous, timed-out, queued worktree setup, `clientThreadId`-only, or unparseable receipt is a phantom task and never authorizes an immediate second creation call; reconcile on real wake.
+4. Call `create_thread` once. Its id proves creation; one `send_message_to_thread` receipt proves dispatch. Create inert, send one id-bound packet, and do not wait. Empty/ambiguous/timed-out/queued-worktree/`clientThreadId`-only/unparseable is phantom: end the turn and reconcile on wake. Unavailable/failed peer routing is `PROTOCOL_BLOCKED`; never substitute `spawn_agent`.
 5. For `app_default`, omit `model` and `thinking`. Explicit bindings use actual task parameters only after host discovery; prompt text is not binding. Reports must omit `model` and `thinking` and preserve destination settings.
 6. Use the exact execution path. The CLI proves required paths currently exist and match Git registry, branch, and commit. Root status is compared with its baseline, not forced clean.
 7. Before a cross-turn pause, ownership handoff, formal review, or `final`, verify and locally commit coherent owned output. Never stage another owner's files; if unsafe, preserve and report exact dirty paths and recovery action.
@@ -71,7 +71,7 @@ The validator is a boundary check, not a workflow engine. An inexpressible bound
 
 Treat each App wake as one bounded event batch. Process only its event and already-delivered facts needed for the same decision. Before continuing a peer, check current top-level status once: `idle` or `notLoaded` means no live turn despite stale `inProgress` history; `active` forbids another continuation or correction.
 
-Successful delivery ends the sender turn except one new-task startup check. Do not read/list/wait on the target, narrate its progress, or inspect another peer while handling one report. A product-required startup wait at most once may follow only a new task's first dispatch; active, progress, or timeout means end the controller turn. Resume only on an inbound task message, user request, or acceptance action; never poll.
+Successful delivery ends the sender turn. Do not inspect its target or another peer. Only a product-required first-dispatch check may call `wait_threads` once, never `wait_agent`; any result ends the turn. Resume on an inbound report, user request, or acceptance; never poll.
 
 ## Accept and close
 
