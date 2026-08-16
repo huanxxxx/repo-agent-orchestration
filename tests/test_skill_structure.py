@@ -181,7 +181,7 @@ class SkillStructureTests(unittest.TestCase):
         )
         self.assertIn("set_thread_archived", controller)
         self.assertIn(
-            "TASK_MODE: delivery_controller|write|review_root|review_worktree",
+            "TASK_MODE: design_authority|delivery_controller|write|review_root|review_worktree",
             contracts,
         )
         self.assertIn("continue in the same turn", contracts)

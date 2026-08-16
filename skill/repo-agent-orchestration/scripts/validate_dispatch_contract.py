@@ -27,7 +27,13 @@ MODEL_POLICY_RE = re.compile(
 )
 PROFILE_MODEL_RE = re.compile(r"^(?:[^<>\s]+/[^<>/\s]+)$")
 TASK_MESSAGE_RE = re.compile(r"^task_message:[^<>\s]+$")
-TASK_MODES = {"delivery_controller", "write", "review_root", "review_worktree"}
+TASK_MODES = {
+    "design_authority",
+    "delivery_controller",
+    "write",
+    "review_root",
+    "review_worktree",
+}
 REVIEW_MODES = {"root_readonly", "existing_worktree", "detached_snapshot"}
 REVIEW_DEPTHS = {"delta", "full"}
 STATUSES = {"progress", "blocked", "final"}
@@ -480,13 +486,14 @@ def validate(kind: str, fields: dict[str, str]) -> list[str]:
                 errors.append(f"{field_name} must not contain placeholders")
         if mode and mode not in TASK_MODES:
             errors.append(
-                "TASK_MODE must be delivery_controller, write, review_root, or review_worktree"
+                "TASK_MODE must be design_authority, delivery_controller, write, "
+                "review_root, or review_worktree"
             )
         if repository_root and actual_cwd and normalized_path(repository_root) != normalized_path(actual_cwd):
             errors.append("ACTUAL_THREAD_CWD must equal REPOSITORY_ROOT")
         if repository_root and worktree_root and not is_descendant_path(worktree_root, repository_root):
             errors.append("WORKTREE_ROOT must be below REPOSITORY_ROOT")
-        if mode in {"delivery_controller", "review_root"}:
+        if mode in {"design_authority", "delivery_controller", "review_root"}:
             if repository_root and execution_path and normalized_path(repository_root) != normalized_path(execution_path):
                 errors.append(f"{mode} EXECUTION_PATH must equal REPOSITORY_ROOT")
         elif mode in {"write", "review_worktree"}:

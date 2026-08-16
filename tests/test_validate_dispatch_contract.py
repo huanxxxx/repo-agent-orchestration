@@ -308,20 +308,32 @@ class ContractValidationTests(unittest.TestCase):
             self.validate("binding", packet),
         )
 
-    def test_review_root_binding_uses_repository_root(self) -> None:
-        packet = (
-            VALID_BINDING.replace("TASK_MODE: write", "TASK_MODE: review_root")
-            .replace(
-                "EXECUTION_PATH: C:\\repo\\.worktrees\\write-1",
-                "EXECUTION_PATH: C:\\repo",
-            )
-        )
-        self.assertEqual(self.validate("binding", packet), [])
-        invalid = packet.replace("EXECUTION_PATH: C:\\repo", "EXECUTION_PATH: C:\\other")
-        self.assertIn(
-            "review_root EXECUTION_PATH must equal REPOSITORY_ROOT",
-            self.validate("binding", invalid),
-        )
+    def test_root_task_bindings_use_repository_root(self) -> None:
+        for mode in ("design_authority", "delivery_controller", "review_root"):
+            with self.subTest(mode=mode):
+                packet = (
+                    VALID_BINDING.replace("TASK_MODE: write", f"TASK_MODE: {mode}")
+                    .replace(
+                        "EXECUTION_PATH: C:\\repo\\.worktrees\\write-1",
+                        "EXECUTION_PATH: C:\\repo",
+                    )
+                )
+                self.assertEqual(self.validate("binding", packet), [])
+                invalid = packet.replace(
+                    "EXECUTION_PATH: C:\\repo", "EXECUTION_PATH: C:\\other"
+                )
+                self.assertIn(
+                    f"{mode} EXECUTION_PATH must equal REPOSITORY_ROOT",
+                    self.validate("binding", invalid),
+                )
+                projectless = packet.replace(
+                    "ACTUAL_THREAD_PROJECT_ID: saved-project",
+                    "ACTUAL_THREAD_PROJECT_ID: null",
+                )
+                self.assertIn(
+                    "ACTUAL_THREAD_PROJECT_ID must be non-null",
+                    self.validate("binding", projectless),
+                )
 
     def test_review_worktree_binding_requires_repository_local_tree(self) -> None:
         packet = VALID_BINDING.replace("TASK_MODE: write", "TASK_MODE: review_worktree")

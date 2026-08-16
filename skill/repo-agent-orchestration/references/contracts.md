@@ -19,7 +19,7 @@ CONTINUITY_POLICY: none|repository_defined:<entry>
 EXTERNAL_GATES: <gates>
 ```
 
-Read this once per authority/task binding. Repository defaults map to `repo_delivery_default`, `repo_write_default`, or `repo_review_default`; `app_default` remains host-selected. `user_explicit:<model>/<reasoning>` is a runtime override, not a repository default.
+Read once per authority/task binding. Repository defaults map to `repo_delivery_default`, `repo_write_default`, or `repo_review_default`; `app_default` remains host-selected. `user_explicit:<model>/<reasoning>` is a runtime override, not a repository default.
 
 ## One ordinary packet path
 
@@ -72,7 +72,7 @@ Optional fields are schema-defined, including `FULL_REVIEW_REASON` for full revi
 ```text
 TASK_ENVIRONMENT: local
 TASK_ARCHIVE_POLICY: dispatching_authority_after_acceptance
-TASK_MODE: delivery_controller|write|review_root|review_worktree
+TASK_MODE: design_authority|delivery_controller|write|review_root|review_worktree
 TARGET_MODE: root_readonly|existing_worktree|detached_snapshot
 REVIEW_DEPTH: delta|full
 STATUS: progress|blocked|final
