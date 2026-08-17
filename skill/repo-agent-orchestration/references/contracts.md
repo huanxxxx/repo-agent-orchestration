@@ -23,15 +23,15 @@ Read once per authority/task binding. Repository defaults map to `repo_delivery_
 
 ## One ordinary packet path
 
-Stream outgoing JSON fields directly to the constructor:
+Stream outgoing JSON to the constructor:
 
 ```text
-python scripts/construct_packet.py --kind <kind> --live -
+python scripts/construct_packet.py --kind <kind> --live --task-message -
 ```
 
-It shares `scripts/packet_schema.py` with the validator, rejects missing/unknown or contradictory fields, performs live route/Git checks where applicable, and emits text only on PASS. Its library functions stay pure: It never creates tasks, touches Git, sends messages, waits, archives, or orchestrates workflow. Avoid temporary JSON/packet files and do not run a second validator after this command.
+`--task-message` shares the schema/live checks and emits exact `send_message_to_thread` JSON only on PASS. Pass it unchanged; App adds delegation framing. Its library stays pure: It never creates tasks, touches Git, sends messages, waits, archives, or orchestrates. Use no temporary packet or second validation.
 
-Validate an incoming raw packet once with:
+Validate incoming raw packet once:
 
 ```text
 python scripts/validate_dispatch_contract.py --kind <kind> -
@@ -94,7 +94,7 @@ They inherit authority/path and return this turn. Separate acceptance/model/wait
 
 ## Route and write semantics
 
-Packets need the returned task id. Create an inert `AWAIT_FORMAL_DISPATCH` fingerprint with no authority, then validate/send one id-bound packet; receipt completes dispatch, with no placeholders. The peer must run `binding` and continue in the same turn on PASS; otherwise write nothing and report blocked. Repeat only if identity changes. Commits do not invalidate binding; each packet live-checks branch/HEAD.
+Packets need the returned task id. Create an inert `AWAIT_FORMAL_DISPATCH`, then send the exact generated arguments unchanged; receipt completes dispatch. The peer validates `binding` and continues in the same turn on PASS, otherwise writes nothing. Rebind only if identity changes; commits do not invalidate binding, while packets live-check HEAD.
 
 For write packets, `SOURCE_ROLE: delivery_controller`, `TARGET_ROLE: peer_writer`, and `REPORT_TO_TASK_ID` identifies the controller. `OWNED_PATHS` grants locations only. Passing acceptance is the stop condition: implement the smallest sufficient result, then map each acceptance condition to its changed paths and evidence. Architecture/scope expansion is a blocker requiring the owning authority.
 
@@ -124,7 +124,7 @@ Prompt equals route capsule plus packet: no duplicated lineage, package reads, g
 
 `DESIGN_REOPEN_REQUEST` pauses affected scope. Design authority creates design review; delivery never proxies it. Pending review needs no interim decision. Only `reopen_approved` adds a checkpoint and requires PASS evidence; other decisions are `clarify|continue|hold|reopen_rejected`.
 
-Constructor or validator failure marks only that dependent boundary `PROTOCOL_BLOCKED`. Do not relabel the same content; source role, packet kind, and task id are immutable. Do not handcraft a bypass or treat local classification as authority.
+Before send, correct one constructor shape error once from known facts; meaning, roles, kind, ids, destination, authority, and verdict stay fixed. Repeat failure, incoming validation failure, inexpressible boundary, or attempted/ambiguous delivery is `PROTOCOL_BLOCKED`. Do not relabel the same content or handcraft a bypass.
 
 ## Report and checkpoint semantics
 

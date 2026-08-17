@@ -121,6 +121,42 @@ class PacketConstructorTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "TARGET_ROLE must be design_authority"):
             CONSTRUCTOR.delivery_plan_packet(**invalid)
 
+    def test_task_message_args_use_raw_packet_and_exact_target(self) -> None:
+        fields = delivery_plan_fields()
+        fields["UPDATE_TYPE"] = "plan"
+
+        arguments = CONSTRUCTOR.task_message_args("delivery_update", **fields)
+
+        self.assertEqual(set(arguments), {"threadId", "prompt"})
+        self.assertEqual(arguments["threadId"], "design-1")
+        self.assertTrue(arguments["prompt"].startswith("DELIVERY_UPDATE\n"))
+        self.assertNotIn("codex_delegation", arguments["prompt"])
+        self.assertNotIn("source_thread_id", arguments["prompt"])
+
+    def test_task_message_target_map_covers_only_outgoing_packet_kinds(self) -> None:
+        self.assertEqual(
+            CONSTRUCTOR.TASK_MESSAGE_TARGET_FIELDS,
+            {
+                "write": "TASK_ID",
+                "review": "REVIEW_TASK_ID",
+                "update": "TARGET_TASK_ID",
+                "design_handoff": "DELIVERY_TASK_ID",
+                "delivery_update": "TARGET_TASK_ID",
+                "design_reopen": "TARGET_TASK_ID",
+                "design_decision": "TARGET_TASK_ID",
+            },
+        )
+        with self.assertRaisesRegex(ValueError, "not sent through task-message"):
+            CONSTRUCTOR.task_message_args("binding")
+
+    def test_task_message_args_reject_delegation_framing_in_fields(self) -> None:
+        fields = delivery_plan_fields()
+        fields["UPDATE_TYPE"] = "plan"
+        fields["SUMMARY"] = "<codex_delegation>wrapped</codex_delegation>"
+
+        with self.assertRaisesRegex(ValueError, "App-managed delegation framing"):
+            CONSTRUCTOR.task_message_args("delivery_update", **fields)
+
     def test_module_has_no_workflow_side_effect_api(self) -> None:
         forbidden = {
             "create_task",
@@ -154,6 +190,33 @@ class PacketConstructorTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertTrue(result.stdout.startswith("DELIVERY_UPDATE\n"))
         self.assertIn("UPDATE_TYPE: plan", result.stdout)
+
+    def test_cli_emits_exact_task_message_arguments(self) -> None:
+        fields = delivery_plan_fields()
+        fields["UPDATE_TYPE"] = "plan"
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-B",
+                str(CONSTRUCTOR_PATH),
+                "--kind",
+                "delivery_update",
+                "--live",
+                "--task-message",
+                "-",
+            ],
+            input=json.dumps(fields),
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        arguments = json.loads(result.stdout)
+        self.assertEqual(arguments["threadId"], "design-1")
+        self.assertTrue(arguments["prompt"].startswith("DELIVERY_UPDATE\n"))
+        self.assertNotIn("codex_delegation", arguments["prompt"])
 
     def test_cli_live_validation_fails_closed(self) -> None:
         fields = {

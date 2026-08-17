@@ -108,6 +108,7 @@ class SkillStructureTests(unittest.TestCase):
         self.assertIn('"delivery_update"', schema)
         self.assertIn('"design_reopen"', schema)
         self.assertIn('"design_decision"', schema)
+        self.assertIn("def task_message_args", constructor)
         self.assertIn("It never creates tasks, touches Git", contracts)
 
     def test_hot_path_is_bounded_and_markdown_has_a_size_budget(self) -> None:
@@ -184,7 +185,7 @@ class SkillStructureTests(unittest.TestCase):
             "TASK_MODE: design_authority|delivery_controller|write|review_root|review_worktree",
             contracts,
         )
-        self.assertIn("continue in the same turn", contracts)
+        self.assertIn("continues in the same turn", contracts)
         self.assertNotIn("BINDING_STATUS", contracts)
         self.assertNotIn("COMMAND_WORKDIR_POLICY", contracts)
 
@@ -300,7 +301,7 @@ class SkillStructureTests(unittest.TestCase):
         self.assertIn("Its id proves creation", skill)
         self.assertIn("receipt proves dispatch", skill)
         self.assertIn("Create inert first", controller)
-        self.assertIn("not continuation/correction or a startup wait", controller)
+        self.assertIn("not as continuation/correction/wait", controller)
         self.assertIn("Successful delivery ends the sender turn", skill)
         self.assertIn("Do not inspect its target or another peer", skill)
         self.assertIn(
@@ -359,6 +360,36 @@ class SkillStructureTests(unittest.TestCase):
         self.assertIn("creation outcome unknown", controller)
         self.assertIn("then reconcile source, project, objective", controller)
         self.assertIn("never embed `<codex_delegation>`", controller)
+
+    def test_task_message_transport_is_constructor_owned_and_unwrapped(self) -> None:
+        skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+        contracts = (SKILL / "references" / "contracts.md").read_text(
+            encoding="utf-8"
+        )
+        controller = (SKILL / "references" / "controller.md").read_text(
+            encoding="utf-8"
+        )
+        constructor = (SKILL / "scripts" / "construct_packet.py").read_text(
+            encoding="utf-8"
+        )
+        for document in (skill, contracts, controller):
+            self.assertIn("--task-message", document)
+            self.assertIn("unchanged", document)
+        self.assertIn('"threadId": packet[target_field]', constructor)
+        self.assertIn('"prompt": prompt', constructor)
+        self.assertIn("App frames them", skill)
+        self.assertIn("never embed `<codex_delegation>`", controller)
+
+    def test_one_pre_send_shape_correction_is_bounded(self) -> None:
+        skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+        contracts = (SKILL / "references" / "contracts.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("correct one shape error once", skill)
+        self.assertIn("without changing semantics or route", skill)
+        self.assertIn("correct one constructor shape error once", contracts)
+        self.assertIn("Repeat failure", contracts)
+        self.assertIn("incoming validation failure", contracts)
 
     def test_scope_reopen_and_active_peer_turns_fail_closed(self) -> None:
         skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")

@@ -22,6 +22,10 @@ from packet_schema import REQUIRED, allowed_fields
 
 FIELD_RE = re.compile(r"^([A-Z][A-Z0-9_]*)\s*[:=]\s*(.*)$")
 FULL_SHA_RE = re.compile(r"^(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64})$")
+PLACEHOLDER_RE = re.compile(r"<[A-Za-z][^<>\r\n]*>")
+DELEGATION_FRAME_RE = re.compile(
+    r"(?:<|&lt;)/?codex_delegation\b", re.IGNORECASE
+)
 MODEL_POLICY_RE = re.compile(
     r"^(?:repo_write_default|repo_review_default|repo_delivery_default|user_explicit):[^<>\s]+/[^<>/\s]+$"
 )
@@ -110,7 +114,11 @@ def parse_fields(text: str) -> dict[str, str]:
 
 
 def has_placeholder(value: str) -> bool:
-    return "<" in value or ">" in value
+    return bool(PLACEHOLDER_RE.search(value))
+
+
+def has_delegation_framing(value: str) -> bool:
+    return bool(DELEGATION_FRAME_RE.search(value))
 
 
 def is_absolute_path(value: str) -> bool:
@@ -429,6 +437,14 @@ def validate_required_task_message(fields: dict[str, str]) -> list[str]:
 def validate(kind: str, fields: dict[str, str]) -> list[str]:
     """Validate portable packet shape; use validate_live or the CLI at boundaries."""
     errors = schema_integrity_errors(kind)
+    framed_fields = sorted(
+        name for name, value in fields.items() if has_delegation_framing(value)
+    )
+    if framed_fields:
+        errors.append(
+            "App-managed delegation framing must not appear inside packet fields: "
+            + ", ".join(framed_fields)
+        )
     recognized_obsolete = obsolete_fields(kind)
     unknown = sorted(
         set(fields) - set(allowed_fields(kind)) - recognized_obsolete

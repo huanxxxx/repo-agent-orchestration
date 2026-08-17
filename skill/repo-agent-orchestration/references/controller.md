@@ -28,7 +28,7 @@ For `app_default`, omit task model settings. For an explicit binding, use the ho
 
 Call `create_thread` once per dispatch in the saved project with `environment: {type: "local"}`. Its id proves creation only. Reject projectless, foreign-project, queued/App-managed-worktree, and `clientThreadId`-only routes. Empty/ambiguous/timed-out/unparseable means `creation outcome unknown`: end the turn, then reconcile source, project, objective, tree, branch, and base. Unavailable/failed App routing is `PROTOCOL_BLOCKED`; never fall back to `spawn_agent`.
 
-Create inert first: not continuation/correction or a startup wait. Send one raw id-bound packet via `send_message_to_thread`; App adds framing, so never embed `<codex_delegation>`. Failure/unknown: retain id/packet, reconcile next wake, never recreate/substitute. Start after route PASS.
+Create inert first, not as continuation/correction/wait. Pass `--task-message` arguments unchanged to `send_message_to_thread`; App adds framing, so never embed `<codex_delegation>`. On failure/unknown, retain id/packet and reconcile next wake; never recreate/substitute. Start after route PASS.
 
 ## Wake fast path
 
@@ -37,7 +37,7 @@ The task-start route gate and repository-profile read are once per task binding.
 1. Consume the wake-causing report/decision and already-delivered facts required for the same decision.
 2. Reuse the validated route and stable profile. Recheck only identity/baseline facts that changed or became ambiguous.
 3. Do not reread the full Skill/reference bundle, validator source, executor-only domain Skills, or implementation source merely to restate a frozen dispatch. Read deeper only for actual planning, acceptance, adjudication, recovery, or protocol debugging.
-4. Build and live-validate one outgoing packet in the single constructor call; send it once.
+4. Construct `--task-message` once; send its arguments unchanged.
 5. Complete synchronous acceptance, dispatch, correction, integration, or reporting, then End the controller turn.
 
 After any successful send, end the turn; never inspect its target or another peer. Only a product-required first-dispatch `wait_threads` may run once; never call `wait_agent` for a peer. Any result ends the turn. No recursive waits or silence snapshots.

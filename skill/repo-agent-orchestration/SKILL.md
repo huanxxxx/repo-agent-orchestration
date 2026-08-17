@@ -46,7 +46,7 @@ An App-created user-visible task is a peer task. Its actual creation capability 
 1. Create peers only for separate acceptance, wait, model, branch, recovery, or formal review. After authorization, dispatch all ready, non-conflicting peer tasks within capacity; do not await another parallelism instruction or split coupled work to fill slots.
 2. Require the smallest change that satisfies `OBJECTIVE`, `ACCEPTANCE`, and `REQUIRED_TESTS`. Every changed path must have a concrete acceptance justification. Once the required acceptance and tests pass, stop implementation; no speculative feature, abstraction, alternate path, refactor, or hardening.
 3. Give a ready writer one local branch/tree and exclusive paths. Internal subagents inherit it; that task verifies and commits the combined checkpoint. Reject projectless/foreign-project tasks. Create peers in the saved project with `environment: {type: "local"}` and the repository-local execution path, never an App-managed tree.
-4. Call `create_thread` once. Its id proves creation; one `send_message_to_thread` receipt proves dispatch. Create inert, send one id-bound packet, and do not wait. Empty/ambiguous/timed-out/queued-worktree/`clientThreadId`-only/unparseable is phantom: end the turn and reconcile on wake. Unavailable/failed peer routing is `PROTOCOL_BLOCKED`; never substitute `spawn_agent`.
+4. Call `create_thread` once. Its id proves creation; a `send_message_to_thread` receipt proves dispatch. Create inert, pass `--task-message` JSON unchanged, and do not wait. Empty/ambiguous/timed-out/queued-worktree/`clientThreadId`-only/unparseable is phantom: end and reconcile on wake. Failed/unavailable peer routing is `PROTOCOL_BLOCKED`; never substitute `spawn_agent`.
 5. For `app_default`, omit `model` and `thinking`. Explicit bindings use actual task parameters only after host discovery; prompt text is not binding. Reports must omit `model` and `thinking` and preserve destination settings.
 6. Use the exact execution path. The CLI proves required paths currently exist and match Git registry, branch, and commit. Root status is compared with its baseline, not forced clean.
 7. Before a cross-turn pause, ownership handoff, formal review, or `final`, verify and locally commit coherent owned output. Never stage another owner's files; if unsafe, preserve and report exact dirty paths and recovery action.
@@ -56,16 +56,16 @@ An App-created user-visible task is a peer task. Its actual creation capability 
 Stream each outgoing packet's JSON fields to one command:
 
 ```text
-python scripts/construct_packet.py --kind <kind> --live -
+python scripts/construct_packet.py --kind <kind> --live --task-message -
 ```
 
-This constructs, statically/live validates, and emits only on PASS. Do not create temporary packet files or invoke the validator afterward. Stream an incoming packet once to:
+`--task-message` emits validated arguments. Pass unchanged; App frames them. Do not create temporary packet files or validate twice. Validate incoming once:
 
 ```text
 python scripts/validate_dispatch_contract.py --kind <kind> -
 ```
 
-The validator is a boundary check, not a workflow engine. An inexpressible boundary is `PROTOCOL_BLOCKED`: do not handcraft, relabel, or continue its dependent action.
+The validator is a boundary check, not a workflow engine. Before send, correct one shape error once without changing semantics or route. A repeat error, incoming validation failure, or attempted/ambiguous delivery is `PROTOCOL_BLOCKED`; never handcraft or relabel.
 
 ## Process one event and yield
 

@@ -15,7 +15,22 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from packet_schema import PACKET_SCHEMAS, REQUIRED, allowed_fields, packet_header
-from validate_dispatch_contract import validate, validate_live
+from validate_dispatch_contract import (
+    has_delegation_framing,
+    validate,
+    validate_live,
+)
+
+
+TASK_MESSAGE_TARGET_FIELDS = {
+    "write": "TASK_ID",
+    "review": "REVIEW_TASK_ID",
+    "update": "TARGET_TASK_ID",
+    "design_handoff": "DELIVERY_TASK_ID",
+    "delivery_update": "TARGET_TASK_ID",
+    "design_reopen": "TARGET_TASK_ID",
+    "design_decision": "TARGET_TASK_ID",
+}
 
 
 def _string_value(value: Any) -> str:
@@ -54,6 +69,18 @@ def serialize_packet(kind: str, fields: dict[str, str]) -> str:
     lines = [packet_header(kind)]
     lines.extend(f"{name}: {value}" for name, value in packet.items())
     return "\n".join(lines) + "\n"
+
+
+def task_message_args(kind: str, **fields: Any) -> dict[str, str]:
+    """Return exact send_message_to_thread arguments without App-managed framing."""
+    target_field = TASK_MESSAGE_TARGET_FIELDS.get(kind)
+    if target_field is None:
+        raise ValueError(f"{kind} packets are not sent through task-message")
+    packet = build_packet(kind, **fields)
+    prompt = serialize_packet(kind, packet)
+    if has_delegation_framing(prompt):
+        raise ValueError("task-message prompt must not contain delegation framing")
+    return {"threadId": packet[target_field], "prompt": prompt}
 
 
 def binding_packet(**fields: Any) -> dict[str, str]:
@@ -105,6 +132,14 @@ def main() -> int:
         help="also verify current filesystem and Git facts before emitting the packet",
     )
     parser.add_argument(
+        "--task-message",
+        action="store_true",
+        help=(
+            "emit exact send_message_to_thread arguments with a raw packet prompt "
+            "and no App-managed delegation framing"
+        ),
+    )
+    parser.add_argument(
         "fields_json",
         help="UTF-8 JSON object path, or - to read the object from stdin",
     )
@@ -128,7 +163,19 @@ def main() -> int:
                 print(f"- {error}", file=sys.stderr)
             return 1
 
-    print(serialize_packet(args.kind, packet), end="")
+    try:
+        if args.task_message:
+            print(
+                json.dumps(
+                    task_message_args(args.kind, **packet),
+                    ensure_ascii=False,
+                )
+            )
+        else:
+            print(serialize_packet(args.kind, packet), end="")
+    except ValueError as exc:
+        print(f"INVALID packet output: {exc}", file=sys.stderr)
+        return 2
     return 0
 
 

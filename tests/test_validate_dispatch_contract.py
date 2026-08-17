@@ -461,6 +461,33 @@ class ContractValidationTests(unittest.TestCase):
             self.validate("review", invalid),
         )
 
+    def test_comparison_operators_are_not_placeholders(self) -> None:
+        evidence = "request is ok as 200 <= status < 300; focused checks PASS"
+        packet = VALID_FINAL.replace(
+            "EVIDENCE: tests=PASS; commit=abc",
+            f"EVIDENCE: {evidence}",
+        )
+
+        self.assertFalse(VALIDATOR.has_placeholder(evidence))
+        self.assertEqual(self.validate("update", packet), [])
+
+    def test_packet_fields_reject_app_delegation_framing(self) -> None:
+        for framing in (
+            "<codex_delegation>wrapped</codex_delegation>",
+            "&lt;codex_delegation&gt;wrapped&lt;/codex_delegation&gt;",
+        ):
+            with self.subTest(framing=framing):
+                packet = VALID_FINAL.replace(
+                    "SUMMARY: implementation complete",
+                    f"SUMMARY: {framing}",
+                )
+                self.assertTrue(
+                    any(
+                        "App-managed delegation framing" in error
+                        for error in self.validate("update", packet)
+                    )
+                )
+
     def test_delta_review_requires_exact_range_and_structured_budget(self) -> None:
         single_commit = VALID_REVIEW.replace(
             f"TARGET_COMMIT_OR_RANGE: {BASE_SHA}..{FULL_SHA}",
