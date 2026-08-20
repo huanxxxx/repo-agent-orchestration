@@ -1,0 +1,20 @@
+REVIEW_TASK_ID: audit-route-chain
+ORCHESTRATION_MODE: delivery
+REVIEW_CLASS: governance
+REVIEW_DEPTH: delta
+SOURCE_ROLE: delivery_controller
+TARGET_ROLE: peer_reviewer
+REPORT_TO_TASK_ID: controller-task-1
+TASK_ENVIRONMENT: local
+TASK_ARCHIVE_POLICY: dispatching_authority_after_acceptance
+TARGET_MODE: root_readonly
+TARGET_PATH: C:\Projects\ledger
+TARGET_COMMIT_OR_RANGE: fedcba9876543210fedcba9876543210fedcba98..0123456789abcdef0123456789abcdef01234567
+READ_ONLY: true
+ACCEPTANCE_BASELINE: route and report-chain invariants only
+THREAT_MODEL: missing formal report, lateral peer contact, or accidental implementation authority
+NON_GOALS: implementation review, task correction, waiting, or dispatch
+REVIEW_SCOPE: inspect the route packet and latest relevant task-message evidence
+REVIEW_BUDGET: context=route packet and latest relevant task messages; checks=verify report target and lateral-contact absence; expand_if=a direct contradiction is found
+ACCEPTANCE: PASS when verified facts and bounded recommendations are separated
+MODEL_POLICY: app_default

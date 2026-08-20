@@ -53,11 +53,14 @@ class SkillStructureTests(unittest.TestCase):
         self.assertIn("`direct`", skill)
         self.assertIn("`delivery`", skill)
         self.assertIn("`architected`", skill)
+        self.assertIn("Use this Skill to split context", skill)
+        self.assertIn("peer_audit", skill)
         self.assertIn("Treat a proposed solution as input, not proof", architected)
         self.assertIn("recommend a preferred option", architected)
         self.assertIn("Do not manufacture objections", architected)
         self.assertIn("independent design-review PASS", architected)
         self.assertIn("single repository-root write lease", architected)
+        self.assertIn("not a license to shadow another layer", architected)
         self.assertIn("Never write the root concurrently", architected)
         self.assertIn("Do not absorb the design-authority role", controller)
 
@@ -69,9 +72,11 @@ class SkillStructureTests(unittest.TestCase):
         controller = (SKILL / "references" / "controller.md").read_text(
             encoding="utf-8"
         )
-        self.assertIn("dispatch all ready, non-conflicting peer tasks", skill)
+        self.assertIn("Dispatch all ready, non-conflicting peers", skill)
         self.assertIn("without waiting for a separate user instruction", architected)
         self.assertIn("does not require a separate user request to parallelize", controller)
+        self.assertIn("Start with a scope challenge", controller)
+        self.assertIn("Send the minimum task capsule", controller)
         self.assertIn("Never create duplicate tasks", architected)
 
     def test_architected_report_chain_is_bidirectional_and_event_driven(self) -> None:
@@ -84,8 +89,10 @@ class SkillStructureTests(unittest.TestCase):
         self.assertIn("delivery controller --DELIVERY_UPDATE", architected)
         self.assertIn("design authority --DESIGN_HANDOFF", architected)
         self.assertIn("design authority --DESIGN_DECISION", architected)
+        self.assertIn("governance reviewer -> contracted dispatching authority", architected)
         self.assertIn("DESIGN_REOPEN_REQUEST", contracts)
         self.assertIn("DECISION_REQUIRED: yes|no", contracts)
+        self.assertIn("UPDATE_CLASS: implementation|design_review|governance_audit", contracts)
         self.assertIn("does not pause authorized work", contracts)
         self.assertIn("without waking it merely to acknowledge acceptance", architected)
 
@@ -194,7 +201,7 @@ class SkillStructureTests(unittest.TestCase):
         validator = (SKILL / "scripts" / "validate_dispatch_contract.py").read_text(
             encoding="utf-8"
         )
-        self.assertIn("required paths currently exist", skill)
+        self.assertIn("CLI proves paths match Git registry", skill)
         self.assertIn("def validate_live_worktree", validator)
         self.assertIn('"worktree", "list", "--porcelain"', validator)
         self.assertIn("must not use detached HEAD", validator)
@@ -446,7 +453,7 @@ class SkillStructureTests(unittest.TestCase):
         self.assertIn("app-created user-visible task is a peer task", published)
         self.assertIn("controller is a coordination role", published)
         self.assertIn("actual creation capability", published)
-        self.assertIn("same-task parent/subagent relationship", published)
+        self.assertIn("current-task internal subagent", published)
         self.assertIn("queued/app-managed-worktree", published)
         self.assertIn("is phantom", published)
         self.assertNotIn("child task", published)
@@ -503,6 +510,7 @@ class SkillStructureTests(unittest.TestCase):
 
         self.assertIn("Review the exact delta by default", skill)
         self.assertIn("independent design-review PASS", architected)
+        self.assertIn("REVIEW_CLASS: governance", architected)
         self.assertIn("delivery never proxies it", contracts)
         self.assertIn("Correction stays delta-only", controller)
         self.assertIn("reuse the original `idle`/`notLoaded` reviewer", controller)
@@ -511,6 +519,7 @@ class SkillStructureTests(unittest.TestCase):
         self.assertIn("do not resend binding", controller)
         self.assertIn("conflict/second opinion is explicit", controller)
         self.assertIn("REVIEW_DEPTH: delta|full", contracts)
+        self.assertIn("REVIEW_CLASS: design|implementation|governance", contracts)
         self.assertIn("`REVIEW_BUDGET` uses `context=", contracts)
         self.assertIn("FULL_REVIEW_REASON", contracts)
         self.assertIn('"REVIEW_DEPTH"', schema)

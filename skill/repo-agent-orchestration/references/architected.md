@@ -4,6 +4,8 @@ Use this mode only when repository policy maps the task to it, the user requests
 
 ## Keep three authority layers
 
+These layers exist to keep long contexts separate. They are not a license to shadow another layer's live work.
+
 ### Design authority
 
 Own the product objective, global design, frozen decisions, non-goals, acceptance baseline, design review, design reopen decisions, and final design-consistency acceptance.
@@ -15,7 +17,7 @@ Own the product objective, global design, frozen decisions, non-goals, acceptanc
 - Checkpoint the candidate, directly dispatch it, and require independent design-review PASS before `DESIGN_HANDOFF` or `reopen_approved`; never proxy or relabel through delivery.
 - Bounded reopen is delta: reuse facts, inspect affected clauses/evidence, make one minimal checkpoint, dispatch one reviewer, and yield. Defer index/continuity/global status until PASS; send no interim `DESIGN_DECISION`.
 - Own design writes before handoff. `DESIGN_HANDOFF` transfers the single repository-root write lease to the delivery controller; remain read-only while delivery owns that lease.
-- Do not dispatch implementation peers or manage their routine progress. Receive only the delivery plan, decision-relevant milestones, design reopen requests, and final delivery evidence.
+- Do not dispatch implementation peers or manage their routine progress. Receive only the delivery plan, decision-relevant milestones, design reopen requests, final delivery evidence, and contracted governance-audit reports.
 - End the design-authority turn after sending `DESIGN_HANDOFF` or `DESIGN_DECISION`, or after handling the decision requested by one `DELIVERY_UPDATE`. For `DECISION_REQUIRED: no`, record the bounded fact and end the turn without replying merely to acknowledge it.
 - While delivery owns the write lease, the design authority must not inspect, wait on, or monitor the delivery controller's downstream peers, task statuses, logs, worktrees, environment setup, or routine checkpoints. It may inspect repository evidence cited in a formal decision packet or perform user-authorized route recovery, but it does not shadow delivery execution.
 
@@ -34,7 +36,7 @@ Own implementation planning, the dependency graph, ready-set calculation, task d
 
 ### Independent peers
 
-Peer writers implement their exact accepted outcome. Peer reviewers evaluate either the frozen design (`REVIEW_CLASS: design`) or a frozen implementation candidate (`REVIEW_CLASS: implementation`). They report to the role that dispatched them and never create design authority.
+Peer writers implement their exact accepted outcome. Peer reviewers evaluate the frozen design (`REVIEW_CLASS: design`), a frozen implementation candidate (`REVIEW_CLASS: implementation`), or a read-only route/takeover/protocol question (`REVIEW_CLASS: governance`). They report only to the role that dispatched them and never create design authority or delivery authority.
 
 ## Preserve the report chain
 
@@ -44,8 +46,9 @@ design authority --DESIGN_HANDOFF--> delivery controller
 peer writer/reviewer -> delivery controller
 delivery controller --DELIVERY_UPDATE/DESIGN_REOPEN_REQUEST--> design authority
 design authority --DESIGN_DECISION--> delivery controller
+governance reviewer -> contracted dispatching authority
 ```
 
-All App-created tasks are runtime peers; arrows show message authority, not App parentage. Each wake handles one event; neither authority may poll peers or span a turn across later messages.
+All App-created tasks are runtime peers; arrows show message authority, not App parentage. Each wake handles one event; neither authority may poll peers or span a turn across later messages. "Do not message other tasks" means no horizontal contact, continuation, correction, or monitoring; it does not block the required final report to `REPORT_TO`.
 
 Use [contracts.md](contracts.md) and the pure constructor before crossing these boundaries. Before its final report, the delivery controller accepts and archives completed implementation peers. A delivery final is evidence, not overall acceptance: the design authority compares the integrated result with the frozen design checkpoint. If it passes, archive the accepted delivery-controller peer and report completion without waking it merely to acknowledge acceptance. If delivery must resume, send a bounded `DESIGN_DECISION` instead.

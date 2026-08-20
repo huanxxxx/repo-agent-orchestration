@@ -1,0 +1,14 @@
+TASK_ID: audit-route-chain
+ORCHESTRATION_MODE: delivery
+UPDATE_CLASS: governance_audit
+SOURCE_ROLE: peer_reviewer
+TARGET_ROLE: delivery_controller
+TARGET_TASK_ID: controller-task-1
+STATUS: final
+SUMMARY: route-chain audit complete
+EVIDENCE: verified=report target is controller-task-1; inference=peer must not contact lateral tasks; needs_check=controller acceptance
+RISKS_OR_LIMITS: read-only audit only
+PENDING_ITEMS: controller decides whether to adjust routing
+DELIVERY: task_message:controller-task-1
+TARGET_SETTINGS: preserve
+NEXT: controller accepts or sends one bounded correction

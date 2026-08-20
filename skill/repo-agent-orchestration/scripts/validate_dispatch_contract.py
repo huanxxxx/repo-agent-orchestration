@@ -42,8 +42,8 @@ REVIEW_MODES = {"root_readonly", "existing_worktree", "detached_snapshot"}
 REVIEW_DEPTHS = {"delta", "full"}
 STATUSES = {"progress", "blocked", "final"}
 ORCHESTRATION_MODES = {"delivery", "architected"}
-REVIEW_CLASSES = {"design", "implementation"}
-UPDATE_CLASSES = {"design_review", "implementation"}
+REVIEW_CLASSES = {"design", "governance", "implementation"}
+UPDATE_CLASSES = {"design_review", "governance_audit", "implementation"}
 DELIVERY_UPDATE_TYPES = {"plan", "milestone", "final"}
 DESIGN_DECISIONS = {
     "clarify",
@@ -571,7 +571,7 @@ def validate(kind: str, fields: dict[str, str]) -> list[str]:
         review_class = fields.get("REVIEW_CLASS", "")
         review_depth = fields.get("REVIEW_DEPTH", "")
         if review_class and review_class not in REVIEW_CLASSES:
-            errors.append("REVIEW_CLASS must be design or implementation")
+            errors.append("REVIEW_CLASS must be design, governance, or implementation")
         if review_depth and review_depth not in REVIEW_DEPTHS:
             errors.append("REVIEW_DEPTH must be delta or full")
         if fields.get("TARGET_ROLE") != "peer_reviewer":
@@ -587,6 +587,19 @@ def validate(kind: str, fields: dict[str, str]) -> list[str]:
             errors.append(
                 "implementation review SOURCE_ROLE must be delivery_controller"
             )
+        elif review_class == "governance":
+            source_role = fields.get("SOURCE_ROLE", "")
+            if source_role not in {"delivery_controller", "design_authority"}:
+                errors.append(
+                    "governance review SOURCE_ROLE must be delivery_controller or design_authority"
+                )
+            if (
+                source_role == "design_authority"
+                and fields.get("ORCHESTRATION_MODE") != "architected"
+            ):
+                errors.append(
+                    "governance review from design_authority requires ORCHESTRATION_MODE=architected"
+                )
         errors.extend(
             validate_concrete_task_id(
                 "REPORT_TO_TASK_ID", fields.get("REPORT_TO_TASK_ID", "")
@@ -885,7 +898,9 @@ def validate(kind: str, fields: dict[str, str]) -> list[str]:
         errors.extend(validate_concrete_task_id("TASK_ID", fields.get("TASK_ID", "")))
         update_class = fields.get("UPDATE_CLASS", "")
         if update_class and update_class not in UPDATE_CLASSES:
-            errors.append("UPDATE_CLASS must be design_review or implementation")
+            errors.append(
+                "UPDATE_CLASS must be design_review, governance_audit, or implementation"
+            )
         source_role = fields.get("SOURCE_ROLE", "")
         target_role = fields.get("TARGET_ROLE", "")
         if update_class == "design_review":
@@ -903,6 +918,22 @@ def validate(kind: str, fields: dict[str, str]) -> list[str]:
             if target_role != "delivery_controller":
                 errors.append(
                     "implementation update TARGET_ROLE must be delivery_controller"
+                )
+        elif update_class == "governance_audit":
+            if source_role != "peer_reviewer":
+                errors.append(
+                    "governance audit update SOURCE_ROLE must be peer_reviewer"
+                )
+            if target_role not in {"delivery_controller", "design_authority"}:
+                errors.append(
+                    "governance audit update TARGET_ROLE must be delivery_controller or design_authority"
+                )
+            if (
+                target_role == "design_authority"
+                and fields.get("ORCHESTRATION_MODE") != "architected"
+            ):
+                errors.append(
+                    "governance audit update to design_authority requires ORCHESTRATION_MODE=architected"
                 )
         errors.extend(
             validate_concrete_task_id(

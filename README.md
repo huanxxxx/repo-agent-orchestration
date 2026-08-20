@@ -1,12 +1,12 @@
 # Repo Agent Orchestration
 
-### A controllable, repository-native Ultra-style workflow for Codex
+### Repository-native context splitting for Codex
 
 **Choose the lightest useful mode: direct work, controller-led delivery, or independent design authority plus parallel delivery.**
 
-Repo Agent Orchestration is a lightweight Codex Skill for coordinating multi-agent repository work through explicit authority, model routing, on-demand Git worktrees, optional repository continuity packages, independent review, direct reports, and evidence-based acceptance.
+Repo Agent Orchestration is a lightweight Codex Skill for keeping long repository work out of one overloaded conversation. It routes suitable slices into independent peer tasks with minimal context, repository-local worktrees when needed, direct reports, and evidence-based acceptance.
 
-Codex already knows how to use agents. This project focuses on the harder engineering questions: who may write, where they may write, which model is submitted for the task, how completion is proven, and who may integrate the result.
+Codex already knows how to use agents. This project focuses on the harder engineering questions: when a task needs a separate context, what information that peer needs, how it reports back, where it may write, and who may accept the result.
 
 > Unofficial community project. It does not unlock, reproduce, or bypass OpenAI's proprietary Ultra implementation, product entitlements, or usage limits. “Ultra-style” describes a multi-agent collaboration pattern, not compatibility with or equivalence to an OpenAI product mode.
 
@@ -24,7 +24,7 @@ Multi-agent coding fails when:
 - a safety handshake takes longer than the work it protects;
 - merge, push, deploy, or production access becomes implicit.
 
-This Skill turns those failure modes into explicit contracts and fail-closed gates.
+This Skill turns those failure modes into small routing and report contracts.
 
 **No daemon. No dashboard. No shared writable worktree between independent tasks.**
 
@@ -36,6 +36,7 @@ This Skill turns those failure modes into explicit contracts and fail-closed gat
 | Delivery controller | Plan dependencies, proactively dispatch ready work, adjudicate implementation findings, integrate, and report back | Same task in `delivery`; App default or explicit repository binding in `architected` |
 | Peer write task | Implement one independently accepted change | App default unless repository or user explicitly binds a supported model |
 | Peer review task | Review one frozen candidate without writing | App default unless repository or user overrides it |
+| Peer audit task | Inspect route, takeover, recovery, or protocol evidence without writing or contacting lateral peers | App default unless repository or user overrides it |
 | Internal subagent | Bounded current-turn retrieval or non-overlapping contribution | Inherits the current task path; never owns a branch or worktree |
 
 The installer defaults architected delivery controllers, writers, and reviewers to `app_default`, which omits model overrides and lets the destination host select a compatible model. An explicit repository or user binding is used only after the host advertises that model. Model names remain repository configuration, not a promise that every Codex surface exposes the same catalog or echoes the effective runtime model; never infer availability only from the current authority model family.
@@ -64,7 +65,7 @@ The installer defaults architected delivery controllers, writers, and reviewers 
           +-------------+ +-------------+ +--------------+
 ```
 
-This diagram shows `architected` mode. Ordinary `delivery` collapses design and delivery authority into the current controller; `direct` creates no peer tasks. Every App-created user-visible task is still a runtime peer, even when another task dispatched it: authority arrows are not App parentage. Create peers with `create_thread` and deliver packets with `send_message_to_thread`; `spawn_agent` always creates a current-task internal subagent whose id is never a peer task id. Every peer write task owns one branch, one repository-local worktree, and one writable ownership boundary. Internal subagents inherit the current path, receive non-overlapping scopes, return within the current turn, and create no tree. A peer task is justified by independent acceptance, cross-turn waiting, model binding, recovery, or formal review—not by agent count alone. Candidate review reuses the frozen implementation tree while its writer is paused; long or historical review gets an on-demand detached snapshot only when a stable filesystem is useful. Design authority dispatches design reviewers directly; delivery controllers dispatch only implementation reviewers.
+This diagram shows `architected` mode. Ordinary `delivery` collapses design and delivery authority into the current controller; `direct` creates no peer tasks. Every App-created user-visible task is still a runtime peer, even when another task dispatched it: authority arrows are not App parentage. Create peers with `create_thread` and deliver packets with `send_message_to_thread`; `spawn_agent` always creates a current-task internal subagent whose id is never a peer task id. A peer is justified by separate context, independent acceptance, cross-turn waiting, model binding, recovery, design, audit, or formal review, not by agent count alone. Every peer write task owns one branch, one repository-local worktree, and one writable ownership boundary. Internal subagents inherit the current path, receive non-overlapping scopes, return within the current turn, and create no tree. Candidate review reuses the frozen implementation tree while its writer is paused; long or historical review gets an on-demand detached snapshot only when a stable filesystem is useful. Governance audit is read-only and reports only to the contracted authority.
 
 When a repository defines an execution package or equivalent continuity entry, the Skill keeps it separate from both the App task and Git worktree. It stores durable objective, scope, state, acceptance, recovery, and next-step facts; repository-specific tiers, paths, templates, and scaffolding stay in the repository. Clean worktrees use their current HEAD as the recovery anchor, and prechange snapshots remain explicit rather than ceremonial.
 
@@ -147,6 +148,7 @@ Individual examples live in [examples/contracts](examples/contracts):
 - valid explicit Luna Max write task;
 - valid read-only review;
 - valid worker final update;
+- valid governance review and audit final update;
 - valid architected delivery plan and milestone;
 - valid design handoff, reopen, and decision packets;
 - invalid projectless task;
@@ -196,10 +198,11 @@ OpenAI's desktop worktree feature uses Codex-managed worktrees and is documented
 - Task hosting and Git execution coordinates are validated separately.
 - Windows, extended Windows, and POSIX paths are normalized lexically before containment checks; nonexistent paths are supported and `..` escapes fail closed.
 - Every repository command must use the exact execution path.
-- Review selects the lightest safe target: root, frozen candidate, or detached snapshot.
+- Review/audit selects the lightest safe target: root, frozen candidate, or detached snapshot.
 - Review is delta-first with an explicit context/check/expansion budget; full review requires a recorded reason.
 - Worker or reviewer PASS remains evidence, not acceptance by the contracted authority.
 - A peer task's local output is not a delivered authority report; progress, blocked, and final reports use direct peer-to-peer task-message delivery.
+- A read-only audit may not contact lateral peers, but its required `task_message:<TARGET_TASK_ID>` report to the contracted authority is not lateral contact.
 - Task-message reports preserve destination settings: senders omit `model` and `thinking`, which otherwise override the destination task.
 - Visible repository tasks explicitly use App environment `local`; isolation comes from the repository-local execution worktree, never an App-managed worktree.
 - A queued App worktree setup or worktree-creation receipt is a failed peer route, not a task to wait on or recover as if it had started.

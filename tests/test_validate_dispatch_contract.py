@@ -79,6 +79,29 @@ ACCEPTANCE: PASS when A1-A2 have no mapped blocker
 MODEL_POLICY: app_default
 """
 
+VALID_GOVERNANCE_REVIEW = rf"""
+REVIEW_TASK_ID: audit-1
+ORCHESTRATION_MODE: delivery
+REVIEW_CLASS: governance
+REVIEW_DEPTH: delta
+SOURCE_ROLE: delivery_controller
+TARGET_ROLE: peer_reviewer
+REPORT_TO_TASK_ID: controller-1
+TASK_ENVIRONMENT: local
+TASK_ARCHIVE_POLICY: dispatching_authority_after_acceptance
+TARGET_MODE: root_readonly
+TARGET_PATH: C:\repo
+TARGET_COMMIT_OR_RANGE: {BASE_SHA}..{FULL_SHA}
+READ_ONLY: true
+ACCEPTANCE_BASELINE: route and report-chain invariants only
+THREAT_MODEL: cross-peer intervention and missing formal report
+NON_GOALS: implementation review or task correction
+REVIEW_SCOPE: inspect dispatch and report chain evidence
+REVIEW_BUDGET: context=route packet and latest relevant task messages; checks=verify report target and lateral-contact absence; expand_if=a direct contradiction is found
+ACCEPTANCE: PASS when the audit has verified facts and bounded recommendations
+MODEL_POLICY: app_default
+"""
+
 VALID_FINAL = """
 TASK_ID: write-1
 ORCHESTRATION_MODE: delivery
@@ -94,6 +117,23 @@ PENDING_ITEMS: controller verification
 DELIVERY: task_message:controller-1
 TARGET_SETTINGS: preserve
 NEXT: controller verifies the candidate
+"""
+
+VALID_GOVERNANCE_AUDIT = """
+TASK_ID: audit-1
+ORCHESTRATION_MODE: delivery
+UPDATE_CLASS: governance_audit
+SOURCE_ROLE: peer_reviewer
+TARGET_ROLE: delivery_controller
+TARGET_TASK_ID: controller-1
+STATUS: final
+SUMMARY: route audit complete
+EVIDENCE: verified=report target was controller-1; inference=peer should not contact lateral tasks; needs_check=controller acceptance
+RISKS_OR_LIMITS: read-only audit only
+PENDING_ITEMS: controller verifies whether to adjust routing
+DELIVERY: task_message:controller-1
+TARGET_SETTINGS: preserve
+NEXT: controller accepts or sends one bounded correction
 """
 
 VALID_DESIGN_HANDOFF = rf"""
@@ -211,12 +251,14 @@ class ContractValidationTests(unittest.TestCase):
     def test_valid_packets(self) -> None:
         for kind, packet in (
             ("binding", VALID_BINDING),
-            ("write", VALID_WRITE),
-            ("review", VALID_REVIEW),
-            ("update", VALID_FINAL),
-            ("design_handoff", VALID_DESIGN_HANDOFF),
-            ("delivery_update", VALID_DELIVERY_PLAN),
-            ("design_reopen", VALID_DESIGN_REOPEN),
+                ("write", VALID_WRITE),
+                ("review", VALID_REVIEW),
+                ("update", VALID_FINAL),
+                ("review", VALID_GOVERNANCE_REVIEW),
+                ("update", VALID_GOVERNANCE_AUDIT),
+                ("design_handoff", VALID_DESIGN_HANDOFF),
+                ("delivery_update", VALID_DELIVERY_PLAN),
+                ("design_reopen", VALID_DESIGN_REOPEN),
             ("design_decision", VALID_DESIGN_DECISION),
         ):
             with self.subTest(kind=kind):
@@ -658,6 +700,34 @@ NEXT: recover on the next real controller wake
         self.assertIn(
             "design review TARGET_COMMIT_OR_RANGE must end at DESIGN_CHECKPOINT",
             self.validate("review", mismatched),
+        )
+
+    def test_governance_audit_reports_only_to_contracted_authority(self) -> None:
+        self.assertEqual(self.validate("review", VALID_GOVERNANCE_REVIEW), [])
+        self.assertEqual(self.validate("update", VALID_GOVERNANCE_AUDIT), [])
+
+        lateral = VALID_GOVERNANCE_AUDIT.replace(
+            "TARGET_ROLE: delivery_controller", "TARGET_ROLE: peer_writer"
+        )
+        self.assertIn(
+            "governance audit update TARGET_ROLE must be delivery_controller or design_authority",
+            self.validate("update", lateral),
+        )
+
+        wrong_source = VALID_GOVERNANCE_AUDIT.replace(
+            "SOURCE_ROLE: peer_reviewer", "SOURCE_ROLE: peer_writer"
+        )
+        self.assertIn(
+            "governance audit update SOURCE_ROLE must be peer_reviewer",
+            self.validate("update", wrong_source),
+        )
+
+        design_in_delivery = VALID_GOVERNANCE_AUDIT.replace(
+            "TARGET_ROLE: delivery_controller", "TARGET_ROLE: design_authority"
+        )
+        self.assertIn(
+            "governance audit update to design_authority requires ORCHESTRATION_MODE=architected",
+            self.validate("update", design_in_delivery),
         )
 
     def test_architected_reports_require_actual_source_task_ids(self) -> None:

@@ -41,31 +41,20 @@ The schema file is the exact required/optional-field SSoT. The compact catalog b
 
 ## Packet catalog
 
+The human task capsule is small: `OBJECTIVE`, `CONTEXT`, `BOUNDARY`, `ACCEPTANCE`, and `REPORT_TO`. The packet schema adds route, model, archive, and Git facts only so the boundary is reproducible.
+
 | Kind | Direction and purpose |
 |---|---|
 | `binding` | task startup route identity |
 | `write` | delivery controller to peer writer |
-| `review` | owning authority to read-only peer reviewer |
-| `update` | writer/reviewer to contracted authority |
+| `review` | owning authority to read-only peer reviewer or governance auditor |
+| `update` | writer/reviewer/auditor to contracted authority |
 | `design_handoff` | design authority to delivery controller |
 | `delivery_update` | delivery controller to design authority |
 | `design_reopen` | delivery controller asks design authority to change/clarify a boundary |
 | `design_decision` | design authority returns the bounded decision |
 
-Required fields, in emitted order:
-
-```text
-binding: TASK_ID, TASK_MODE, TASK_ENVIRONMENT, REPOSITORY_ROOT, WORKTREE_ROOT, EXECUTION_PATH, TASK_PROJECT_ID, ACTUAL_THREAD_CWD, ACTUAL_THREAD_PROJECT_ID
-write: TASK_ID, ORCHESTRATION_MODE, SOURCE_ROLE, TARGET_ROLE, REPORT_TO_TASK_ID, AUTHORITY_BASELINE, TASK_ENVIRONMENT, TASK_ARCHIVE_POLICY, WORKTREE_ROOT, WORKTREE, BRANCH, BASE_COMMIT, OBJECTIVE, OWNED_PATHS, DO_NOT_TOUCH, ACCEPTANCE, REQUIRED_TESTS, MODEL_POLICY
-review: REVIEW_TASK_ID, ORCHESTRATION_MODE, REVIEW_CLASS, REVIEW_DEPTH, SOURCE_ROLE, TARGET_ROLE, REPORT_TO_TASK_ID, TASK_ENVIRONMENT, TASK_ARCHIVE_POLICY, TARGET_MODE, TARGET_PATH, TARGET_COMMIT_OR_RANGE, READ_ONLY, ACCEPTANCE_BASELINE, THREAT_MODEL, NON_GOALS, REVIEW_SCOPE, REVIEW_BUDGET, ACCEPTANCE, MODEL_POLICY
-update: TASK_ID, ORCHESTRATION_MODE, UPDATE_CLASS, SOURCE_ROLE, TARGET_ROLE, TARGET_TASK_ID, STATUS, SUMMARY, EVIDENCE, DELIVERY, TARGET_SETTINGS, NEXT
-design_handoff: DESIGN_TASK_ID, DELIVERY_TASK_ID, ORCHESTRATION_MODE, SOURCE_ROLE, TARGET_ROLE, REPORT_TO_TASK_ID, TASK_ENVIRONMENT, TASK_ARCHIVE_POLICY, REPOSITORY_ROOT, DESIGN_CHECKPOINT, DESIGN_REVIEW_STATUS, DESIGN_REVIEW_EVIDENCE, OBJECTIVE, AUTHORITATIVE_INPUTS, FROZEN_DECISIONS, NON_GOALS, ACCEPTANCE_BASELINE, IMPLEMENTATION_BOUNDARY, EXTERNAL_GATES, DESIGN_REOPEN_RULE, MODEL_POLICY
-delivery_update: DELIVERY_TASK_ID, DESIGN_TASK_ID, ORCHESTRATION_MODE, SOURCE_ROLE, TARGET_ROLE, TARGET_TASK_ID, UPDATE_TYPE, DESIGN_CHECKPOINT, SUMMARY, DESIGN_ALIGNMENT, EVIDENCE, RISKS_OR_LIMITS, PENDING_ITEMS, DECISION_REQUIRED, DELIVERY, TARGET_SETTINGS, NEXT
-design_reopen: DELIVERY_TASK_ID, DESIGN_TASK_ID, ORCHESTRATION_MODE, SOURCE_ROLE, TARGET_ROLE, TARGET_TASK_ID, DESIGN_CHECKPOINT, AFFECTED_SCOPE, CONFLICT, EVIDENCE, OPTIONS, RECOMMENDATION, PAUSED_SCOPE, UNAFFECTED_WORK, DELIVERY, TARGET_SETTINGS, NEXT
-design_decision: DESIGN_TASK_ID, DELIVERY_TASK_ID, ORCHESTRATION_MODE, SOURCE_ROLE, TARGET_ROLE, TARGET_TASK_ID, PRIOR_DESIGN_CHECKPOINT, DECISION, RATIONALE, UPDATED_DESIGN_CHECKPOINT, AFFECTED_SCOPE, AUTHORITY_BOUNDARY, DELIVERY, TARGET_SETTINGS, NEXT
-```
-
-Optional fields are schema-defined, including `FULL_REVIEW_REASON` for full review and `DESIGN_REVIEW_EVIDENCE` for `reopen_approved`; existing architected, non-final, and plan/milestone fields remain conditional.
+Required and optional field order lives in `scripts/packet_schema.py`. Keep this reference for meaning, not as a duplicate schema. Conditional fields include `FULL_REVIEW_REASON` for full review, `DESIGN_REVIEW_EVIDENCE` for `reopen_approved`, and the existing architected plan/milestone fields.
 
 ## Fixed boundary values
 
@@ -74,7 +63,9 @@ TASK_ENVIRONMENT: local
 TASK_ARCHIVE_POLICY: dispatching_authority_after_acceptance
 TASK_MODE: design_authority|delivery_controller|write|review_root|review_worktree
 TARGET_MODE: root_readonly|existing_worktree|detached_snapshot
+REVIEW_CLASS: design|implementation|governance
 REVIEW_DEPTH: delta|full
+UPDATE_CLASS: implementation|design_review|governance_audit
 STATUS: progress|blocked|final
 MODEL_POLICY: app_default|repo_write_default:<model>/<reasoning>|repo_review_default:<model>/<reasoning>|repo_delivery_default:<model>/<reasoning>|user_explicit:<model>/<reasoning>
 TARGET_SETTINGS: preserve
@@ -114,7 +105,7 @@ NON_GOALS: <excluded outcomes>
 
 `full` requires `FULL_REVIEW_REASON`, caps at 9,000 characters, and is only for new, cross-cutting, irreversible, or explicit baselines. Corrections are delta unless the baseline reopens.
 
-Prompt equals route capsule plus packet: no duplicated lineage, package reads, global status, or test matrices. `design` belongs to design authority; `implementation` to delivery. Review is read-only and cannot expand scope.
+Prompt equals route capsule plus packet: no duplicated lineage, package reads, global status, or test matrices. `design` belongs to design authority; `implementation` to delivery; `governance` covers route, takeover, recovery, or protocol questions. Review is read-only and cannot expand scope.
 
 ## Architected packet semantics
 
@@ -128,8 +119,8 @@ Before send, correct one constructor shape error once from known facts; meaning,
 
 ## Report and checkpoint semantics
 
-`UPDATE_CLASS: implementation` goes to the delivery controller; `design_review` goes to the design authority. `progress` carries a new decision fact while the peer turn continues. `blocked` and `final` return control. Do not add owner/turn-state fields.
+`UPDATE_CLASS: implementation` goes to the delivery controller; `design_review` goes to the design authority; `governance_audit` goes only to the authority named by `REPORT_TO`. `progress` carries a new decision fact while the peer turn continues. `blocked` and `final` return control. Do not add owner/turn-state fields.
 
-For a write-task `final`, `EVIDENCE` names the local checkpoint commit and maps acceptance to paths/checks; `RISKS_OR_LIMITS` and `PENDING_ITEMS` are mandatory. Before a planned pause or handoff, commit each coherent owned unit. If unsafe, report blocked with the exact dirty paths, ownership reason, and recovery action; do not stage another owner's work.
+For a write-task `final`, `EVIDENCE` names the local checkpoint commit and maps acceptance to paths/checks; `RISKS_OR_LIMITS` and `PENDING_ITEMS` are mandatory. For a governance audit final, `EVIDENCE` separates verified facts, high-confidence inference, and items requiring authority verification. Before a planned pause or handoff, commit each coherent owned unit. If unsafe, report blocked with the exact dirty paths, ownership reason, and recovery action; do not stage another owner's work.
 
-`DELIVERY` must be `task_message:<TARGET_TASK_ID>` for every status; task failure is not delivery failure. `TARGET_SETTINGS: preserve` omits destination-thread overrides. Validate/send once; confirm, then end the turn. A failed call delivered nothing: keep the packet plus a local `DELIVERY_FAILURE: <reason>` note outside it; never claim receipt.
+`DELIVERY` must be `task_message:<TARGET_TASK_ID>` for every status; task failure is not delivery failure. A read-only reviewer or auditor may not message lateral peers, but this required report to `TARGET_TASK_ID` is not lateral contact. `TARGET_SETTINGS: preserve` omits destination-thread overrides. Validate/send once; confirm, then end the turn. A failed call delivered nothing: keep the packet plus a local `DELIVERY_FAILURE: <reason>` note outside it; never claim receipt.
