@@ -7,7 +7,7 @@ description: Split long repository work into direct work, internal help, or inde
 
 Keep product primary. Use this Skill to split context; avoid bureaucracy.
 
-Default path: choose boundary -> send minimum capsule -> peer works in its own context -> peer reports once to `REPORT_TO` -> owner accepts/archives or sends one correction.
+Default path: choose boundary -> send minimum capsule -> peer works in its own context -> peer reports once to `REPORT_TO` -> owner accepts, archives, and classifies cleanup or sends one correction.
 
 Hard boundaries: repo-local paths, write ownership, read-only review, preserved settings, and separate gates for merge, push, deploy, production data, credentials, and permissions.
 
@@ -74,4 +74,4 @@ In `architected`, final evidence returns to design authority. Merge, push, deplo
 
 After PASS, do not reopen review merely because rolling handoff moves HEAD. Keep the reviewed checkpoint distinct from the later continuity checkpoint. A `continuity_only` closeout changes no implementation, normative design/contracts, acceptance, non-goals, findings, or verdict evidence; root-write authority verifies/commits it without review.
 
-Archive an accepted peer only after correction/in-flight work ends and confirm it. Final, archive, worktree removal, integration, push, and deploy are separate. A clean task-tree HEAD is already a recovery anchor.
+Archive an accepted peer only after correction/in-flight work ends and confirm it. Then run `CLOSEOUT_CLEANUP`: classify the task worktree and local branch as removed or retained. Remove only after resolving path/branch/head/status, proving clean state plus integration or explicit abandonment, saving recovery coordinates, and confirming no recovery value. Remove the registered worktree before deleting the local branch; never delete remote branches or force-delete unknown, dirty, or recoverable work. If cleanup is unsafe or deferred, emit `RETAINED_WORKTREE` with exact task id, path, branch, head, reason, and next action. Final, archive, cleanup, integration, push, and deploy are separate gates.

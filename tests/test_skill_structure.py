@@ -132,8 +132,8 @@ class SkillStructureTests(unittest.TestCase):
             SKILL / "scripts" / "validate_dispatch_contract.py"
         ).read_text(encoding="utf-8")
 
-        self.assertLessEqual(skill_path.stat().st_size, 8_200)
-        self.assertLessEqual(sum(path.stat().st_size for path in markdown), 42_000)
+        self.assertLessEqual(skill_path.stat().st_size, 8_800)
+        self.assertLessEqual(sum(path.stat().st_size for path in markdown), 45_000)
         self.assertIn("once per task/runtime binding", skill)
         self.assertIn("Do not reload the Skill bundle", skill)
         self.assertIn("Do not create temporary packet files", skill)
@@ -252,6 +252,30 @@ class SkillStructureTests(unittest.TestCase):
         self.assertIn("invent new acceptance criteria", continuity)
         self.assertIn("classify any proposed closeout diff", controller)
         self.assertIn("Never dispatch a docs-only reviewer", controller)
+
+    def test_peer_acceptance_requires_worktree_branch_cleanup_decision(self) -> None:
+        skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+        controller = (SKILL / "references" / "controller.md").read_text(
+            encoding="utf-8"
+        )
+        recovery = (SKILL / "references" / "recovery.md").read_text(
+            encoding="utf-8"
+        )
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+        self.assertIn("`CLOSEOUT_CLEANUP`", skill)
+        self.assertIn("classify the task worktree and local branch", skill)
+        self.assertIn("After the archive decision, complete `CLOSEOUT_CLEANUP`", controller)
+        self.assertIn("RETAINED_WORKTREE", controller)
+        self.assertIn("TASK_ID:", controller)
+        self.assertIn("NEXT_ACTION:", controller)
+        self.assertIn("do not leave the removal decision for future archaeology", recovery)
+        self.assertIn("REMOVED_WORKTREE", recovery)
+        self.assertIn("REMOVED_BRANCH", recovery)
+        self.assertIn("Remove the registered Git worktree before deleting the local branch", recovery)
+        self.assertIn("Never delete a remote branch", recovery)
+        self.assertIn("No age-based cleanup", readme)
+        self.assertIn("archive status, task age, path naming", readme)
 
     def test_focused_evidence_cannot_claim_full_or_production_proof(self) -> None:
         skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")

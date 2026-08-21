@@ -64,4 +64,18 @@ Verify actual diff/commit, owned paths, checks, evidence limits, unresolved find
 
 After PASS, classify any proposed closeout diff as `continuity_only` or `normative`. A continuity-only diff records existing state on repository-allowlisted paths; commit it under the current root-write lease. Never dispatch a docs-only reviewer merely to record PASS. Normative changes reopen the applicable baseline.
 
-Archive only after acceptance and after correction/in-flight work is absent. Call `set_thread_archived({threadId: <accepted-task-id>, archived: true})` and confirm success. Task final, archival, and worktree removal remain separate.
+Archive only after acceptance and after correction/in-flight work is absent. Call `set_thread_archived({threadId: <accepted-task-id>, archived: true})` and confirm success. A peer `final` is delivery, not archive; archive is not cleanup.
+
+After the archive decision, complete `CLOSEOUT_CLEANUP` for every peer-owned worktree/branch before ending the acceptance turn unless an external gate is explicitly missing. Inspect the exact registered worktree, local branch, head, dirty/untracked state, integration target, and saved recovery coordinates. If clean and integrated, or clean and explicitly abandoned with no recovery value, remove the Git worktree first and then delete only the local branch with the safest branch-delete mode that passes. If not safe, do not delete; emit a compact retained inventory:
+
+```text
+RETAINED_WORKTREE
+TASK_ID:
+WORKTREE:
+BRANCH:
+HEAD:
+REASON:
+NEXT_ACTION:
+```
+
+`REASON` must be concrete: dirty, untracked, not integrated, unknown owner, blocked, user-retained, missing external gate, or recoverable evidence. Never infer cleanup from task archival, age, naming, or directory location; never delete a remote branch from this closeout rule.

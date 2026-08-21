@@ -20,13 +20,14 @@ Multi-agent coding fails when:
 - a reviewer modifies the candidate it is supposed to review;
 - an agent reports PASS and nobody verifies the real diff;
 - a worker finishes in its own task but never delivers the final milestone to the controller;
+- a task gets archived while its worktree and local branch remain unclassified;
 - a completed turn says `owner=task` even though it cannot restart itself;
 - a safety handshake takes longer than the work it protects;
 - merge, push, deploy, or production access becomes implicit.
 
 This Skill turns those failure modes into small routing and report contracts.
 
-**No daemon. No dashboard. No shared writable worktree between independent tasks.**
+**No daemon. No dashboard. No shared writable worktree between independent tasks. No age-based cleanup.**
 
 ## Default host-compatible profile
 
@@ -68,6 +69,8 @@ The installer defaults architected delivery controllers, writers, and reviewers 
 This diagram shows `architected` mode. Ordinary `delivery` collapses design and delivery authority into the current controller; `direct` creates no peer tasks. Every App-created user-visible task is still a runtime peer, even when another task dispatched it: authority arrows are not App parentage. Create peers with `create_thread` and deliver packets with `send_message_to_thread`; `spawn_agent` always creates a current-task internal subagent whose id is never a peer task id. A peer is justified by separate context, independent acceptance, cross-turn waiting, model binding, recovery, design, audit, or formal review, not by agent count alone. Every peer write task owns one branch, one repository-local worktree, and one writable ownership boundary. Internal subagents inherit the current path, receive non-overlapping scopes, return within the current turn, and create no tree. Candidate review reuses the frozen implementation tree while its writer is paused; long or historical review gets an on-demand detached snapshot only when a stable filesystem is useful. Governance audit is read-only and reports only to the contracted authority.
 
 When a repository defines an execution package or equivalent continuity entry, the Skill keeps it separate from both the App task and Git worktree. It stores durable objective, scope, state, acceptance, recovery, and next-step facts; repository-specific tiers, paths, templates, and scaffolding stay in the repository. Clean worktrees use their current HEAD as the recovery anchor, and prechange snapshots remain explicit rather than ceremonial.
+
+After an accepted peer is archived, its dispatcher must make a `CLOSEOUT_CLEANUP` decision for every peer-owned worktree and local branch. Safe residue is removed through Git's worktree flow; unsafe or useful residue is retained with an explicit `RETAINED_WORKTREE` reason and next action. The rule prevents future archaeology, but it does not create a background cleanup daemon or permission to delete remote branches.
 
 Task startup is one logical dispatch with two transport steps because the formal packet requires the actual id returned by creation. The creation instruction is inert and grants no execution authority; after the receipt, the dispatcher immediately sends one validated id-bound packet. Its receipt completes dispatch, and the peer performs the fast route gate and continues on PASS without a startup wait.
 
@@ -207,6 +210,8 @@ OpenAI's desktop worktree feature uses Codex-managed worktrees and is documented
 - Visible repository tasks explicitly use App environment `local`; isolation comes from the repository-local execution worktree, never an App-managed worktree.
 - A queued App worktree setup or worktree-creation receipt is a failed peer route, not a task to wait on or recover as if it had started.
 - Accepted peer tasks are archived explicitly by the authority that dispatched them; a peer `final` is delivery, not archival.
+- Accepted peer closeout includes a worktree/branch cleanup decision: remove safe local residue or emit `RETAINED_WORKTREE` with task id, path, branch, head, reason, and next action.
+- Cleanup is evidence-gated and local-only: archive status, task age, path naming, or directory location never prove a worktree or branch safe to delete; remote branches are not deleted by this closeout rule.
 - Repository continuity packages are optional durable fact anchors, never task-message channels, authorization tokens, or workflow engines.
 - A post-PASS continuity-only closeout keeps the reviewed checkpoint distinct from its later bookkeeping commit and never triggers review merely to record that PASS occurred.
 - A clean task worktree uses its HEAD as the recovery anchor; prechange snapshots require an explicit request or an authorized risky rewrite of task-owned tracked changes.

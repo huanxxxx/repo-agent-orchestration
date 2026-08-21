@@ -61,4 +61,12 @@ Mark a user-visible peer task `PASS_VERIFIED` only after final evidence and veri
 
 Receive an internal subagent's final result, confirm it stopped, and release its slot promptly.
 
-Treat task archival and worktree removal as separate actions. Before removing a worktree, resolve and inspect its exact path, branch, head, and dirty state. Remove it only when it is clean, integrated or explicitly abandoned, evidence and recovery coordinates are saved, and it has no recovery value. Remove an integrated local branch only after the worktree is safely unregistered. Never force-delete unknown or recoverable changes.
+Treat task archival and worktree removal as separate actions, but do not leave the removal decision for future archaeology. After a peer is accepted/archived, make one explicit closeout classification for every peer-owned worktree and branch:
+
+- `REMOVED_WORKTREE`: exact path was registered, resolved, clean, integrated or explicitly abandoned, recovery coordinates were saved, and no recovery value remains.
+- `REMOVED_BRANCH`: the corresponding local branch was removed after the worktree was unregistered and Git proved it safe to delete.
+- `RETAINED_WORKTREE`: deletion was unsafe, not authorized, or not yet valuable enough.
+
+Before removing, resolve and inspect exact path, branch, head, dirty/untracked state, integration target, and recovery value. Prefer proof that the branch head is ancestor or patch-equivalent to the integration target; use repository-specific evidence when a branch was intentionally abandoned. Remove the registered Git worktree before deleting the local branch. Never delete a remote branch, force-delete unknown/dirty/recoverable work, or use archive status, directory age, or path name as cleanup proof.
+
+A retained item must include `TASK_ID`, `WORKTREE`, `BRANCH`, `HEAD`, `REASON`, and `NEXT_ACTION`. Keep the reason concrete: dirty, untracked, not integrated, unknown owner, blocked, user-retained, missing external gate, or recoverable evidence.
