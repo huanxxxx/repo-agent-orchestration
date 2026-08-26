@@ -23,7 +23,6 @@ PACKET_SCHEMAS: dict[str, dict[str, tuple[str, ...] | str]] = {
     "write": {
         "header": "PEER_WRITE_DISPATCH",
         "required": (
-            "TASK_ID",
             "ORCHESTRATION_MODE",
             "SOURCE_ROLE",
             "TARGET_ROLE",
@@ -42,12 +41,11 @@ PACKET_SCHEMAS: dict[str, dict[str, tuple[str, ...] | str]] = {
             "REQUIRED_TESTS",
             "MODEL_POLICY",
         ),
-        "optional": ("DESIGN_CHECKPOINT",),
+        "optional": ("TASK_ID", "DESIGN_CHECKPOINT"),
     },
     "review": {
         "header": "READ_ONLY_REVIEW_DISPATCH",
         "required": (
-            "REVIEW_TASK_ID",
             "ORCHESTRATION_MODE",
             "REVIEW_CLASS",
             "REVIEW_DEPTH",
@@ -68,12 +66,11 @@ PACKET_SCHEMAS: dict[str, dict[str, tuple[str, ...] | str]] = {
             "ACCEPTANCE",
             "MODEL_POLICY",
         ),
-        "optional": ("FULL_REVIEW_REASON", "DESIGN_CHECKPOINT"),
+        "optional": ("REVIEW_TASK_ID", "FULL_REVIEW_REASON", "DESIGN_CHECKPOINT"),
     },
     "update": {
         "header": "TASK_UPDATE",
         "required": (
-            "TASK_ID",
             "ORCHESTRATION_MODE",
             "UPDATE_CLASS",
             "SOURCE_ROLE",
@@ -87,6 +84,7 @@ PACKET_SCHEMAS: dict[str, dict[str, tuple[str, ...] | str]] = {
             "NEXT",
         ),
         "optional": (
+            "TASK_ID",
             "DESIGN_CHECKPOINT",
             "RISKS_OR_LIMITS",
             "PENDING_ITEMS",
@@ -96,7 +94,6 @@ PACKET_SCHEMAS: dict[str, dict[str, tuple[str, ...] | str]] = {
         "header": "DESIGN_HANDOFF",
         "required": (
             "DESIGN_TASK_ID",
-            "DELIVERY_TASK_ID",
             "ORCHESTRATION_MODE",
             "SOURCE_ROLE",
             "TARGET_ROLE",
@@ -117,7 +114,7 @@ PACKET_SCHEMAS: dict[str, dict[str, tuple[str, ...] | str]] = {
             "DESIGN_REOPEN_RULE",
             "MODEL_POLICY",
         ),
-        "optional": (),
+        "optional": ("DELIVERY_TASK_ID",),
     },
     "delivery_update": {
         "header": "DELIVERY_UPDATE",

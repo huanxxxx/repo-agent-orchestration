@@ -591,6 +591,15 @@ class ContractValidationTests(unittest.TestCase):
         self.assertIn("DELIVERY must be task_message", errors)
         self.assertIn("final EVIDENCE must include", errors)
 
+    def test_final_risk_and_pending_fields_are_optional(self) -> None:
+        compact = "\n".join(
+            line
+            for line in VALID_FINAL.splitlines()
+            if not line.startswith(("RISKS_OR_LIMITS:", "PENDING_ITEMS:"))
+        )
+
+        self.assertEqual(self.validate("update", compact), [])
+
     def test_blocked_requires_direct_delivery(self) -> None:
         blocked = """
 TASK_ID: write-1
@@ -730,7 +739,7 @@ NEXT: recover on the next real controller wake
             self.validate("update", design_in_delivery),
         )
 
-    def test_architected_reports_require_actual_source_task_ids(self) -> None:
+    def test_declared_source_task_ids_must_be_concrete(self) -> None:
         for kind, packet, field in (
             ("delivery_update", VALID_DELIVERY_PLAN, "DELIVERY_TASK_ID"),
             ("design_reopen", VALID_DESIGN_REOPEN, "DELIVERY_TASK_ID"),

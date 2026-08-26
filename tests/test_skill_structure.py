@@ -73,6 +73,7 @@ class SkillStructureTests(unittest.TestCase):
             encoding="utf-8"
         )
         self.assertIn("Dispatch all ready, non-conflicting peers", skill)
+        self.assertIn("current task-creation authority", skill)
         self.assertIn("without waiting for a separate user instruction", architected)
         self.assertIn("does not require a separate user request to parallelize", controller)
         self.assertIn("Start with a scope challenge", controller)
@@ -135,7 +136,7 @@ class SkillStructureTests(unittest.TestCase):
         self.assertLessEqual(skill_path.stat().st_size, 8_800)
         self.assertLessEqual(sum(path.stat().st_size for path in markdown), 45_000)
         self.assertIn("once per task/runtime binding", skill)
-        self.assertIn("Do not reload the Skill bundle", skill)
+        self.assertIn("Reload only when route identity", skill)
         self.assertIn("Do not create temporary packet files", skill)
         self.assertIn("Do not reread the full Skill/reference bundle", controller)
         self.assertIn("executor-only domain Skills", controller)
@@ -192,7 +193,7 @@ class SkillStructureTests(unittest.TestCase):
             "TASK_MODE: design_authority|delivery_controller|write|review_root|review_worktree",
             contracts,
         )
-        self.assertIn("continues in the same turn", contracts)
+        self.assertIn("continues in the same initial turn", contracts)
         self.assertNotIn("BINDING_STATUS", contracts)
         self.assertNotIn("COMMAND_WORKDIR_POLICY", contracts)
 
@@ -215,7 +216,7 @@ class SkillStructureTests(unittest.TestCase):
             encoding="utf-8"
         )
         self.assertIn("More agents alone never justify more worktrees", skill)
-        self.assertIn("different peer write tasks never share", skill)
+        self.assertIn("different peer writers never share", skill)
         self.assertIn("Agent count alone is not a task boundary", controller)
         self.assertIn("EXECUTION_PATH: inherit_current", contracts)
         self.assertIn("get no peer packet/tree/branch", controller)
@@ -264,7 +265,7 @@ class SkillStructureTests(unittest.TestCase):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
 
         self.assertIn("`CLOSEOUT_CLEANUP`", skill)
-        self.assertIn("classify the task worktree and local branch", skill)
+        self.assertIn("run `CLOSEOUT_CLEANUP`", skill)
         self.assertIn("After the archive decision, complete `CLOSEOUT_CLEANUP`", controller)
         self.assertIn("RETAINED_WORKTREE", controller)
         self.assertIn("TASK_ID:", controller)
@@ -328,15 +329,15 @@ class SkillStructureTests(unittest.TestCase):
             encoding="utf-8"
         )
         self.assertIn("ends the sender turn", skill)
-        self.assertIn("first-dispatch check may call `wait_threads` once", skill)
-        self.assertIn("Its id proves creation", skill)
-        self.assertIn("receipt proves dispatch", skill)
-        self.assertIn("Create inert first", controller)
-        self.assertIn("not as continuation/correction/wait", controller)
-        self.assertIn("Successful delivery ends the sender turn", skill)
+        self.assertIn("calls `wait_threads` once, then yields", skill)
+        self.assertIn("proves creation and initial delivery", skill)
+        self.assertIn("full launch prompt", skill)
+        self.assertIn("Never create `AWAIT_FORMAL_DISPATCH`", controller)
+        self.assertIn("Do not resend the launch packet", controller)
+        self.assertIn("later delivery ends the sender turn", skill)
         self.assertIn("Do not inspect its target or another peer", skill)
         self.assertIn(
-            "After any successful send, end the turn; never inspect its target or another peer",
+            "After successful creation or any later send, end the turn",
             controller,
         )
         self.assertIn("first-dispatch `wait_threads` may run once", controller)
@@ -358,7 +359,7 @@ class SkillStructureTests(unittest.TestCase):
         validator = (SKILL / "scripts" / "validate_dispatch_contract.py").read_text(
             encoding="utf-8"
         )
-        self.assertIn("task failure is not delivery failure", contracts)
+        self.assertIn("task failure is not delivery failure", contracts.casefold())
         self.assertIn("DELIVERY_FAILURE: <reason>", contracts)
         self.assertNotIn("BLOCKED_DELIVERY_RE", validator)
 
@@ -385,12 +386,13 @@ class SkillStructureTests(unittest.TestCase):
         controller = (SKILL / "references" / "controller.md").read_text(
             encoding="utf-8"
         )
-        self.assertIn("Call `create_thread` once", skill)
-        self.assertIn("do not wait", skill)
+        self.assertIn("call `create_thread` once", skill)
+        self.assertIn("never create `AWAIT_FORMAL_DISPATCH`", skill)
         self.assertIn("Call `create_thread` once per dispatch", controller)
         self.assertIn("creation outcome unknown", controller)
         self.assertIn("then reconcile source, project, objective", controller)
-        self.assertIn("never embed `<codex_delegation>`", controller)
+        self.assertIn("meaningful title", controller)
+        self.assertNotIn("Create inert first", controller)
 
     def test_task_message_transport_is_constructor_owned_and_unwrapped(self) -> None:
         skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
@@ -404,12 +406,39 @@ class SkillStructureTests(unittest.TestCase):
             encoding="utf-8"
         )
         for document in (skill, contracts, controller):
-            self.assertIn("--task-message", document)
+            self.assertIn("--task-message-to", document)
             self.assertIn("unchanged", document)
         self.assertIn('"threadId": packet[target_field]', constructor)
         self.assertIn('"prompt": prompt', constructor)
         self.assertIn("App frames them", skill)
-        self.assertIn("never embed `<codex_delegation>`", controller)
+        self.assertIn("App adds delegation framing", contracts)
+
+    def test_initial_peer_dispatch_is_single_stage(self) -> None:
+        skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+        contracts = (SKILL / "references" / "contracts.md").read_text(
+            encoding="utf-8"
+        )
+        controller = (SKILL / "references" / "controller.md").read_text(
+            encoding="utf-8"
+        )
+        constructor = (SKILL / "scripts" / "construct_packet.py").read_text(
+            encoding="utf-8"
+        )
+
+        for document in (skill, contracts, controller):
+            self.assertIn("complete", document)
+            self.assertIn("`create_thread`", document)
+        self.assertIn("--launch", skill)
+        self.assertIn("--launch", contracts)
+        self.assertIn("omit their not-yet-created self id", contracts)
+        self.assertIn("def launch_prompt", constructor)
+        self.assertNotIn("Create an inert", contracts)
+        for document in (skill, contracts):
+            self.assertIn(
+                ".agents/skills/repo-agent-orchestration/scripts/construct_packet.py",
+                document,
+            )
+            self.assertNotIn("python scripts/construct_packet.py", document)
 
     def test_one_pre_send_shape_correction_is_bounded(self) -> None:
         skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
@@ -427,7 +456,7 @@ class SkillStructureTests(unittest.TestCase):
         controller = (SKILL / "references" / "controller.md").read_text(
             encoding="utf-8"
         )
-        self.assertIn("only the design authority may change the design baseline", skill)
+        self.assertIn("only design may change the baseline", skill)
         self.assertIn("DESIGN_REOPEN_REQUEST", skill)
         self.assertIn("it may not authorize itself", controller)
         self.assertIn(
@@ -474,9 +503,9 @@ class SkillStructureTests(unittest.TestCase):
             encoding="utf-8"
         )
         published = "\n".join((skill, controller, contracts, readme, demo)).casefold()
-        self.assertIn("app-created user-visible task is a peer task", published)
+        self.assertIn("app-created user-visible task is a peer", published)
         self.assertIn("controller is a coordination role", published)
-        self.assertIn("actual creation capability", published)
+        self.assertIn("create_thread` carries its complete first prompt", published)
         self.assertIn("current-task internal subagent", published)
         self.assertIn("queued/app-managed-worktree", published)
         self.assertIn("is phantom", published)
@@ -503,8 +532,8 @@ class SkillStructureTests(unittest.TestCase):
         self.assertIn("never peer `TASK_ID`s", contracts)
         self.assertIn("`wait_agent` are internal-only", skill)
         self.assertIn("never call `wait_agent` for a peer", controller)
-        self.assertIn("may call `wait_threads` once, never `wait_agent`", skill)
-        self.assertIn("never substitute `spawn_agent`", skill)
+        self.assertIn("`wait_threads` may run once", skill)
+        self.assertIn("failed routing is `protocol_blocked`, never `spawn_agent`", skill.casefold())
 
     def test_review_routing_covers_root_candidate_and_snapshot(self) -> None:
         contracts = (SKILL / "references" / "contracts.md").read_text(

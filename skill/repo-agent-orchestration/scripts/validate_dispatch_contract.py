@@ -957,11 +957,6 @@ def validate(kind: str, fields: dict[str, str]) -> list[str]:
         if status == "final":
             if fields.get("EVIDENCE", "").casefold() == "none":
                 errors.append("final EVIDENCE must include commands or artifacts")
-            for name in ("RISKS_OR_LIMITS", "PENDING_ITEMS"):
-                if name not in fields:
-                    errors.append(f"final report missing field: {name}")
-                elif not fields[name]:
-                    errors.append(f"final report empty field: {name}")
         for name in (
             "SUMMARY",
             "EVIDENCE",

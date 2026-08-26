@@ -23,21 +23,27 @@ Read once per authority/task binding. Repository defaults map to `repo_delivery_
 
 ## One ordinary packet path
 
-Stream outgoing JSON to the constructor:
+Run the installed helper from the repository root. Build the complete initial peer prompt before task creation:
 
 ```text
-python scripts/construct_packet.py --kind <kind> --live --task-message -
+python .agents/skills/repo-agent-orchestration/scripts/construct_packet.py --kind <write|review|design_handoff> --live --launch -
 ```
 
-`--task-message` shares the schema/live checks and emits exact `send_message_to_thread` JSON only on PASS. Pass it unchanged; App adds delegation framing. Its library stays pure: It never creates tasks, touches Git, sends messages, waits, archives, or orchestrates. Use no temporary packet or second validation.
+Use the resulting packet unchanged as `create_thread.prompt`. For later task messages:
+
+```text
+python .agents/skills/repo-agent-orchestration/scripts/construct_packet.py --kind <kind> --live --task-message-to <target-task-id> -
+```
+
+`--task-message-to` injects target, delivery, and destination-setting fields and emits exact `send_message_to_thread` JSON only on PASS. Pass it unchanged; App adds delegation framing. The constructor supplies invariant defaults but invents no semantic facts. It never creates tasks, touches Git, sends messages, waits, archives, or orchestrates. Use no temporary packet or second validation.
 
 Validate incoming raw packet once:
 
 ```text
-python scripts/validate_dispatch_contract.py --kind <kind> -
+python .agents/skills/repo-agent-orchestration/scripts/validate_dispatch_contract.py --kind <kind> -
 ```
 
-The schema file is the exact required/optional-field SSoT. The compact catalog below describes meaning; do not copy these lists into another implementation.
+The schema file is the field SSoT; the catalog below describes meaning only.
 
 ## Packet catalog
 
@@ -71,7 +77,7 @@ MODEL_POLICY: app_default|repo_write_default:<model>/<reasoning>|repo_review_def
 TARGET_SETTINGS: preserve
 ```
 
-App peers use saved-project `create_thread` with `environment: {type: "local"}`, then `send_message_to_thread`; `spawn_agent` ids are never peer `TASK_ID`s. Give internal subagents only:
+App peers use saved-project `create_thread` with a complete prompt and explicit `environment: {type: "local"}`; later messages use `send_message_to_thread`. Never rely on the host's Git-project worktree default. `spawn_agent` ids are never peer `TASK_ID`s. Give internal subagents only:
 
 ```text
 EXECUTION_PATH: inherit_current
@@ -85,7 +91,7 @@ They inherit authority/path and return this turn. Separate acceptance/model/wait
 
 ## Route and write semantics
 
-Packets need the returned task id. Create an inert `AWAIT_FORMAL_DISPATCH`, then send the exact generated arguments unchanged; receipt completes dispatch. The peer validates `binding` and continues in the same turn on PASS, otherwise writes nothing. Rebind only if identity changes; commits do not invalidate binding, while packets live-check HEAD.
+Initial packets omit their not-yet-created self id; the App receipt supplies the runtime id. The validated packet is `create_thread.prompt`, so a returned `threadId` completes creation and dispatch in one call. Never create an inert task or resend the launch. The peer validates its route and continues in the same initial turn on PASS, otherwise writes nothing. Rebind only if identity changes; packets live-check HEAD.
 
 For write packets, `SOURCE_ROLE: delivery_controller`, `TARGET_ROLE: peer_writer`, and `REPORT_TO_TASK_ID` identifies the controller. `OWNED_PATHS` grants locations only. Passing acceptance is the stop condition: implement the smallest sufficient result, then map each acceptance condition to its changed paths and evidence. Architecture/scope expansion is a blocker requiring the owning authority.
 
@@ -121,6 +127,6 @@ Before send, correct one constructor shape error once from known facts; meaning,
 
 `UPDATE_CLASS: implementation` goes to the delivery controller; `design_review` goes to the design authority; `governance_audit` goes only to the authority named by `REPORT_TO`. `progress` carries a new decision fact while the peer turn continues. `blocked` and `final` return control. Do not add owner/turn-state fields.
 
-For a write-task `final`, `EVIDENCE` names the local checkpoint commit and maps acceptance to paths/checks; `RISKS_OR_LIMITS` and `PENDING_ITEMS` are mandatory. For a governance audit final, `EVIDENCE` separates verified facts, high-confidence inference, and items requiring authority verification. Before a planned pause or handoff, commit each coherent owned unit. If unsafe, report blocked with the exact dirty paths, ownership reason, and recovery action; do not stage another owner's work.
+For a write-task `final`, `EVIDENCE` names the local checkpoint commit and maps acceptance to paths/checks. Include `RISKS_OR_LIMITS` or `PENDING_ITEMS` only when there is something material to report; omission never means the constructor inferred `none`. For a governance audit final, `EVIDENCE` separates verified facts, high-confidence inference, and items requiring authority verification. Before a planned pause or handoff, commit each coherent owned unit. If unsafe, report blocked with the exact dirty paths, ownership reason, and recovery action; do not stage another owner's work.
 
-`DELIVERY` must be `task_message:<TARGET_TASK_ID>` for every status; task failure is not delivery failure. A read-only reviewer or auditor may not message lateral peers, but this required report to `TARGET_TASK_ID` is not lateral contact. `TARGET_SETTINGS: preserve` omits destination-thread overrides. Validate/send once; confirm, then end the turn. A failed call delivered nothing: keep the packet plus a local `DELIVERY_FAILURE: <reason>` note outside it; never claim receipt.
+For reports, `--task-message-to` derives `TARGET_TASK_ID`, `DELIVERY`, and `TARGET_SETTINGS: preserve` from the API target; do not hand-copy them. It omits destination-thread overrides. Task failure is not delivery failure. A reviewer may not message lateral peers, but its required report is not lateral contact. Validate/send once, confirm, and end. A failed call delivered nothing: keep the packet plus `DELIVERY_FAILURE: <reason>` outside it.

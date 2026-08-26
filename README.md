@@ -66,13 +66,13 @@ The installer defaults architected delivery controllers, writers, and reviewers 
           +-------------+ +-------------+ +--------------+
 ```
 
-This diagram shows `architected` mode. Ordinary `delivery` collapses design and delivery authority into the current controller; `direct` creates no peer tasks. Every App-created user-visible task is still a runtime peer, even when another task dispatched it: authority arrows are not App parentage. Create peers with `create_thread` and deliver packets with `send_message_to_thread`; `spawn_agent` always creates a current-task internal subagent whose id is never a peer task id. A peer is justified by separate context, independent acceptance, cross-turn waiting, model binding, recovery, design, audit, or formal review, not by agent count alone. Every peer write task owns one branch, one repository-local worktree, and one writable ownership boundary. Internal subagents inherit the current path, receive non-overlapping scopes, return within the current turn, and create no tree. Candidate review reuses the frozen implementation tree while its writer is paused; long or historical review gets an on-demand detached snapshot only when a stable filesystem is useful. Governance audit is read-only and reports only to the contracted authority.
+This diagram shows `architected` mode. Ordinary `delivery` collapses design and delivery authority into the current controller; `direct` creates no peer tasks. Every App-created user-visible task is still a runtime peer, even when another task dispatched it: authority arrows are not App parentage. Create peers with one complete `create_thread` prompt; reserve `send_message_to_thread` for later reports, decisions, and corrections. `spawn_agent` always creates a current-task internal subagent whose id is never a peer task id. A peer is justified by separate context, independent acceptance, cross-turn waiting, model binding, recovery, design, audit, or formal review, not by agent count alone. Every peer write task owns one branch, one repository-local worktree, and one writable ownership boundary. Internal subagents inherit the current path, receive non-overlapping scopes, return within the current turn, and create no tree. Candidate review reuses the frozen implementation tree while its writer is paused; long or historical review gets an on-demand detached snapshot only when a stable filesystem is useful. Governance audit is read-only and reports only to the contracted authority.
 
 When a repository defines an execution package or equivalent continuity entry, the Skill keeps it separate from both the App task and Git worktree. It stores durable objective, scope, state, acceptance, recovery, and next-step facts; repository-specific tiers, paths, templates, and scaffolding stay in the repository. Clean worktrees use their current HEAD as the recovery anchor, and prechange snapshots remain explicit rather than ceremonial.
 
 After an accepted peer is archived, its dispatcher must make a `CLOSEOUT_CLEANUP` decision for every peer-owned worktree and local branch. Safe residue is removed through Git's worktree flow; unsafe or useful residue is retained with an explicit `RETAINED_WORKTREE` reason and next action. The rule prevents future archaeology, but it does not create a background cleanup daemon or permission to delete remote branches.
 
-Task startup is one logical dispatch with two transport steps because the formal packet requires the actual id returned by creation. The creation instruction is inert and grants no execution authority; after the receipt, the dispatcher immediately sends one validated id-bound packet. Its receipt completes dispatch, and the peer performs the fast route gate and continues on PASS without a startup wait.
+Task startup is one transport step. The constructor produces the complete validated launch packet before creation and omits the not-yet-known self id; the returned `threadId` is authoritative. The dispatcher passes that packet directly to `create_thread`, and the peer performs the fast route gate in its initial turn. There is no inert bootstrap task, automatic-archive race, or immediate resend.
 
 ## Install into a repository
 
@@ -171,10 +171,11 @@ python skill/repo-agent-orchestration/scripts/validate_dispatch_contract.py \
 
 Supported kinds are `binding`, `write`, `review`, `update`, `design_handoff`, `delivery_update`, `design_reopen`, and `design_decision`. Direct CLI checks for route packets are live: synthetic example paths are intentionally rejected unless they currently exist and match the Git worktree registry, branch, commit, and clean-state contract. `scripts/validate_examples.py` performs the portable static example matrix.
 
-For a new outgoing packet, stream JSON fields through the constructor's single boundary command. `--live` combines construction, static validation, and live route/Git validation, so no temporary packet or second validator call is needed:
+For a new outgoing packet, stream JSON fields through the constructor's single boundary command. `--live` combines construction, static validation, and live route/Git validation, so no temporary packet or second validator call is needed. An initial peer uses `--launch`; a later message uses `--task-message-to <target-task-id>`:
 
 ```powershell
-Get-Content -Raw fields.json | python skill/repo-agent-orchestration/scripts/construct_packet.py --kind design_reopen --live -
+Get-Content -Raw fields.json | python skill/repo-agent-orchestration/scripts/construct_packet.py --kind review --live --launch -
+Get-Content -Raw report.json | python skill/repo-agent-orchestration/scripts/construct_packet.py --kind update --live --task-message-to controller-task-id -
 ```
 
 Incoming packet text can likewise be streamed to `validate_dispatch_contract.py --kind <kind> -`. The constructor shares its declarative schema with the validator and does not create tasks, touch Git, send messages, wait, or archive anything. The ordinary `delivery` mode remains available; use the optional `architected` mode when repository policy or task facts require a separate design authority, delivery controller, and independent execution/review layer.
@@ -217,9 +218,9 @@ OpenAI's desktop worktree feature uses Codex-managed worktrees and is documented
 - A clean task worktree uses its HEAD as the recovery anchor; prechange snapshots require an explicit request or an authorized risky rewrite of task-owned tracked changes.
 - Coherent task-owned output is committed locally before a cross-turn pause, ownership handoff, formal review, or final; unsafe mixed ownership is reported precisely instead of staged.
 - Write tasks make the smallest acceptance-satisfying change and stop when acceptance passes; unrequested architecture, alternate paths, and hardening require a separately authorized scope.
-- A confirmed task id completes creation only; successful delivery of its id-bound formal packet completes dispatch without a startup wait.
+- A confirmed task id completes creation and delivery of the complete launch packet; there is no second startup message or inert turn.
 - Internal-agent tools (`spawn_agent`, internal send/follow-up, and `wait_agent`) cannot create, carry, or stand in for a peer task; unavailable App peer routing fails closed.
-- Correction review reuses the original idle reviewer by default; a fresh range and judgment do not require a fresh task. The constructor emits exact App task-message arguments, and senders pass them unchanged without a hand-written delegation envelope.
+- Correction review reuses the original idle reviewer by default; a fresh range and judgment do not require a fresh task. The constructor injects task-message transport fields and emits exact App arguments, and senders pass them unchanged without a hand-written delegation envelope.
 - Each authority wake processes one bounded event batch and ends; future peer events must wake a new turn rather than extending a polling session.
 - The route gate and repository profile are read once per stable task binding; later wakes reuse them and load only changed hot state.
 - Routine outgoing packets use one streamed constructor/live-validation command instead of temporary files and duplicate validation calls.

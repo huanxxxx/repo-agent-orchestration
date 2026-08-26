@@ -59,7 +59,66 @@ def delivery_milestone_fields() -> dict[str, str]:
     return fields
 
 
+def write_launch_fields() -> dict[str, str]:
+    return {
+        "REPORT_TO": "controller-1",
+        "AUTHORITY_BASELINE": "A1-A2",
+        "WORKTREE_ROOT": r"C:\repo\.worktrees",
+        "WORKTREE": r"C:\repo\.worktrees\writer-1",
+        "BRANCH": "codex/writer-1",
+        "BASE_COMMIT": FULL_SHA,
+        "OBJECTIVE": "implement one bounded change",
+        "OWNED_PATHS": "src/**; tests/**",
+        "DO_NOT_TOUCH": "deployment; production",
+        "ACCEPTANCE": "A1-A2 pass",
+        "REQUIRED_TESTS": "python -m unittest",
+    }
+
+
 class PacketConstructorTests(unittest.TestCase):
+    def test_launch_prompt_is_complete_before_task_creation(self) -> None:
+        prompt = CONSTRUCTOR.launch_prompt("write", **write_launch_fields())
+
+        self.assertTrue(prompt.startswith("PEER_WRITE_DISPATCH\n"))
+        self.assertNotRegex(prompt, r"(?m)^TASK_ID:")
+        self.assertIn("ORCHESTRATION_MODE: delivery", prompt)
+        self.assertIn("SOURCE_ROLE: delivery_controller", prompt)
+        self.assertIn("TARGET_ROLE: peer_writer", prompt)
+        self.assertIn("TASK_ENVIRONMENT: local", prompt)
+        self.assertIn("REPORT_TO_TASK_ID: controller-1", prompt)
+        self.assertNotIn("AWAIT_FORMAL_DISPATCH", prompt)
+
+    def test_launch_rejects_a_preassigned_runtime_id(self) -> None:
+        with self.assertRaisesRegex(ValueError, "assigned by create_thread"):
+            CONSTRUCTOR.launch_prompt(
+                "write", TASK_ID="guessed-writer-id", **write_launch_fields()
+            )
+
+    def test_minimal_design_review_report_derives_mechanics_and_aliases(self) -> None:
+        arguments = CONSTRUCTOR.task_message_args(
+            "update",
+            target_task_id="design-1",
+            UPDATE_CLASS="design_review",
+            STATUS="final",
+            VERDICT="HOLD",
+            FINDINGS="D1 conflicts with the verified runtime boundary",
+            DESIGN_CHECKPOINT=FULL_SHA,
+        )
+
+        self.assertEqual(arguments["threadId"], "design-1")
+        prompt = arguments["prompt"]
+        self.assertNotRegex(prompt, r"(?m)^TASK_ID:")
+        self.assertIn("ORCHESTRATION_MODE: architected", prompt)
+        self.assertIn("SOURCE_ROLE: peer_reviewer", prompt)
+        self.assertIn("TARGET_ROLE: design_authority", prompt)
+        self.assertIn("SUMMARY: HOLD", prompt)
+        self.assertIn("EVIDENCE: D1 conflicts", prompt)
+        self.assertIn("DELIVERY: task_message:design-1", prompt)
+        self.assertIn("TARGET_SETTINGS: preserve", prompt)
+        self.assertIn("NEXT: authority_acceptance", prompt)
+        self.assertNotIn("RISKS_OR_LIMITS", prompt)
+        self.assertNotIn("PENDING_ITEMS", prompt)
+
     def test_delivery_plan_injects_type_and_uses_schema_order(self) -> None:
         packet = CONSTRUCTOR.delivery_plan_packet(**delivery_plan_fields())
         self.assertEqual(packet["UPDATE_TYPE"], "plan")
@@ -217,6 +276,56 @@ class PacketConstructorTests(unittest.TestCase):
         self.assertEqual(arguments["threadId"], "design-1")
         self.assertTrue(arguments["prompt"].startswith("DELIVERY_UPDATE\n"))
         self.assertNotIn("codex_delegation", arguments["prompt"])
+
+    def test_cli_launch_and_explicit_task_message_target(self) -> None:
+        launch = subprocess.run(
+            [
+                sys.executable,
+                "-B",
+                str(CONSTRUCTOR_PATH),
+                "--kind",
+                "write",
+                "--launch",
+                "-",
+            ],
+            input=json.dumps(write_launch_fields()),
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+        self.assertEqual(launch.returncode, 0, launch.stderr)
+        self.assertNotRegex(launch.stdout, r"(?m)^TASK_ID:")
+
+        report = subprocess.run(
+            [
+                sys.executable,
+                "-B",
+                str(CONSTRUCTOR_PATH),
+                "--kind",
+                "update",
+                "--task-message-to",
+                "design-1",
+                "-",
+            ],
+            input=json.dumps(
+                {
+                    "UPDATE_CLASS": "design_review",
+                    "STATUS": "final",
+                    "VERDICT": "PASS",
+                    "FINDINGS": "D1-D2 have no mapped blocker",
+                    "DESIGN_CHECKPOINT": FULL_SHA,
+                }
+            ),
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+        self.assertEqual(report.returncode, 0, report.stderr)
+        arguments = json.loads(report.stdout)
+        self.assertEqual(arguments["threadId"], "design-1")
+        self.assertIn("SUMMARY: PASS", arguments["prompt"])
 
     def test_cli_live_validation_fails_closed(self) -> None:
         fields = {

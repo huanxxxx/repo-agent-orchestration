@@ -18,7 +18,7 @@ Dispatch every ready, non-conflicting peer within capacity; this does not requir
 
 Send the minimum task capsule: objective, necessary context, boundary, acceptance, and report target. Leave repository history, full test matrices, and unrelated package status out unless they change the peer's decision.
 
-Every App-created user-visible task is a peer. Use `create_thread`, then `send_message_to_thread`; the controller is a coordination role, not its runtime parent. Internal tools - `spawn_agent`, `send_input`, agent send/follow-up, `wait_agent` - inherit the current path, return this turn, stay in parent-owned paths, and get no peer packet/tree/branch. Their id is never a peer `TASK_ID`; if synchronous return is unsuitable, use a peer.
+Every App-created user-visible task is a peer. Use `create_thread` with the complete initial packet; use `send_message_to_thread` only for later reports, decisions, or corrections. The controller is a coordination role, not its runtime parent. Internal tools - `spawn_agent`, `send_input`, agent send/follow-up, `wait_agent` - inherit the current path, return this turn, stay in parent-owned paths, and get no peer packet/tree/branch. Their id is never a peer `TASK_ID`; if synchronous return is unsuitable, use a peer.
 
 `OWNED_PATHS` says where a task may write, not that any change there is acceptable. Require the smallest sufficient implementation and a mapping from each acceptance condition to changed paths and evidence. Boundary expansion is `blocked`, not permission to redesign.
 
@@ -30,9 +30,9 @@ For review, prefer `root_readonly` for short stable-root review, `existing_workt
 
 For `app_default`, omit task model settings. For an explicit binding, use the host's advertised model catalog instead of guessing from the controller model name; submit real creation parameters and treat the binding as unverified until the host echoes the effective model.
 
-Call `create_thread` once per dispatch in the saved project with `environment: {type: "local"}`. Its id proves creation only. Reject projectless, foreign-project, queued/App-managed-worktree, and `clientThreadId`-only routes. Empty/ambiguous/timed-out/unparseable means `creation outcome unknown`: end the turn, then reconcile source, project, objective, tree, branch, and base. Unavailable/failed App routing is `PROTOCOL_BLOCKED`; never fall back to `spawn_agent`.
+Construct the full launch prompt first. Call `create_thread` once per dispatch in the saved project with a meaningful title and explicit `environment: {type: "local"}`; never rely on a worktree default. A returned `threadId` proves both creation and initial-prompt delivery. Reject projectless, foreign-project, queued/App-managed-worktree, and `clientThreadId`-only routes. Empty/ambiguous/timed-out/unparseable means `creation outcome unknown`: end the turn, then reconcile source, project, objective, tree, branch, and base. Unavailable/failed App routing is `PROTOCOL_BLOCKED`; never fall back to `spawn_agent`.
 
-Create inert first, not as continuation/correction/wait. Pass `--task-message` arguments unchanged to `send_message_to_thread`; App adds framing, so never embed `<codex_delegation>`. On failure/unknown, retain id/packet and reconcile next wake; never recreate/substitute. Start after route PASS.
+Never create `AWAIT_FORMAL_DISPATCH`, an inert bootstrap, or a title that hides the objective. Do not resend the launch packet after creation. On failure/unknown, retain the packet and reconcile next wake; never recreate/substitute. If the host requires a first progress check, use one bounded `wait_threads` call and end the turn regardless of result.
 
 ## Wake fast path
 
@@ -41,10 +41,10 @@ The task-start route gate and repository-profile read are once per task binding.
 1. Consume the wake-causing report/decision and already-delivered facts required for the same decision.
 2. Reuse the validated route and stable profile. Recheck only identity/baseline facts that changed or became ambiguous.
 3. Do not reread the full Skill/reference bundle, validator source, executor-only domain Skills, or implementation source merely to restate a frozen dispatch.
-4. Construct `--task-message` once; send its arguments unchanged.
+4. For a later message, construct `--task-message-to` once and send its arguments unchanged.
 5. Complete synchronous acceptance, dispatch, correction, integration, or reporting, then End the controller turn.
 
-After any successful send, end the turn; never inspect its target or another peer. A formal report to the contracted authority is the only allowed peer-to-peer message after read-only review or audit. Only a product-required first-dispatch `wait_threads` may run once; never call `wait_agent` for a peer. Any result ends the turn. No recursive waits or silence snapshots.
+After successful creation or any later send, end the turn after at most the host-required first-dispatch check; never inspect another peer. A formal report to the contracted authority is the only allowed peer-to-peer message after read-only review or audit. The first-dispatch `wait_threads` may run once; never call `wait_agent` for a peer. Any result ends the turn. No recursive waits or silence snapshots.
 
 Before continuing/correcting, inspect current top-level runtime status once. `idle` and `notLoaded` mean no live turn; persisted historical turn rows are not a live-turn inventory. Record stale metadata but do not block, archive/restore, interrupt, or ask the user to stop a historical turn. If the task is `active`, do not send a plain `continue`. Use current active-turn evidence to steer/stop; if current active-turn evidence identifies more than one live turn, recover all of them.
 
@@ -52,7 +52,7 @@ Before continuing/correcting, inspect current top-level runtime status once. `id
 
 Do not strand completed work only in a dirty worktree. Before a cross-turn pause, ownership handoff, formal review, or final, verify exact owned paths and create a local checkpoint commit. Internal subagents return paths/evidence; the owning task makes the combined commit. Mixed ownership stays unstaged and is reported exactly.
 
-`progress`, `blocked`, and `final` must use direct task-message with `TARGET_SETTINGS: preserve`. Task failure is not delivery failure. `progress` carries a decision fact; delivered terminal reports return control, and writer final names the checkpoint. A read-only audit final is a formal state update, not permission to contact other peers. A failed call leaves the packet undelivered; keep it plus a local failure note for next-wake recovery.
+`progress`, `blocked`, and `final` use direct task-message; `--task-message-to` derives the target, delivery marker, and preserved destination settings. Task failure is not delivery failure. `progress` carries a decision fact; delivered terminal reports return control, and writer final names the checkpoint. A read-only audit final is a formal state update, not permission to contact other peers. A failed call leaves the packet undelivered; keep it plus a local failure note for next-wake recovery.
 
 In `architected`, report only initial plan, decision-relevant milestones, reopen requests, and final evidence. `DECISION_REQUIRED: no` does not pause authorized work. A delivery controller may adjudicate implementation inside the frozen baseline, but it may not authorize itself to change the design; send `DESIGN_REOPEN_REQUEST` and pause only affected/dependent scope.
 
