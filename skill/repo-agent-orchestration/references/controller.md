@@ -8,6 +8,8 @@ Keep only product objective, current gate, dependency-ready set, active peers, a
 
 If continuity is enabled, update the sole rolling handoff only when scope, material state, acceptance, recovery coordinates, or next product step changes. App messages carry task reports; do not mirror agent mechanics.
 
+At a semantic checkpoint from [continuity.md](continuity.md), rotate a drifting controller instead of extending it. This is ownership replacement, not downstream dispatch: a confirmed launch transfers the accepted baseline and ends the predecessor without waiting. Otherwise emit `HANDOFF_READY` once; do not change owners, block, retry, or poll.
+
 ## Decide and dispatch
 
 Start with a scope challenge: what existing mechanism already solves this, what is the smallest useful slice, and which independent lanes can run without shared writes or acceptance coupling?
@@ -30,7 +32,7 @@ For review, prefer `root_readonly` for short stable-root review, `existing_workt
 
 For `app_default`, omit task model settings. For an explicit binding, use the host's advertised model catalog instead of guessing from the controller model name; submit real creation parameters and treat the binding as unverified until the host echoes the effective model.
 
-Construct the full launch prompt first. Call `create_thread` once per dispatch in the saved project with a meaningful title and explicit `environment: {type: "local"}`; never rely on a worktree default. A returned `threadId` proves both creation and initial-prompt delivery. Reject projectless, foreign-project, queued/App-managed-worktree, and `clientThreadId`-only routes. Empty/ambiguous/timed-out/unparseable means `creation outcome unknown`: end the turn, then reconcile source, project, objective, tree, branch, and base. Unavailable/failed App routing is `PROTOCOL_BLOCKED`; never fall back to `spawn_agent`.
+Construct the full launch prompt first. Call `create_thread` once per dispatch in the saved project with a meaningful title and explicit `environment: {type: "local"}`; never rely on a worktree default. A returned `threadId` proves both creation and initial-prompt delivery. Reject projectless, foreign-project, queued/App-managed-worktree, and `clientThreadId`-only routes. Empty/ambiguous/timed-out/unparseable means `creation outcome unknown`: end the turn, then reconcile source, project, objective, tree, branch, and base. Unavailable/failed App routing for a required peer boundary is `PROTOCOL_BLOCKED`; never fall back to `spawn_agent`. Optional fresh-context owner rotation instead follows the `HANDOFF_READY` fallback in [continuity.md](continuity.md).
 
 Never create `AWAIT_FORMAL_DISPATCH`, an inert bootstrap, or a title that hides the objective. Do not resend the launch packet after creation. On failure/unknown, retain the packet and reconcile next wake; never recreate/substitute. If the host requires a first progress check, use one bounded `wait_threads` call and end the turn regardless of result.
 

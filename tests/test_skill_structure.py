@@ -133,8 +133,8 @@ class SkillStructureTests(unittest.TestCase):
             SKILL / "scripts" / "validate_dispatch_contract.py"
         ).read_text(encoding="utf-8")
 
-        self.assertLessEqual(skill_path.stat().st_size, 8_800)
-        self.assertLessEqual(sum(path.stat().st_size for path in markdown), 45_000)
+        self.assertLessEqual(skill_path.stat().st_size, 9_300)
+        self.assertLessEqual(sum(path.stat().st_size for path in markdown), 49_000)
         self.assertIn("once per task/runtime binding", skill)
         self.assertIn("Reload only when route identity", skill)
         self.assertIn("Do not create temporary packet files", skill)
@@ -236,6 +236,31 @@ class SkillStructureTests(unittest.TestCase):
         self.assertIn("Do not create a package for short work", continuity)
         self.assertIn("HEAD of a clean task worktree", recovery)
         self.assertIn("user explicitly requests one", recovery)
+
+    def test_fresh_context_rotation_is_checkpointed_lightweight_and_best_effort(self) -> None:
+        skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+        continuity = (SKILL / "references" / "continuity.md").read_text(
+            encoding="utf-8"
+        )
+        controller = (SKILL / "references" / "controller.md").read_text(
+            encoding="utf-8"
+        )
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+        self.assertIn("Rotate context at a checkpoint", skill)
+        self.assertIn("cumulative token total is only a pressure signal", skill)
+        self.assertIn("Rotation replaces the owner", skill)
+        self.assertIn("FRESH_CONTEXT_HANDOFF", continuity)
+        self.assertIn("INVALIDATED_ROUTES:", continuity)
+        self.assertIn("NEXT_ACTION:", continuity)
+        self.assertIn("This capsule is plain continuity data, not a new packet kind", continuity)
+        self.assertIn("still an App runtime peer", continuity)
+        self.assertIn("not the full predecessor conversation", continuity)
+        self.assertIn("A confirmed `threadId` transfers ownership", continuity)
+        self.assertIn("This optional transport failure is not `PROTOCOL_BLOCKED`", continuity)
+        self.assertIn("ownership replacement, not downstream dispatch", controller)
+        self.assertIn("Optional fresh-context rotation emits `HANDOFF_READY`", readme)
+        self.assertIn("Do not add a packet kind merely to serialize that capsule", (SKILL / "references" / "contracts.md").read_text(encoding="utf-8"))
 
     def test_post_pass_continuity_closeout_does_not_reopen_review(self) -> None:
         skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
@@ -514,7 +539,7 @@ class SkillStructureTests(unittest.TestCase):
         self.assertNotIn("child packet", published)
         self.assertNotIn("child local final", published)
 
-    def test_peer_route_is_bound_to_app_tools_and_fails_closed(self) -> None:
+    def test_required_peer_route_is_bound_to_app_tools_and_fails_closed(self) -> None:
         skill = (SKILL / "SKILL.md").read_text(encoding="utf-8")
         controller = (SKILL / "references" / "controller.md").read_text(
             encoding="utf-8"
@@ -533,7 +558,10 @@ class SkillStructureTests(unittest.TestCase):
         self.assertIn("`wait_agent` are internal-only", skill)
         self.assertIn("never call `wait_agent` for a peer", controller)
         self.assertIn("`wait_threads` may run once", skill)
-        self.assertIn("failed routing is `protocol_blocked`, never `spawn_agent`", skill.casefold())
+        self.assertIn(
+            "failed routing for a required peer boundary is `protocol_blocked`, never `spawn_agent`",
+            skill.casefold(),
+        )
 
     def test_review_routing_covers_root_candidate_and_snapshot(self) -> None:
         contracts = (SKILL / "references" / "contracts.md").read_text(

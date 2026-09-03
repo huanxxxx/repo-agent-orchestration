@@ -45,6 +45,8 @@ python .agents/skills/repo-agent-orchestration/scripts/validate_dispatch_contrac
 
 The schema file is the field SSoT; the catalog below describes meaning only.
 
+The fresh-context owner rotation in [continuity.md](continuity.md) is not an ordinary peer dispatch. Its compact continuity capsule is the complete successor prompt, and the successor performs the normal task-start identity/repository checks before writing. Do not add a packet kind merely to serialize that capsule. Required peer boundaries and later task messages still use the constructor path above.
+
 ## Packet catalog
 
 The human task capsule is small: `OBJECTIVE`, `CONTEXT`, `BOUNDARY`, `ACCEPTANCE`, and `REPORT_TO`. The packet schema adds route, model, archive, and Git facts only so the boundary is reproducible.

@@ -149,7 +149,9 @@ def render_block(
     )
     failure = (
         "- If the Skill or a capability required for an independently scoped task is "
-        "unavailable, stop and report; do not collapse it into current-task execution."
+        "unavailable, stop and report; do not collapse it into current-task execution. "
+        "An optional fresh-context rotation may instead emit HANDOFF_READY and retain the "
+        "current owner; it is not PROTOCOL_BLOCKED."
     )
     return newline.join(
         (

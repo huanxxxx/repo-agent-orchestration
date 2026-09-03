@@ -1,4 +1,4 @@
-# Repository continuity packages
+# Continuity and fresh-context handoff
 
 Use a repository continuity package only when repository policy opts in. A repository may call it an execution package, task package, ADR bundle, topic folder, or another stable name. Keep its paths, tiers, templates, scaffolding, archive rules, and promotion destinations in that repository.
 
@@ -9,6 +9,34 @@ Use a repository continuity package only when repository policy opts in. A repos
 - The continuity package owns durable repository facts and recovery coordinates.
 
 None substitutes for another. A package is not an authorization token, workflow engine, task-message channel, agent roster, heartbeat, checkpoint schedule, or formal review verdict.
+
+## Rotate at a semantic checkpoint
+
+A fresh-context rotation replaces the active owner; it adds no authority layer, parallel lane, or worktree. The successor is still an App runtime peer, but owns the accepted objective instead of reporting to the predecessor.
+
+Rotate only after a coherent slice is committed, different work remains, and context shows drift: repeated rediscovery, conflict with a frozen decision, repeated correction, or substantial compaction. A cumulative token number alone never triggers rotation. Do not rotate during an edit, test, external action, mixed ownership, or ambiguous repository/worktree state.
+
+Write one concise capsule, linking evidence instead of copying history or logs:
+
+```text
+FRESH_CONTEXT_HANDOFF
+OBJECTIVE: <one current outcome>
+ACCEPTED_BASELINE: <accepted scope, criteria, or design checkpoint>
+RECOVERY_COORDINATES: repo=<path>; execution_path=<path>; branch=<branch>; head=<sha>
+COMPLETED_AND_EVIDENCE: <verified results and their locations>
+VALID_DECISIONS: <decisions still in force>
+INVALIDATED_ROUTES: <approaches the successor must not revive and why>
+NEXT_ACTION: <first concrete action>
+NON_GOALS_AND_AUTHORITY: <scope and action gates>
+UNRESOLVED: <facts or blockers still open>
+WORKTREE_STATE: <clean, or exact dirty/untracked owned paths>
+```
+
+If continuity is enabled, update its sole rolling handoff and commit any continuity-only change without reopening accepted review. Otherwise carry the capsule in the launch or final message; create no package. This capsule is plain continuity data, not a new packet kind or validator schema.
+
+With explicit task-creation authority, launch once in the same project with `local`. A confirmed `threadId` transfers ownership: the predecessor ends without waiting, while the successor verifies repository, path, branch, HEAD, and state, then reads only the capsule and cited current surfaces, not the full predecessor conversation.
+
+Without a confirmed id, no transfer occurred. Emit `HANDOFF_READY` plus the capsule once; do not retry, poll, invent a peer id, or use an internal subagent as a persistent replacement. This optional transport failure is not `PROTOCOL_BLOCKED`; the current task remains owner and may take one bounded next slice when uninterrupted progress was requested. A phantom task must fail its normal route gate before writing.
 
 ## Route and maintain
 

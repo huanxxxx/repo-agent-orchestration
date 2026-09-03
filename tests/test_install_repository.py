@@ -118,6 +118,8 @@ class RepositoryInstallerTests(unittest.TestCase):
         self.assertIn("changes architecture, data contracts", agents)
         self.assertIn("independent task ownership", agents)
         self.assertIn("do not collapse it into current-task execution", agents)
+        self.assertIn("HANDOFF_READY", agents)
+        self.assertIn("it is not PROTOCOL_BLOCKED", agents)
 
     def test_preserves_existing_agents_content_and_updates_only_managed_block(self) -> None:
         temporary, repo = self.make_repo()

@@ -21,6 +21,12 @@ Read only the needed reference: [architected.md](references/architected.md), [co
 
 For routine dispatch, use the CLI; do not inspect protocol source, enumerate schemas, load executor-only Skills, or walk implementation. Inspect deeper only for planning, acceptance, recovery, or defects.
 
+## Rotate context at a checkpoint
+
+A cumulative token total is only a pressure signal. At a recoverable commit, if a different slice remains or facts are going stale, follow [continuity.md](references/continuity.md) for fresh-context rotation; never rotate mid-operation.
+
+Rotation replaces the owner. A confirmed, explicitly authorized successor ends the predecessor without waiting; failed optional delivery emits `HANDOFF_READY` once and retains the owner - no `PROTOCOL_BLOCKED`, retry, poll, or internal substitute.
+
 ## Choose authority
 
 Use `direct` for short current-task work, `delivery` for a frozen outcome needing independent implementation/review/recovery/parallel work, and `architected` for architecture, data contracts, core workflows, product boundaries, multiple packages, material direction choices, or an explicitly requested design authority.
@@ -39,12 +45,12 @@ An App-created user-visible task is a peer. `create_thread` carries its complete
 2. Send a small task capsule: `OBJECTIVE`, `CONTEXT`, `BOUNDARY`, `ACCEPTANCE`, `REPORT_TO`. The packet schema adds route, model, archive, and Git facts; those mechanics must not become the task itself.
 3. Require the smallest change that satisfies `OBJECTIVE`, `ACCEPTANCE`, and `REQUIRED_TESTS`. Every changed path must have a concrete acceptance justification. Once the required acceptance and tests pass, stop implementation.
 4. Give a ready writer one local branch/tree and exclusive paths. Internal subagents inherit it; that task verifies and commits the combined checkpoint. Reject projectless/foreign-project tasks. Create peers in the saved project with `environment: {type: "local"}` and the repository-local execution path, never an App-managed tree.
-5. Build the full launch prompt, then call `create_thread` once with a meaningful title, saved project, explicit `environment: {type: "local"}`, and that prompt. A returned `threadId` proves creation and initial delivery; never create `AWAIT_FORMAL_DISPATCH` or resend the launch. A host-required first check calls `wait_threads` once, then yields. Ambiguous, queued-worktree, or `clientThreadId`-only creation is phantom; reconcile next wake. Failed routing is `PROTOCOL_BLOCKED`, never `spawn_agent`.
+5. Build the full launch prompt, then call `create_thread` once with a meaningful title, saved project, explicit `environment: {type: "local"}`, and that prompt. A returned `threadId` proves creation and initial delivery; never create `AWAIT_FORMAL_DISPATCH` or resend the launch. A host-required first check calls `wait_threads` once, then yields. Ambiguous, queued-worktree, or `clientThreadId`-only creation is phantom; reconcile next wake. Failed routing for a required peer boundary is `PROTOCOL_BLOCKED`, never `spawn_agent`; optional rotation uses `HANDOFF_READY`.
 6. For `app_default`, omit `model` and `thinking`; explicit bindings use actual task parameters only after host discovery. Reports must omit `model` and `thinking` and preserve destination settings.
 7. Use the exact execution path; the CLI proves paths match Git registry, branch, and commit. Root status is compared with its baseline, not forced clean.
 8. Before a cross-turn pause, ownership handoff, formal review, or `final`, verify and locally commit coherent owned output. Never stage another owner's files; if unsafe, report exact dirty paths and recovery action.
 
-## Cross a task boundary once
+## Cross a required peer boundary once
 
 From the repository root, build a peer's complete initial prompt with the installed Skill:
 
