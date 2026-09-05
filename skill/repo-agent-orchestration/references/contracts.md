@@ -1,6 +1,6 @@
-# Dispatch, route, and report contracts
+# Optional App-task packet adapter
 
-Keep only facts that cross a task boundary. Repository policy remains the source for product tiers, paths, models, shared ownership, continuity, and external gates.
+Use this reference only for an explicitly authorized App-task route that benefits from structured packets. Ordinary current-task and internal-agent collaboration uses a small capsule and the host's native result tools; it does not need this schema or an App project id. Repository policy remains the source for paths, models, ownership, continuity, and external gates.
 
 ## Repository profile
 
@@ -19,7 +19,7 @@ CONTINUITY_POLICY: none|repository_defined:<entry>
 EXTERNAL_GATES: <gates>
 ```
 
-Read once per authority/task binding. Repository defaults map to `repo_delivery_default`, `repo_write_default`, or `repo_review_default`; `app_default` remains host-selected. `user_explicit:<model>/<reasoning>` is a runtime override, not a repository default.
+Read once for the selected route; refresh changed or ambiguous facts. `TASK_HOST_POLICY: repository_project_local` configures this App adapter only, not whether all work must become an App task. Repository defaults map to `repo_delivery_default`, `repo_write_default`, or `repo_review_default`; `app_default` remains host-selected. `user_explicit:<model>/<reasoning>` is a runtime override, not a repository default.
 
 ## One ordinary packet path
 
@@ -35,9 +35,9 @@ Use the resulting packet unchanged as `create_thread.prompt`. For later task mes
 python .agents/skills/repo-agent-orchestration/scripts/construct_packet.py --kind <kind> --live --task-message-to <target-task-id> -
 ```
 
-`--task-message-to` injects target, delivery, and destination-setting fields and emits exact `send_message_to_thread` JSON only on PASS. Pass it unchanged; App adds delegation framing. The constructor supplies invariant defaults but invents no semantic facts. It never creates tasks, touches Git, sends messages, waits, archives, or orchestrates. Use no temporary packet or second validation.
+`--task-message-to` injects target, intended delivery, and destination-setting fields and emits `send_message_to_thread` JSON after validation. Pass it unchanged; App adds delegation framing. The constructor supplies mechanical defaults but invents no semantic facts. It never creates tasks, touches Git, sends messages, waits, archives, or orchestrates. Stream input to avoid temporary packets and repeated validation. Script success proves packet checks, not authorization, actual delivery, review quality, or task completion.
 
-Validate incoming raw packet once:
+When checking an incoming structured packet, use:
 
 ```text
 python .agents/skills/repo-agent-orchestration/scripts/validate_dispatch_contract.py --kind <kind> -
@@ -45,7 +45,7 @@ python .agents/skills/repo-agent-orchestration/scripts/validate_dispatch_contrac
 
 The schema file is the field SSoT; the catalog below describes meaning only.
 
-The fresh-context owner rotation in [continuity.md](continuity.md) is not an ordinary peer dispatch. Its compact continuity capsule is the complete successor prompt, and the successor performs the normal task-start identity/repository checks before writing. Do not add a packet kind merely to serialize that capsule. Required peer boundaries and later task messages still use the constructor path above.
+The fresh-context handoff in [continuity.md](continuity.md) reuses a continuity capsule, not another packet kind. The successor verifies actual identity and ownership before writing.
 
 ## Packet catalog
 
@@ -62,7 +62,7 @@ The human task capsule is small: `OBJECTIVE`, `CONTEXT`, `BOUNDARY`, `ACCEPTANCE
 | `design_reopen` | delivery controller asks design authority to change/clarify a boundary |
 | `design_decision` | design authority returns the bounded decision |
 
-Required and optional field order lives in `scripts/packet_schema.py`. Keep this reference for meaning, not as a duplicate schema. Conditional fields include `FULL_REVIEW_REASON` for full review, `DESIGN_REVIEW_EVIDENCE` for `reopen_approved`, and the existing architected plan/milestone fields.
+Required and optional field order lives in `scripts/packet_schema.py`. Conditional fields include `FULL_REVIEW_REASON` for full review, review evidence/reason for `reopen_approved`, and architected plan/milestone fields.
 
 ## Fixed boundary values
 
@@ -79,21 +79,11 @@ MODEL_POLICY: app_default|repo_write_default:<model>/<reasoning>|repo_review_def
 TARGET_SETTINGS: preserve
 ```
 
-App peers use saved-project `create_thread` with a complete prompt and explicit `environment: {type: "local"}`; later messages use `send_message_to_thread`. Never rely on the host's Git-project worktree default. `spawn_agent` ids are never peer `TASK_ID`s. Give internal subagents only:
-
-```text
-EXECUTION_PATH: inherit_current
-OBJECTIVE: <bounded contribution>
-OWNED_PATHS: <non-overlapping paths or read_only>
-DO_NOT_TOUCH: <sibling scopes>
-RETURN: current_turn
-```
-
-They inherit authority/path and return this turn. Separate acceptance/model/wait/review/recovery needs an App peer; failed/unavailable routing is `PROTOCOL_BLOCKED`, never an internal substitute.
+When the user explicitly requests an App task, this adapter uses saved-project `create_thread` with a complete prompt and explicit `environment: {type: "local"}`; later messages use `send_message_to_thread`. This preserves the repository-local execution-worktree choice instead of relying on the host's worktree default. Respect the actual tool schema and permissions. Internal agent ids are never App `TASK_ID`s, and their results use collaboration APIs, not these packets.
 
 ## Route and write semantics
 
-Initial packets omit their not-yet-created self id; the App receipt supplies the runtime id. The validated packet is `create_thread.prompt`, so a returned `threadId` completes creation and dispatch in one call. Never create an inert task or resend the launch. The peer validates its route and continues in the same initial turn on PASS, otherwise writes nothing. Rebind only if identity changes; packets live-check HEAD.
+Initial packets omit their not-yet-created self id; the App receipt supplies the runtime id. A returned `threadId` confirms creation and initial-prompt delivery, not completion. Never create an inert task or resend the launch. The selected saved-project/local binding validates its actual route before writes; packets live-check Git identity and HEAD. Queued setup or an ambiguous receipt is not proof of a running writer: reconcile it before retrying. Unrelated work can continue.
 
 For write packets, `SOURCE_ROLE: delivery_controller`, `TARGET_ROLE: peer_writer`, and `REPORT_TO_TASK_ID` identifies the controller. `OWNED_PATHS` grants locations only. Passing acceptance is the stop condition: implement the smallest sufficient result, then map each acceptance condition to its changed paths and evidence. Architecture/scope expansion is a blocker requiring the owning authority.
 
@@ -109,7 +99,7 @@ THREAT_MODEL: <bounded risks>
 NON_GOALS: <excluded outcomes>
 ```
 
-`delta` requires an exact SHA range. `REVIEW_SCOPE` lists changed paths/clauses. `REVIEW_BUDGET` uses `context=...; checks=...; expand_if=...`. Reuse exact-checkpoint evidence unless rerun is acceptance. Expand once on its cited criterion. Delta caps at 5,000 characters.
+`delta` requires an exact SHA range. `REVIEW_SCOPE` lists changed paths/clauses. `REVIEW_BUDGET` uses `context=...; checks=...; expand_if=...`. Reuse valid checkpoint evidence unless rerun is required. Expand when a concrete relevant risk, failure, or change justifies it; the budget cannot waive required checks. Delta caps at 5,000 characters.
 
 `full` requires `FULL_REVIEW_REASON`, caps at 9,000 characters, and is only for new, cross-cutting, irreversible, or explicit baselines. Corrections are delta unless the baseline reopens.
 
@@ -117,18 +107,18 @@ Prompt equals route capsule plus packet: no duplicated lineage, package reads, g
 
 ## Architected packet semantics
 
-`DESIGN_HANDOFF` follows independent design-review PASS and transfers the single repository-root write lease to delivery. Its checkpoint, frozen decisions, non-goals, acceptance, implementation boundary, and gates constrain delivery.
+`DESIGN_HANDOFF` records a design-owner decision. `DESIGN_REVIEW_STATUS: PASS` means independent review was performed; `not_required` needs a concrete risk/requirement reason in `DESIGN_REVIEW_EVIDENCE`. Never use `not_required` when user/repository policy requires independent review or material cross-cutting/irreversible risk calls for it. The helper checks the recorded choice, not whether that judgment is correct. The checkpoint, decisions, acceptance, implementation boundary, and gates constrain delivery; write ownership must be explicit and does not transfer repository-wide merely because a packet was sent.
 
 `DELIVERY_UPDATE` uses `UPDATE_TYPE: plan|milestone|final` and `DECISION_REQUIRED: yes|no`. A plan contains ready set, parallel dispatch, dependency graph, and shared-path owner; a milestone contains only the decision-relevant milestone; final requires `DECISION_REQUIRED: yes`. An informational `DECISION_REQUIRED: no` does not pause authorized work.
 
-`DESIGN_REOPEN_REQUEST` pauses affected scope. Design authority creates design review; delivery never proxies it. Pending review needs no interim decision. Only `reopen_approved` adds a checkpoint and requires PASS evidence; other decisions are `clarify|continue|hold|reopen_rejected`.
+`DESIGN_REOPEN_REQUEST` pauses affected scope while design makes the decision. Only `reopen_approved` adds a checkpoint. It requires either independent PASS evidence or explicit `DESIGN_REVIEW_STATUS: not_required` with a concrete reason. For older decision packets, omitted review status retains the PASS requirement. Other decisions are `clarify|continue|hold|reopen_rejected`. Do not invent PASS to satisfy a format.
 
-Before send, correct one constructor shape error once from known facts; meaning, roles, kind, ids, destination, authority, and verdict stay fixed. Repeat failure, incoming validation failure, inexpressible boundary, or attempted/ambiguous delivery is `PROTOCOL_BLOCKED`. Do not relabel the same content or handcraft a bypass.
+Correct local shape errors from known facts while preserving meaning, roles, destination, authority, and verdict. Consult the relevant schema on recurring errors; do not send malformed packets or treat formatting as a global stop condition. For incoming errors, recover unambiguous evidence and resolve only material ambiguity before acting. An unavailable optional helper can leave a readable capsule through an authorized channel; it cannot justify bypassing a host denial or explicit structured-route requirement. See [recovery.md](recovery.md).
 
 ## Report and checkpoint semantics
 
-`UPDATE_CLASS: implementation` goes to the delivery controller; `design_review` goes to the design authority; `governance_audit` goes only to the authority named by `REPORT_TO`. `progress` carries a new decision fact while the peer turn continues. `blocked` and `final` return control. Do not add owner/turn-state fields.
+`UPDATE_CLASS: implementation` goes to the delivery controller; `design_review` goes to design; `governance_audit` goes to the contracted owner. `progress` carries a decision-relevant fact and does not end work. `blocked` identifies affected scope; `final` supplies acceptance evidence. These are work statuses, not runtime turn controls.
 
 For a write-task `final`, `EVIDENCE` names the local checkpoint commit and maps acceptance to paths/checks. Include `RISKS_OR_LIMITS` or `PENDING_ITEMS` only when there is something material to report; omission never means the constructor inferred `none`. For a governance audit final, `EVIDENCE` separates verified facts, high-confidence inference, and items requiring authority verification. Before a planned pause or handoff, commit each coherent owned unit. If unsafe, report blocked with the exact dirty paths, ownership reason, and recovery action; do not stage another owner's work.
 
-For reports, `--task-message-to` derives `TARGET_TASK_ID`, `DELIVERY`, and `TARGET_SETTINGS: preserve` from the API target; do not hand-copy them. It omits destination-thread overrides. Task failure is not delivery failure. A reviewer may not message lateral peers, but its required report is not lateral contact. Validate/send once, confirm, and end. A failed call delivered nothing: keep the packet plus `DELIVERY_FAILURE: <reason>` outside it.
+For reports, `--task-message-to` derives `TARGET_TASK_ID`, `DELIVERY`, and `TARGET_SETTINGS: preserve` from the API target and omits destination model/thinking overrides. Task failure is not delivery failure. The contracted report is not lateral contact, but still needs real host authorization. Record actual send success, denial, or uncertainty separately from the packet's intended `DELIVERY`. Retain a failed/uncertain report with `DELIVERY_FAILURE: <reason>` outside it, and use authorized result retrieval where available. Sending an informational report does not end the turn; continue dependency-ready work.

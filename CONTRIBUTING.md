@@ -8,6 +8,8 @@ Contributions should preserve the distinction between reusable orchestration beh
 2. Keep concrete repository paths, model selections, shared write surfaces, and external gates in examples rather than hard-coding them into the skill.
 3. Add or update tests for every validator behavior change.
 4. Avoid adding task state machines, authorization receipts, or product-specific execution packages to the reusable skill.
+5. Separate core collaboration guidance from optional App transport. Preserve explicit independence requirements and real authority/ownership boundaries while allowing unaffected work to continue.
+6. Test observable behavior or mechanical invariants rather than requiring policy sentences verbatim. For workflow changes, replay relevant `examples/behavioral/cases.json` inputs with a fresh evaluator and withhold the expected outcomes; distinguish decision-only exercises from real tool execution.
 
 ## Validation
 

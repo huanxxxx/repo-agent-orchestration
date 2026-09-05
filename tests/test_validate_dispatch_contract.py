@@ -817,6 +817,69 @@ NEXT: recover on the next real controller wake
         approved = approved_without_review + "\nDESIGN_REVIEW_EVIDENCE: review-2 PASS against the frozen delta\n"
         self.assertEqual(self.validate("design_decision", approved), [])
 
+    def test_design_handoff_can_record_review_not_required_with_reason(self) -> None:
+        fields = VALIDATOR.parse_fields(VALID_DESIGN_HANDOFF)
+        fields["DESIGN_REVIEW_STATUS"] = "not_required"
+        fields["DESIGN_REVIEW_EVIDENCE"] = (
+            "reversible documentation-only adjustment; no independent review requirement; "
+            "owner verified unchanged runtime and acceptance semantics"
+        )
+        self.assertEqual(VALIDATOR.validate("design_handoff", fields), [])
+
+    def test_not_required_needs_an_explicit_concrete_reason(self) -> None:
+        for kind, source in (
+            ("design_handoff", VALID_DESIGN_HANDOFF),
+            ("design_decision", VALID_DESIGN_DECISION),
+        ):
+            for evidence in (None, "", "none", "N/A", "pending", "<reason>"):
+                with self.subTest(kind=kind, evidence=evidence):
+                    fields = VALIDATOR.parse_fields(source)
+                    fields["DESIGN_REVIEW_STATUS"] = "not_required"
+                    if kind == "design_decision":
+                        fields["DECISION"] = "reopen_approved"
+                        fields["UPDATED_DESIGN_CHECKPOINT"] = NEW_SHA
+                    if evidence is None:
+                        fields.pop("DESIGN_REVIEW_EVIDENCE", None)
+                    else:
+                        fields["DESIGN_REVIEW_EVIDENCE"] = evidence
+                    self.assertIn(
+                        "not_required requires a concrete reason in DESIGN_REVIEW_EVIDENCE",
+                        VALIDATOR.validate(kind, fields),
+                    )
+
+    def test_design_reopen_explicit_review_choice_preserves_checkpoint_rules(self) -> None:
+        fields = VALIDATOR.parse_fields(VALID_DESIGN_DECISION)
+        fields.update(
+            DECISION="reopen_approved",
+            UPDATED_DESIGN_CHECKPOINT=NEW_SHA,
+            DESIGN_REVIEW_STATUS="not_required",
+            DESIGN_REVIEW_EVIDENCE="bounded reversible adjustment; owner checked compatibility; no review mandate",
+        )
+        self.assertEqual(VALIDATOR.validate("design_decision", fields), [])
+        fields["UPDATED_DESIGN_CHECKPOINT"] = FULL_SHA
+        self.assertIn(
+            "reopen_approved requires a new UPDATED_DESIGN_CHECKPOINT",
+            VALIDATOR.validate("design_decision", fields),
+        )
+
+    def test_review_status_is_not_silently_inferred_from_empty_or_unknown_values(self) -> None:
+        for status in ("", "skipped", "pending", "failed"):
+            with self.subTest(status=status):
+                fields = VALIDATOR.parse_fields(VALID_DESIGN_HANDOFF)
+                fields["DESIGN_REVIEW_STATUS"] = status
+                self.assertIn(
+                    "DESIGN_REVIEW_STATUS must be PASS or not_required",
+                    VALIDATOR.validate("design_handoff", fields),
+                )
+
+    def test_review_status_cannot_authorize_a_non_reopen_decision(self) -> None:
+        fields = VALIDATOR.parse_fields(VALID_DESIGN_DECISION)
+        fields["DESIGN_REVIEW_STATUS"] = "not_required"
+        self.assertIn(
+            "only reopen_approved may declare DESIGN_REVIEW_STATUS",
+            VALIDATOR.validate("design_decision", fields),
+        )
+
     def test_obsolete_ceremony_fields_are_rejected(self) -> None:
         write = VALID_WRITE + "\nCONTROLLER_AFTER_DISPATCH: event_driven_yield\nNO_REPORT_CHECK_AFTER: current_turn_once\n"
         report = VALID_FINAL + "\nTURN_STATE: ending\nBLOCKER_OR_NEXT: owner=controller\n"

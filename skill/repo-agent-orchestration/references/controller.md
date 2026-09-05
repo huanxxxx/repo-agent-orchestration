@@ -1,83 +1,51 @@
-# Delivery controller workflow
+# Delivery controller
 
-The delivery controller is a context router and acceptance owner. In `delivery`, it owns the accepted objective and baseline. In `architected`, operate from a validated `DESIGN_HANDOFF`, preserve its checkpoint, and report to the design authority. Do not absorb the design-authority role.
+Own the outcome, dependencies, acceptance, integration, and result delivery. In `architected`, preserve the design authority's baseline and return decision-relevant evidence to it. Otherwise the current owner can make ordinary design and implementation decisions within the user's scope.
 
-## Hot state
+## Plan only enough to act
 
-Keep only product objective, current gate, dependency-ready set, active peers, acceptance baseline, next product step, and, in `architected`, design checkpoint/task id. Keep the initial controller model/settings; if runtime metadata shows unexplained drift, stop routing and report controller-model drift.
+Keep the objective, acceptance, non-goals, next useful step, ready work, dependencies, and write ownership clear. Ask what existing mechanism already solves the problem and which smallest useful slice can demonstrate the intended result.
 
-If continuity is enabled, update the sole rolling handoff only when scope, material state, acceptance, recovery coordinates, or next product step changes. App messages carry task reports; do not mirror agent mechanics.
+Choose responsibilities before tools. A bounded writer, independent reviewer, or investigator may be an internal agent. A separate App lifecycle requires explicit user task-creation authority and host support. Use only necessary fresh-context inputs for independent judgment; do not supply the expected verdict. Shared filesystem access still requires exclusive paths and one integration owner.
 
-At a semantic checkpoint from [continuity.md](continuity.md), rotate a drifting controller instead of extending it. This is ownership replacement, not downstream dispatch: a confirmed launch transfers the accepted baseline and ends the predecessor without waiting. Otherwise emit `HANDOFF_READY` once; do not change owners, block, retry, or poll.
+Delegate all ready, separable contributions within capacity when it saves time or improves quality. Do not wait for a second instruction to parallelize already-authorized delegation. Serialize for an actual dependency, overlapping writes, acceptance coupling, or resource constraint. Sending the first assignment does not cancel the rest of the ready set.
 
-## Decide and dispatch
+The task capsule needs objective, relevant inputs, scope, acceptance/checks, and report destination. `OWNED_PATHS` limits where work can happen; it is not permission for arbitrary changes there. Prefer narrow call-chain evidence over whole-repository reading. No packet construction, project-id lookup, or worktree creation is required merely because a subagent is used.
 
-Start with a scope challenge: what existing mechanism already solves this, what is the smallest useful slice, and which independent lanes can run without shared writes or acceptance coupling?
+## Filesystem and model choices
 
-For each candidate, ask whether authority/dependencies are ready, writes are exclusive/read-only, and the outcome needs separate context, acceptance, cross-turn wait, model, branch, recovery, design, audit, or formal review. A yes makes it a peer; otherwise use the current task or bounded internal subagent. Agent count alone is not a task boundary.
+Verify the actual Git root, branch/HEAD, status baseline, and owned paths before writing. Internal contributions use the owner's execution tree with disjoint scopes; do not create a tree per helper. Separately running App writers use separate registered repository-local branches/worktrees under the repository profile. Check their exact current base rather than trusting remembered paths or deleted branches.
 
-Dispatch every ready, non-conflicting peer within capacity; this does not require a separate user request to parallelize. Record the concrete dependency, shared write, acceptance coupling, or external gate behind serialization. Recompute only after a decision-relevant event.
+Read-only review can use a stable root or frozen candidate. Pause writes to the candidate while it is reviewed; use a detached snapshot when a stable historical/test-running filesystem is needed. A reviewer does not need an extra writable branch merely to be independent.
 
-Send the minimum task capsule: objective, necessary context, boundary, acceptance, and report target. Leave repository history, full test matrices, and unrelated package status out unless they change the peer's decision.
+For `app_default`, omit model and reasoning overrides. Honor an explicit supported binding through the host's actual parameters; do not guess availability from the owner's model. Messages reporting results omit destination model/thinking overrides. If actual metadata differs, report the fact without attributing causality from unrelated task rows.
 
-Every App-created user-visible task is a peer. Use `create_thread` with the complete initial packet; use `send_message_to_thread` only for later reports, decisions, or corrections. The controller is a coordination role, not its runtime parent. Internal tools - `spawn_agent`, `send_input`, agent send/follow-up, `wait_agent` - inherit the current path, return this turn, stay in parent-owned paths, and get no peer packet/tree/branch. Their id is never a peer `TASK_ID`; if synchronous return is unsuitable, use a peer.
+For an authorized App task use [contracts.md](contracts.md). That adapter's saved-project/local policy applies to App routing, not to ordinary current-task work or internal agents. A profile is not permission to call an unavailable or restricted API.
 
-`OWNED_PATHS` says where a task may write, not that any change there is acceptable. Require the smallest sufficient implementation and a mapping from each acceptance condition to changed paths and evidence. Boundary expansion is `blocked`, not permission to redesign.
+## Continue according to dependencies
 
-## Prepare one route
+On a new result, decision, or user request, refresh the facts it changes and act on newly ready work. Reuse stable routing and acceptance evidence. Do not repeatedly load every reference, packet script, executor Skill, or package document just to send an already-defined assignment.
 
-Create one repository-local branch/worktree only after its peer is ready. Validate path, base, branch, registry, and status with the one-command packet path in [contracts.md](contracts.md). Never treat a remembered task path as current proof.
+Dispatch other ready contributions, do useful local work, and collect relevant completed results. An informational report does not pause authorized work. A blocking dependency pauses only affected/dependent actions; independent authorized work may continue.
 
-For review, prefer `root_readonly` for short stable-root review, `existing_worktree` for a frozen candidate, and `detached_snapshot` only for long, test-running, or historical review. Pause a writer while its frozen worktree is reviewed. The reviewer creates no tree. Design review is dispatched only by design authority.
+When a result is genuinely needed, use the matching host wait/result tool with a bounded wait. Internal-agent ids belong to collaboration APIs; App ids belong to App APIs. After a meaningful result, proceed with acceptance or the next stage. For an App task with a supported future wake, yield once nothing useful remains. Silence is not a reason for repeated list/read/status calls. See [recovery.md](recovery.md) if results cannot reach the owner.
 
-For `app_default`, omit task model settings. For an explicit binding, use the host's advertised model catalog instead of guessing from the controller model name; submit real creation parameters and treat the binding as unverified until the host echoes the effective model.
+Do not send duplicate assignments or a plain continuation to already active work. If new evidence requires correction, use the host-supported steering mechanism and existing task identity. Historical `inProgress` rows do not prove a live turn; use current runtime facts when a lifecycle decision actually needs them.
 
-Construct the full launch prompt first. Call `create_thread` once per dispatch in the saved project with a meaningful title and explicit `environment: {type: "local"}`; never rely on a worktree default. A returned `threadId` proves both creation and initial-prompt delivery. Reject projectless, foreign-project, queued/App-managed-worktree, and `clientThreadId`-only routes. Empty/ambiguous/timed-out/unparseable means `creation outcome unknown`: end the turn, then reconcile source, project, objective, tree, branch, and base. Unavailable/failed App routing for a required peer boundary is `PROTOCOL_BLOCKED`; never fall back to `spawn_agent`. Optional fresh-context owner rotation instead follows the `HANDOFF_READY` fallback in [continuity.md](continuity.md).
+## Accept and report
 
-Never create `AWAIT_FORMAL_DISPATCH`, an inert bootstrap, or a title that hides the objective. Do not resend the launch packet after creation. On failure/unknown, retain the packet and reconcile next wake; never recreate/substitute. If the host requires a first progress check, use one bounded `wait_threads` call and end the turn regardless of result.
+Use an independent reviewer when required by the user/repository or justified by correctness risk. Delta review gets relevant contracts, raw diff/evidence, non-goals, required checks, and a reason to expand if needed. Reuse the reviewer for ordinary correction; choose fresh context when judgment has become anchored or a genuinely independent second opinion is needed. No fixed number of review rounds substitutes for judging the blocker.
 
-## Wake fast path
+Verify actual changes and required checks. Stop expansion when acceptance passes. Distinguish targeted, full-repository, protected-environment, and production evidence. If repeated corrections change the target or repeat stale assumptions, re-establish the current acceptance and use [continuity.md](continuity.md) at a safe boundary, even on the same slice.
 
-The task-start route gate and repository-profile read are once per task binding. On later wakes:
+Before a planned pause, handoff, formal review, or final, locally commit coherent owned output. Internal agents return changed paths/checks; the owner verifies and commits the combined unit. Preserve mixed/untracked work and describe any unresolved ownership precisely.
 
-1. Consume the wake-causing report/decision and already-delivered facts required for the same decision.
-2. Reuse the validated route and stable profile. Recheck only identity/baseline facts that changed or became ambiguous.
-3. Do not reread the full Skill/reference bundle, validator source, executor-only domain Skills, or implementation source merely to restate a frozen dispatch.
-4. For a later message, construct `--task-message-to` once and send its arguments unchanged.
-5. Complete synchronous acceptance, dispatch, correction, integration, or reporting, then End the controller turn.
+Reports carry progress that changes a decision, a genuine blocker, or final evidence. Include the checkpoint, acceptance evidence, limits, and required next action. Use internal result delivery for internal agents; use the selected authorized App channel for App tasks. A failed message is not delivered, but it does not erase the completed result or stop unrelated work.
 
-After successful creation or any later send, end the turn after at most the host-required first-dispatch check; never inspect another peer. A formal report to the contracted authority is the only allowed peer-to-peer message after read-only review or audit. The first-dispatch `wait_threads` may run once; never call `wait_agent` for a peer. Any result ends the turn. No recursive waits or silence snapshots.
+In `architected`, send the initial plan, material milestones, design questions, and final evidence to design. A `DECISION_REQUIRED: no` report permits continued work inside the frozen baseline. A design conflict needs a bounded reopen decision and pauses only affected scope. Final implementation evidence still needs design-consistency acceptance by the design authority.
 
-Before continuing/correcting, inspect current top-level runtime status once. `idle` and `notLoaded` mean no live turn; persisted historical turn rows are not a live-turn inventory. Record stale metadata but do not block, archive/restore, interrupt, or ask the user to stop a historical turn. If the task is `active`, do not send a plain `continue`. Use current active-turn evidence to steer/stop; if current active-turn evidence identifies more than one live turn, recover all of them.
+## Close once
 
-## Checkpoint and reports
+Record accepted status in the repository's sole rolling handoff when opted in. A continuity-only commit does not invalidate the reviewed checkpoint; do not create another review just to record PASS. Normative changes require the applicable acceptance/design decision.
 
-Do not strand completed work only in a dirty worktree. Before a cross-turn pause, ownership handoff, formal review, or final, verify exact owned paths and create a local checkpoint commit. Internal subagents return paths/evidence; the owning task makes the combined commit. Mixed ownership stays unstaged and is reported exactly.
-
-`progress`, `blocked`, and `final` use direct task-message; `--task-message-to` derives the target, delivery marker, and preserved destination settings. Task failure is not delivery failure. `progress` carries a decision fact; delivered terminal reports return control, and writer final names the checkpoint. A read-only audit final is a formal state update, not permission to contact other peers. A failed call leaves the packet undelivered; keep it plus a local failure note for next-wake recovery.
-
-In `architected`, report only initial plan, decision-relevant milestones, reopen requests, and final evidence. `DECISION_REQUIRED: no` does not pause authorized work. A delivery controller may adjudicate implementation inside the frozen baseline, but it may not authorize itself to change the design; send `DESIGN_REOPEN_REQUEST` and pause only affected/dependent scope.
-
-## Review, integrate, close
-
-Freeze acceptance IDs/threat/non-goals. `delta` uses exact range/paths/clauses/checks, `expand_if`, reusable evidence; `full` needs a reason. Severity alone never grants scope. Correction stays delta-only unless baseline reopens. If binding/class/model unchanged, reuse the original `idle`/`notLoaded` reviewer: `fresh` means a new range/judgment, not a new task. Send one compact `send_message_to_thread` packet with findings, paths, and closure checks; reference baseline and do not resend binding. Create new only if original unavailable/archived, routing changed, conflict/second opinion is explicit, or baseline reopened. Map criteria/evidence; two new-blocker rounds trigger scope-drift audit.
-
-Verify actual diff/commit, owned paths, checks, evidence limits, unresolved findings, and root-baseline drift. Passing acceptance is the stop condition. In `architected`, send final evidence with `DECISION_REQUIRED: yes`; design consistency remains with the design authority.
-
-After PASS, classify any proposed closeout diff as `continuity_only` or `normative`. A continuity-only diff records existing state on repository-allowlisted paths; commit it under the current root-write lease. Never dispatch a docs-only reviewer merely to record PASS. Normative changes reopen the applicable baseline.
-
-Archive only after acceptance and after correction/in-flight work is absent. Call `set_thread_archived({threadId: <accepted-task-id>, archived: true})` and confirm success. A peer `final` is delivery, not archive; archive is not cleanup.
-
-After the archive decision, complete `CLOSEOUT_CLEANUP` for every peer-owned worktree/branch before ending the acceptance turn unless an external gate is explicitly missing. Inspect the exact registered worktree, local branch, head, dirty/untracked state, integration target, and saved recovery coordinates. If clean and integrated, or clean and explicitly abandoned with no recovery value, remove the Git worktree first and then delete only the local branch with the safest branch-delete mode that passes. If not safe, do not delete; emit a compact retained inventory:
-
-```text
-RETAINED_WORKTREE
-TASK_ID:
-WORKTREE:
-BRANCH:
-HEAD:
-REASON:
-NEXT_ACTION:
-```
-
-`REASON` must be concrete: dirty, untracked, not integrated, unknown owner, blocked, user-retained, missing external gate, or recoverable evidence. Never infer cleanup from task archival, age, naming, or directory location; never delete a remote branch from this closeout rule.
+Archive an accepted App task only when no correction or live operation remains, and confirm the archive result. Then make a worktree/branch cleanup decision using [recovery.md](recovery.md). Internal results need no App archival. If removal is unsafe or unauthorized, record exact retained coordinates, reason, and next action rather than losing track of the residue.

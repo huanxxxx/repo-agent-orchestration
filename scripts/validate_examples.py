@@ -19,6 +19,7 @@ CASES = {
     "valid-final-update.txt": ("update", ()),
     "valid-governance-audit-update.txt": ("update", ()),
     "valid-design-handoff.txt": ("design_handoff", ()),
+    "valid-design-handoff-not-required.txt": ("design_handoff", ()),
     "valid-delivery-plan.txt": ("delivery_update", ()),
     "valid-delivery-milestone.txt": ("delivery_update", ()),
     "valid-design-reopen.txt": ("design_reopen", ()),

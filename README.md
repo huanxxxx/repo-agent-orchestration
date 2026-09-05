@@ -1,255 +1,113 @@
 # Repo Agent Orchestration
 
-### Repository-native context splitting for Codex
+### Useful context boundaries for repository delivery
 
-**Choose the lightest useful mode: direct work, controller-led delivery, or independent design authority plus parallel delivery.**
+A lightweight Codex Skill for finishing repository work across appropriate contexts, with clear ownership, proportional verification, reliable results, and recoverable handoff.
 
-Repo Agent Orchestration is a lightweight Codex Skill for keeping long repository work out of one overloaded conversation. It routes suitable slices into independent peer tasks with minimal context, repository-local worktrees when needed, direct reports, and evidence-based acceptance.
+The core describes engineering responsibilities, not a mandatory App task hierarchy. Use direct work for bounded outcomes, available internal agents for useful subtasks and independent judgment, and explicitly requested App tasks for a separate user-owned lifecycle. Choose a distinct design authority for material design tradeoffs or when the user/repository requires one.
 
-Codex already knows how to use agents. This project focuses on the harder engineering questions: when a task needs a separate context, what information that peer needs, how it reports back, where it may write, and who may accept the result.
+Unofficial community project. It does not grant permissions, unlock product capabilities, or reproduce a proprietary OpenAI orchestration system.
 
-> Unofficial community project. It does not unlock, reproduce, or bypass OpenAI's proprietary Ultra implementation, product entitlements, or usage limits. “Ultra-style” describes a multi-agent collaboration pattern, not compatibility with or equivalence to an OpenAI product mode.
+## What changes decisions
 
-## Why
+- Delegate ready, separable work when authorized and useful. Sending one assignment or an informational report does not end the owner turn.
+- Continue dependency-ready work; wait through the host's bounded/result mechanism only when a real dependency needs it. Do not poll unchanged task status or promise unsupported wakeups.
+- Keep implementation and review judgments independent without requiring every reviewer to be a user-visible App task.
+- Verify actual Git identity and exclusive paths. Internal writers share their owner's tree with disjoint scopes; independently running App writers use separate registered repository-local worktrees.
+- Read the affected call chain and run required/risk-relevant checks. Stop implementation at acceptance; expand verification for concrete evidence, not ceremony.
+- Preserve meaningful local commits, result delivery status, and recovery coordinates. A failed report does not erase a completed result.
+- Consider fresh context at a safe boundary for an independent next phase **or** repeated drift on the same slice. Do not require both. Persistent owner replacement still requires appropriate host support and explicit user authority.
+- Preserve single ownership, read-only review, destination model settings, and external-action gates. Classify accepted task worktrees/branches for safe removal or explicit retention.
+- Keep repository execution-package names, tiers, templates, and scaffolding in that repository. A post-PASS rolling-state update does not create another review cycle.
 
-Multi-agent coding fails when:
+## Responsibilities and tools
 
-- two independent task owners write to the same working tree;
-- an execution task runs from the wrong repository or cwd;
-- a worker silently falls back to an unintended model;
-- a reviewer modifies the candidate it is supposed to review;
-- an agent reports PASS and nobody verifies the real diff;
-- a worker finishes in its own task but never delivers the final milestone to the controller;
-- a task gets archived while its worktree and local branch remain unclassified;
-- a completed turn says `owner=task` even though it cannot restart itself;
-- a safety handshake takes longer than the work it protects;
-- merge, push, deploy, or production access becomes implicit.
+| Need | Default choice within actual host permissions |
+|---|---|
+| Small coherent outcome | Current task |
+| Parallel bounded contribution or fresh-context investigation | Internal agent with minimal inputs and explicit paths |
+| Independent review | Non-author reviewer, relevant raw evidence and acceptance |
+| Separate user-visible lifecycle / persistent owner replacement | App task only when explicitly requested and supported |
+| Material independent design judgment | Distinct design responsibility; transport chosen separately |
 
-This Skill turns those failure modes into small routing and report contracts.
+`direct`, `delivery`, and `architected` describe who owns decisions. They are not mandatory numbers of conversations. In architected work, design owns direction and final consistency; delivery owns implementation and returns plans, material questions, and final evidence. Design can inspect necessary code and evidence directly without managing downstream routine work.
 
-**No daemon. No dashboard. No shared writable worktree between independent tasks. No age-based cleanup.**
+Independent design review is required by explicit user/repository requirements or material cross-cutting/irreversible risk. Low-risk adjustments can record why design-owner verification suffices. A real direction change still needs an updated design decision; bookkeeping does not.
 
-## Default host-compatible profile
+## Install or update one repository
 
-| Role | Responsibility | Default policy |
-|---|---|---|
-| Design authority | Freeze the professional global design, decide reopen requests, and accept final design consistency in `architected` mode | Current Codex task selection |
-| Delivery controller | Plan dependencies, proactively dispatch ready work, adjudicate implementation findings, integrate, and report back | Same task in `delivery`; App default or explicit repository binding in `architected` |
-| Peer write task | Implement one independently accepted change | App default unless repository or user explicitly binds a supported model |
-| Peer review task | Review one frozen candidate without writing | App default unless repository or user overrides it |
-| Peer audit task | Inspect route, takeover, recovery, or protocol evidence without writing or contacting lateral peers | App default unless repository or user overrides it |
-| Internal subagent | Bounded current-turn retrieval or non-overlapping contribution | Inherits the current task path; never owns a branch or worktree |
-
-The installer defaults architected delivery controllers, writers, and reviewers to `app_default`, which omits model overrides and lets the destination host select a compatible model. An explicit repository or user binding is used only after the host advertises that model. Model names remain repository configuration, not a promise that every Codex surface exposes the same catalog or echoes the effective runtime model; never infer availability only from the current authority model family.
-
-## Workflow
-
-```text
-                  +--------------------------+
-                  | Design authority         |
-                  | Freeze / Reopen / Accept |
-                  +------------+-------------+
-                               |
-                     DESIGN_HANDOFF / reports
-                               |
-                  +------------v-------------+
-                  | Delivery controller      |
-                  | Plan / Dispatch / Merge  |
-                  +------------+-------------+
-                               |
-                    ready-set parallel dispatch
-                 +-------------+-------------+
-                 |             |             |
-          +------v------+ +----v--------+ +--v-----------+
-          | Writer A    | | Writer B    | | Reviewer     |
-          | Worktree A  | | Worktree B  | | Read-only    |
-          +-------------+ +-------------+ +--------------+
-```
-
-This diagram shows `architected` mode. Ordinary `delivery` collapses design and delivery authority into the current controller; `direct` creates no peer tasks. Every App-created user-visible task is still a runtime peer, even when another task dispatched it: authority arrows are not App parentage. Create peers with one complete `create_thread` prompt; reserve `send_message_to_thread` for later reports, decisions, and corrections. `spawn_agent` always creates a current-task internal subagent whose id is never a peer task id. A peer is justified by separate context, independent acceptance, cross-turn waiting, model binding, recovery, design, audit, or formal review, not by agent count alone. Every peer write task owns one branch, one repository-local worktree, and one writable ownership boundary. Internal subagents inherit the current path, receive non-overlapping scopes, return within the current turn, and create no tree. Candidate review reuses the frozen implementation tree while its writer is paused; long or historical review gets an on-demand detached snapshot only when a stable filesystem is useful. Governance audit is read-only and reports only to the contracted authority.
-
-When a repository defines an execution package or equivalent continuity entry, the Skill keeps it separate from both the App task and Git worktree. It stores durable objective, scope, state, acceptance, recovery, and next-step facts; repository-specific tiers, paths, templates, and scaffolding stay in the repository. Clean worktrees use their current HEAD as the recovery anchor, and prechange snapshots remain explicit rather than ceremonial.
-
-Long tasks may rotate to a fresh-context owner at a semantic checkpoint. A cumulative token total is only a pressure signal: rotation waits for a coherent commit and a materially different next slice, then carries one compact capsule containing the current objective, accepted baseline, recovery coordinates, verified results, still-valid decisions, invalidated routes, next action, boundaries, unresolved facts, and worktree state. The successor remains an App runtime peer but replaces the authority owner; the predecessor stops without polling. Unavailable optional task routing leaves `HANDOFF_READY` and the current owner in place rather than blocking the work. This reuses continuity and adds no packet kind, role, daemon, or workflow engine.
-
-After an accepted peer is archived, its dispatcher must make a `CLOSEOUT_CLEANUP` decision for every peer-owned worktree and local branch. Safe residue is removed through Git's worktree flow; unsafe or useful residue is retained with an explicit `RETAINED_WORKTREE` reason and next action. The rule prevents future archaeology, but it does not create a background cleanup daemon or permission to delete remote branches.
-
-Task startup is one transport step. The constructor produces the complete validated launch packet before creation and omits the not-yet-known self id; the returned `threadId` is authoritative. The dispatcher passes that packet directly to `create_thread`, and the peer performs the fast route gate in its initial turn. There is no inert bootstrap task, automatic-archive race, or immediate resend.
-
-## Install into a repository
-
-Run from this cloned project:
+Run from this source checkout:
 
 ```bash
 python scripts/install_repository.py --repo /absolute/path/to/repository
 ```
 
-The installer:
-
-1. requires the exact absolute Git repository root;
-2. copies the Skill to `.agents/skills/repo-agent-orchestration`;
-3. creates or idempotently updates one marked block in the root `AGENTS.md`;
-4. writes an explicit instruction to use the Skill for architecture-sensitive work or when delivery needs independent task ownership, formal review, parallel dispatch, cross-turn recovery, integration, or closure;
-5. preserves existing repository configuration outside the managed block;
-6. excludes `__pycache__` and `.pyc` artifacts.
-
-Preview without writing:
+The installer copies `skill/repo-agent-orchestration` to `.agents/skills/repo-agent-orchestration` and idempotently updates its marked root `AGENTS.md` block. Existing repository rules outside that block and configured values are preserved. Installation is a local repository change, not a commit, push, release, or permission grant.
 
 ```bash
 python scripts/install_repository.py --repo /absolute/path/to/repository --dry-run
-```
-
-Check whether an installed copy or managed profile has drifted without writing:
-
-```bash
 python scripts/install_repository.py --repo /absolute/path/to/repository --check
 ```
 
-On upgrade, omitted CLI options preserve values already present in the managed `AGENTS.md` block, except the former installer default `gpt-5.6-luna/max`, which migrates automatically to `app_default`. Defaults are used only when a value does not yet exist. Pass an explicit CLI value only when deliberately binding a repository to a supported model.
+`--dry-run` previews writes; `--check` detects installed-file/profile drift without changing the target. Upgrades refresh the managed routing prose as well as the Skill, so an old mandatory-App rule is not left in that managed block. Unmanaged repository rules are never rewritten.
 
-The installer accepts `--main-branch`, `--worktree-root`, `--branch-prefix`, `--root-worktree-policy`, `--task-host-policy`, `--controller-model-policy`, `--delivery-controller-model`, `--write-task-model`, `--review-task-model`, `--shared-integration-paths`, `--continuity-policy`, and `--external-gates`. The fixed protocol fields currently accept only `TASK_HOST_POLICY: repository_project_local` and `CONTROLLER_MODEL_POLICY: app_current_task`. Model values must be `app_default` or `<model>/<reasoning>`; invalid values are rejected before any write. Operational failures print a structured JSON error and exit nonzero instead of a traceback.
+Model defaults are `app_default`, which omits model/thinking overrides. On upgrade, existing explicit bindings are preserved except the retired installer default `gpt-5.6-luna/max`, which migrates to `app_default`. Explicit supported bindings remain configurable; this Skill does not select Astra or change the user's current model.
 
-The repository profile remains configurable:
+The installer accepts `--main-branch`, `--worktree-root`, `--branch-prefix`, `--root-worktree-policy`, `--task-host-policy`, `--controller-model-policy`, `--delivery-controller-model`, `--write-task-model`, `--review-task-model`, `--shared-integration-paths`, `--continuity-policy`, and `--external-gates`. See [the profile example](examples/AGENTS.profile.md).
 
-```text
-MAIN_BRANCH: main
-ROOT_WORKTREE_POLICY: observe_integrate_validate
-WORKTREE_ROOT: <absolute repo-local worktree root>
-BRANCH_PREFIX: codex/
-TASK_HOST_POLICY: repository_project_local
-CONTROLLER_MODEL_POLICY: app_current_task
-DELIVERY_CONTROLLER_MODEL: app_default|<explicit model>/<reasoning>
-WRITE_TASK_MODEL: app_default|<explicit model>/<reasoning>
-REVIEW_TASK_MODEL: app_default
-SHARED_INTEGRATION_PATHS: <repository-specific paths>
-CONTINUITY_POLICY: none|repository_defined:<index or entry>
-EXTERNAL_GATES: <merge, push, deploy, data, credential, and publication gates>
-```
+`TASK_HOST_POLICY: repository_project_local` remains the supported **optional App adapter** profile. It does not require App task creation for normal work or make an App project id a prerequisite for internal collaboration. `CONTROLLER_MODEL_POLICY: app_current_task` preserves the current selection.
 
-See [examples/AGENTS.profile.md](examples/AGENTS.profile.md) for a neutral profile.
+## Optional structured App adapter
 
-## Run the local end-to-end demo
-
-```bash
-python scripts/run_local_demo.py
-```
-
-The demo creates a temporary Git repository, two independent writer branches and worktrees, valid route/write/review/final contracts, one deliberately invalid `projectless` route with an escaping `..` path, and one missing-worktree route. It passes only when both writers are registered separately, valid contracts pass, both invalid routes are rejected, and the writers do not change the root baseline. The final contract also proves direct controller delivery.
-
-Evidence boundary: this deterministic demo exercises local Git isolation and the contract gate. It does not create Codex tasks, verify task-message delivery, or prove an effective runtime model. Use [the Codex Desktop runbook](examples/demo/CODEX_DESKTOP_RUNBOOK.md) for a reproducible product-facing demonstration and record those external receipts separately.
-
-## Run contract examples
-
-Validate every published positive and negative example:
-
-```bash
-python scripts/validate_examples.py
-```
-
-Individual examples live in [examples/contracts](examples/contracts):
-
-- valid Windows binding;
-- valid App-default write task;
-- valid explicit Luna Max write task;
-- valid read-only review;
-- valid worker final update;
-- valid governance review and audit final update;
-- valid architected delivery plan and milestone;
-- valid design handoff, reopen, and decision packets;
-- invalid projectless task;
-- invalid worktree path escape;
-- invalid App-managed worktree environment;
-- invalid local-final-only report;
-- invalid controller-bound report model override;
-- invalid obsolete ownership fields;
-- invalid obsolete waiting fields.
-
-You can also invoke the validator directly:
-
-```bash
-python skill/repo-agent-orchestration/scripts/validate_dispatch_contract.py \
-  --kind update examples/contracts/valid-final-update.txt
-```
-
-Supported kinds are `binding`, `write`, `review`, `update`, `design_handoff`, `delivery_update`, `design_reopen`, and `design_decision`. Direct CLI checks for route packets are live: synthetic example paths are intentionally rejected unless they currently exist and match the Git worktree registry, branch, commit, and clean-state contract. `scripts/validate_examples.py` performs the portable static example matrix.
-
-For a new outgoing packet, stream JSON fields through the constructor's single boundary command. `--live` combines construction, static validation, and live route/Git validation, so no temporary packet or second validator call is needed. An initial peer uses `--launch`; a later message uses `--task-message-to <target-task-id>`:
+The existing constructor and validator remain available when the user explicitly requests App tasks and the host supports the saved-project/local route:
 
 ```powershell
 Get-Content -Raw fields.json | python skill/repo-agent-orchestration/scripts/construct_packet.py --kind review --live --launch -
 Get-Content -Raw report.json | python skill/repo-agent-orchestration/scripts/construct_packet.py --kind update --live --task-message-to controller-task-id -
 ```
 
-Incoming packet text can likewise be streamed to `validate_dispatch_contract.py --kind <kind> -`. The constructor shares its declarative schema with the validator and does not create tasks, touch Git, send messages, wait, or archive anything. The ordinary `delivery` mode remains available; use the optional `architected` mode when repository policy or task facts require a separate design authority, delivery controller, and independent execution/review layer.
+Stream JSON directly when a temporary file is unnecessary. Use the complete launch as `create_thread.prompt`; use the later-message JSON with `send_message_to_thread` without adding another delegation envelope. Keep internal agent ids out of App APIs. New App tasks need an explicit saved project and `environment: {type: "local"}` under this profile.
 
-## Compatibility and evidence limits
+The eight packet kinds remain `binding`, `write`, `review`, `update`, `design_handoff`, `delivery_update`, `design_reopen`, and `design_decision`. Their shared schema lives in `packet_schema.py`; ordinary internal collaboration does not use it.
 
-OpenAI documents repository-local Skill discovery from `$REPO_ROOT/.agents/skills` and repository instruction discovery through `AGENTS.md`. Standalone Skills are documented for the desktop app, Codex CLI, and the IDE extension. See the official [Skill documentation](https://learn.chatgpt.com/docs/build-skills) and [AGENTS.md documentation](https://learn.chatgpt.com/docs/agent-configuration/agents-md).
+Design handoff supports `DESIGN_REVIEW_STATUS: PASS|not_required`. An explicit `not_required` must include a concrete reason in `DESIGN_REVIEW_EVIDENCE` and cannot waive an actual review requirement. Reopen decisions can use the same explicit status; older packets without it retain the independent PASS requirement. The constructor never decides that review is unnecessary.
 
-| Surface | Status for this project |
-|---|---|
-| Codex Desktop on Windows, saved local repository project | **Primary tested surface** for the full repository-host/execution-worktree workflow |
-| Python validator and installer | Standard-library only; repository CI targets Python 3.11 and 3.13 on Ubuntu, and local acceptance runs on Python 3.13/Windows |
-| Codex CLI and IDE extension | Repository Skill discovery is documented; the full visible-task, project-id/cwd receipt, and direct task-message workflow is **unverified here** |
-| macOS/Linux Codex product workflow | POSIX path behavior is unit-tested; product-level task hosting and receipts are **unverified here** |
-| ChatGPT Work on the web | Full standalone repository workflow is **unsupported or unverified here**; a future Plugin may be a better distribution surface |
+The adapter still checks exact path containment, saved-project identity, current Git branch/commit, read-only review, and preserved report settings. It does not prove task authorization, actual delivery, review quality, or acceptance. A report's `DELIVERY` field is the intended route, not a delivery receipt.
 
-The full profile depends on capabilities that a surface may not expose uniformly: a saved repository project, local task hosting, user-visible task creation, explicit model parameters, direct task messages, actual project/cwd receipts, and a separately controlled execution worktree. If any required capability is missing, stop and report the capability gap instead of downgrading the route.
+Local shape errors can be repaired without freezing unrelated work. Ambiguous task creation must be reconciled before retry; insufficient authority, uncertain ownership, or an incorrect target still blocks the affected action. Never bypass a denied tool call.
 
-OpenAI's desktop worktree feature uses Codex-managed worktrees and is documented separately. This project intentionally supports an existing repository-local worktree boundary and does not claim that a Codex-managed worktree is equivalent. See the official [worktree documentation](https://learn.chatgpt.com/docs/environments/git-worktrees).
-
-## Security properties
-
-- Projectless repository tasks are rejected.
-- Task hosting and Git execution coordinates are validated separately.
-- Windows, extended Windows, and POSIX paths are normalized lexically before containment checks; nonexistent paths are supported and `..` escapes fail closed.
-- Every repository command must use the exact execution path.
-- Review/audit selects the lightest safe target: root, frozen candidate, or detached snapshot.
-- Review is delta-first with an explicit context/check/expansion budget; full review requires a recorded reason.
-- Worker or reviewer PASS remains evidence, not acceptance by the contracted authority.
-- A peer task's local output is not a delivered authority report; progress, blocked, and final reports use direct peer-to-peer task-message delivery.
-- A read-only audit may not contact lateral peers, but its required `task_message:<TARGET_TASK_ID>` report to the contracted authority is not lateral contact.
-- Task-message reports preserve destination settings: senders omit `model` and `thinking`, which otherwise override the destination task.
-- Visible repository tasks explicitly use App environment `local`; isolation comes from the repository-local execution worktree, never an App-managed worktree.
-- A queued App worktree setup or worktree-creation receipt is a failed peer route, not a task to wait on or recover as if it had started.
-- Accepted peer tasks are archived explicitly by the authority that dispatched them; a peer `final` is delivery, not archival.
-- Accepted peer closeout includes a worktree/branch cleanup decision: remove safe local residue or emit `RETAINED_WORKTREE` with task id, path, branch, head, reason, and next action.
-- Cleanup is evidence-gated and local-only: archive status, task age, path naming, or directory location never prove a worktree or branch safe to delete; remote branches are not deleted by this closeout rule.
-- Repository continuity packages are optional durable fact anchors, never task-message channels, authorization tokens, or workflow engines.
-- A post-PASS continuity-only closeout keeps the reviewed checkpoint distinct from its later bookkeeping commit and never triggers review merely to record that PASS occurred.
-- A clean task worktree uses its HEAD as the recovery anchor; prechange snapshots require an explicit request or an authorized risky rewrite of task-owned tracked changes.
-- Coherent task-owned output is committed locally before a cross-turn pause, ownership handoff, formal review, or final; unsafe mixed ownership is reported precisely instead of staged.
-- Write tasks make the smallest acceptance-satisfying change and stop when acceptance passes; unrequested architecture, alternate paths, and hardening require a separately authorized scope.
-- A confirmed task id completes creation and delivery of the complete launch packet; there is no second startup message or inert turn.
-- Internal-agent tools (`spawn_agent`, internal send/follow-up, and `wait_agent`) cannot create, carry, or stand in for a peer task; unavailable App routing fails closed only when the peer boundary is required for correctness. Optional fresh-context rotation emits `HANDOFF_READY`, retains the current owner, and never retries or polls.
-- Correction review reuses the original idle reviewer by default; a fresh range and judgment do not require a fresh task. The constructor injects task-message transport fields and emits exact App arguments, and senders pass them unchanged without a hand-written delegation envelope.
-- Each authority wake processes one bounded event batch and ends; future peer events must wake a new turn rather than extending a polling session.
-- The route gate and repository profile are read once per stable task binding; later wakes reuse them and load only changed hot state.
-- Routine outgoing packets use one streamed constructor/live-validation command instead of temporary files and duplicate validation calls.
-- One pre-send constructor shape error may be corrected once without changing packet meaning; a second failure, incoming validation error, or attempted/ambiguous delivery fails closed as `PROTOCOL_BLOCKED`.
-- Merge, push, deployment, publication, production data, credentials, and permissions remain separate gates.
-
-## Run tests
+## Validation and evidence limits
 
 ```bash
 python -m unittest discover -s tests -v
+python scripts/validate_examples.py
+python scripts/run_local_demo.py
 ```
 
-The test suite and project scripts use only the Python standard library. Git is required for installer repository checks and the local worktree demo.
+The test suite uses the Python standard library; Git is required for installer/worktree tests. CI targets Python 3.11 and 3.13. Deterministic tests cover packet construction, legacy compatibility, path isolation, model settings, installation, and cleanup of the disposable demo. Packaging tests check discovery and links, not whether specific prohibitions remain word-for-word.
+
+The local demo creates a temporary Git repository and isolated writer trees. It proves local Git/contract checks, not App creation, task-message delivery, effective models, or real agent behavior. [The optional Desktop runbook](examples/demo/CODEX_DESKTOP_RUNBOOK.md) describes an explicitly authorized product-facing demonstration.
+
+[Behavioral cases](examples/behavioral/cases.json) exercise decisions that string assertions cannot prove. Use a fresh evaluator with each case's input and the Skill, withholding the expected outcomes. Record what it actually chose and distinguish decision-only exercises from real tool execution. Do not treat passing unit tests or one model exercise as a guarantee against future drift.
+
+The core depends only on the host's actual permitted agent/result capabilities. The full App adapter has additional requirements: saved project, local task creation, messages, runtime receipts, and separate execution worktrees. Missing optional App capabilities do not invalidate ordinary authorized repository work. Preserve an explicitly requested independence requirement rather than silently substituting a different lifecycle.
+
+## Cleanup
+
+After accepted App work is idle, archive it and make an explicit cleanup decision for every owned worktree/branch. Remove only validated clean, integrated or explicitly abandoned residue with no recovery value, through Git's worktree flow and with applicable authorization. Remove the registered tree before deleting the local branch. Retain unsafe/useful residue with exact coordinates, reason, and next action.
+
+No age-based cleanup, forced deletion of dirty/recoverable work, remote-branch deletion, background daemon, or automatic permission escalation is included.
 
 ## Project layout
 
 ```text
-skill/repo-agent-orchestration/  Installable Codex Skill
-scripts/install_repository.py    Repository-local installer
-scripts/validate_examples.py     Published contract-example runner
-scripts/run_local_demo.py        Temporary Git/worktree demonstration
-examples/contracts/              Runnable positive and negative contracts
-examples/demo/                   Product-facing demonstration runbook
-tests/                           Contract, installer, example, and demo tests
-.github/workflows/               Python 3.11/3.13 CI
+skill/repo-agent-orchestration/  Installable Skill and optional App packet helpers
+scripts/install_repository.py    Repository installer/checker
+scripts/validate_examples.py     Portable App packet example matrix
+scripts/run_local_demo.py        Disposable Git/worktree demonstration
+examples/behavioral/             Independent behavioral exercise inputs
+examples/demo/                   Optional product-facing demonstration
+tests/                           Deterministic acceptance tests
 ```
-
-## License
 
 MIT. See [LICENSE](LICENSE).

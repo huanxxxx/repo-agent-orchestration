@@ -141,17 +141,17 @@ def render_block(
         values = tuple((key, value) for key, value in values if key in include_keys)
     body = newline.join(f"{key}: {value}" for key, value in values)
     activation = (
-        "- Use the repository-local `$repo-agent-orchestration` Skill to choose direct, "
-        "delivery, or architected mode when work changes architecture, data contracts, core "
-        "workflows, or product boundaries, or needs independent task ownership, formal review, "
-        "parallel dispatch, cross-turn recovery, integration, or closure; keep bounded "
-        "same-task collaboration inside the current task."
+        "- Use the repository-local `$repo-agent-orchestration` Skill for useful context "
+        "splitting, multi-part delivery, independent judgment, or actual handoff/recovery. "
+        "Keep small work direct. Choose responsibilities separately from transport; "
+        "delegate authorized, separable subtasks through available collaboration tools."
     )
     failure = (
-        "- If the Skill or a capability required for an independently scoped task is "
-        "unavailable, stop and report; do not collapse it into current-task execution. "
-        "An optional fresh-context rotation may instead emit HANDOFF_READY and retain the "
-        "current owner; it is not PROTOCOL_BLOCKED."
+        "- App user-owned tasks require explicit user task-creation authority and host "
+        "support. TASK_HOST_POLICY configures only that optional App route. Preserve "
+        "explicit independence requirements; if a capability is missing, explain the "
+        "affected gap and continue unaffected authorized work. Formatting or optional "
+        "transport failures do not grant permissions or block unrelated progress."
     )
     return newline.join(
         (

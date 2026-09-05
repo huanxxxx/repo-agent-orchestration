@@ -1,0 +1,20 @@
+DESIGN_TASK_ID: design-task-1
+ORCHESTRATION_MODE: architected
+SOURCE_ROLE: design_authority
+TARGET_ROLE: delivery_controller
+REPORT_TO_TASK_ID: design-task-1
+TASK_ENVIRONMENT: local
+TASK_ARCHIVE_POLICY: dispatching_authority_after_acceptance
+REPOSITORY_ROOT: C:\repo
+DESIGN_CHECKPOINT: 0123456789abcdef0123456789abcdef01234567
+DESIGN_REVIEW_STATUS: not_required
+DESIGN_REVIEW_EVIDENCE: reversible documentation adjustment; no independent-review mandate; owner verified unchanged interface and acceptance semantics
+OBJECTIVE: apply the decided patch version in two design documents
+AUTHORITATIVE_INPUTS: accepted version decision and targeted compatibility evidence
+FROZEN_DECISIONS: version selected; interfaces and acceptance unchanged
+NON_GOALS: runtime implementation, deployment, broad dependency upgrades
+ACCEPTANCE_BASELINE: both owned documents match the decided version
+IMPLEMENTATION_BOUNDARY: two owned design paths only
+EXTERNAL_GATES: push; deploy; publish
+DESIGN_REOPEN_RULE: new incompatibility returns to the design authority
+MODEL_POLICY: app_default

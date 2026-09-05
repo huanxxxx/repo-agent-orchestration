@@ -8,15 +8,19 @@
 4. Keep snapshot commit, push, main integration, deployment, and publication as separate authorization boundaries. Use a repository utility when one exists; this Skill does not prescribe a repository-specific script.
 5. Distinguish a prechange snapshot from a checkpoint commit: the former preserves prior dirty input before risky rewriting; the latter records real task output before a pause, handoff, review, or final.
 
-## Silent task
+## Missing result or uncertain delivery
 
-1. Start only on a real wake: a one-shot checkpoint, task signal, user request, or another controller decision.
-2. Inspect the task's current top-level runtime status once. `idle` or `notLoaded` means no live turn; do not override it by paging persisted historical turns or treating a stale `inProgress` row as stoppable work.
-3. If it is active, do not interrupt or send a duplicate continuation. Stop after the one check.
-4. If it completed without a delivered task message, read its latest final once and treat it as recovery evidence.
-5. A completed turn returns control to the controller. Continue the task only when the recovered state actually requires another stage.
-6. If no new fact appears, stop querying and preserve the task and worktree evidence.
-7. Do not create recurring heartbeats or immediate snapshots to imitate a future missing-report check. If a true one-shot wakeup is unavailable, say that proactive silent-task detection cannot be guaranteed.
+When a real dependency needs its result, use the host's supported result/wait mechanism. A task event, user request, or acceptance decision may justify inspecting current runtime state. Historical `inProgress` rows are not proof of stoppable work. Do not interrupt active work or resend its assignment merely because it is quiet.
+
+If work completed without a message, retrieve its final through an authorized read/result tool and verify relevant evidence. State that the owner recovered the result rather than claiming the original send succeeded. A permission denial requires a permitted alternative or user action, never rewritten envelopes or repeated sends intended to bypass the denial.
+
+An ambiguous creation/message receipt means the outcome is unknown, not definitely failed. Reconcile the existing task/delivery before retrying; do not create duplicates. Continue unrelated authorized work. If no supported future wake exists, explain how the pending result will be collected instead of claiming event-driven resumption is guaranteed. Do not add recurring monitoring unless the user asks for it, or repeatedly snapshot unchanged status.
+
+## Packet error versus execution blocker
+
+A local formatting error is repairable from known facts; it is not a global `PROTOCOL_BLOCKED` state. Correct the reported errors without changing the objective, authority, destination, or verdict. If errors recur, inspect the relevant schema/example rather than resending unchanged input or inventing missing facts. Preserve readable evidence if the helper cannot express it.
+
+For malformed incoming reports, recover unambiguous facts and ask the sender only for missing material information. Do not execute an ambiguous instruction or accept a claimed PASS without evidence. Uncertain identity, conflicting ownership, insufficient authority, and unresolved acceptance are real blockers for the affected action; unrelated work can continue.
 
 ## Controller takeover
 
@@ -34,7 +38,7 @@
 3. Record each helper's parent task, inherited execution path, owned paths, dirty state, commit state, and remaining work.
 4. Freeze the current candidate and identify one safe owner for each write boundary.
 5. Create one repository-local worktree for each separable future peer task. Do not create one per helper. If existing dirty changes cannot be separated safely, report the conflict instead of forcing a split.
-6. Re-dispatch unfinished implementation and formal review as user-visible peer tasks with explicit model binding.
+6. Re-dispatch only when the user authorized the separate App tasks and the host supports them; preserve supported explicit model choices, otherwise use host defaults.
 7. Keep the product mainline unchanged unless the user separately changes it.
 
 ## Dirty or ambiguous worktree
@@ -43,17 +47,13 @@ Stop before overwriting. Identify the exact paths, owner, base, branch, head, tr
 
 ## Unexpected platform-managed worktree
 
-Treat any worktree created outside the declared repository-local root as an orphan candidate. Do not use it as an activity source or continue writing. Identify its task or session, resolved path, branch, head, base, dirty state, untracked files, and recovery value. Remove it only through the Git worktree flow after its session is cancelled or archived, it is clean, and it has no recovery value. Never force-delete it merely because its path is wrong.
+If a route required a repository-local worktree but creation produced a different tree, pause writes on that route and identify its task, resolved path, branch, head, base, and dirty/untracked state. A queued setup is not a started writer; follow the actual host receipt without creating a replacement blindly. Preserve any recovery value and obtain a valid authorized route. Never delete a tree merely because its path is unexpected.
 
-## Foreign-cwd or projectless task
+## Wrong repository or execution identity
 
-1. Revoke further write authority and send a stop instruction once; do not rely on the task to reinterpret its prompt.
-2. Record the task id, actual cwd, project id, intended worktree, last successful write, dirty paths, in-flight commands, and recovery value.
-3. Never let a user-global or projectless task continue by addressing a repository through absolute paths.
-4. A repository-root cwd is valid only as a verified `repository_project_local` host. Confirm the non-null repository project id, recorded root baseline, and exact execution path before continuing.
-5. Detect duplicate task ids before restoring any owner. Multiple sessions that touched one writable worktree make every overlapping path mixed ownership until proven otherwise.
-6. Preserve dirty evidence and stop. Do not reset, overwrite, combine, stage, commit, or remove the task directory merely to restore routing cleanliness.
-7. Re-dispatch only after the fast route gate can pass. If unavailable, keep the implementation blocked.
+Pause affected writes and identify the actual Git root, execution path, branch, HEAD, owner, in-flight operations, and dirty/untracked changes. Re-establish the authorized boundary before continuing. Multiple owners touching the same path create an ownership conflict until reconciled; do not reset or stage mixed work to make the route appear clean.
+
+The optional `repository_project_local` App adapter also verifies its saved project id and local hosting. Those checks protect that chosen route. A current-task or internal-agent workflow does not acquire or lose repository write authority merely because an App project id is absent; use explicit user scope, host permissions, actual Git identity, and ownership. Never evade a route restriction by changing directories or relabelling an App peer as an internal agent.
 
 ## Completion and cleanup
 

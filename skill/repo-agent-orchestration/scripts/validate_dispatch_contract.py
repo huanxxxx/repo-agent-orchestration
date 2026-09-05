@@ -434,6 +434,23 @@ def validate_required_task_message(fields: dict[str, str]) -> list[str]:
     return errors
 
 
+def validate_design_review_choice(
+    fields: dict[str, str], *, default_status: str = ""
+) -> list[str]:
+    """Check a recorded review decision, not the authority or risk judgment behind it."""
+    status = fields.get("DESIGN_REVIEW_STATUS", default_status).casefold()
+    if status not in {"pass", "not_required"}:
+        return ["DESIGN_REVIEW_STATUS must be PASS or not_required"]
+    evidence = fields.get("DESIGN_REVIEW_EVIDENCE", "").strip()
+    if status == "not_required" and (
+        not evidence
+        or evidence.casefold() in {"none", "null", "n/a", "not_required", "pending"}
+        or has_placeholder(evidence)
+    ):
+        return ["not_required requires a concrete reason in DESIGN_REVIEW_EVIDENCE"]
+    return []
+
+
 def validate(kind: str, fields: dict[str, str]) -> list[str]:
     """Validate portable packet shape; use validate_live or the CLI at boundaries."""
     errors = schema_integrity_errors(kind)
@@ -709,8 +726,7 @@ def validate(kind: str, fields: dict[str, str]) -> list[str]:
                 "DESIGN_CHECKPOINT", fields.get("DESIGN_CHECKPOINT", "")
             )
         )
-        if fields.get("DESIGN_REVIEW_STATUS", "").casefold() != "pass":
-            errors.append("DESIGN_REVIEW_STATUS must be PASS")
+        errors.extend(validate_design_review_choice(fields))
         for name in (
             "DESIGN_REVIEW_EVIDENCE",
             "OBJECTIVE",
@@ -863,6 +879,8 @@ def validate(kind: str, fields: dict[str, str]) -> list[str]:
             )
         updated = fields.get("UPDATED_DESIGN_CHECKPOINT", "")
         if decision == "reopen_approved":
+            # Older packets omit status and must still provide independent PASS.
+            errors.extend(validate_design_review_choice(fields, default_status="PASS"))
             errors.extend(validate_checkpoint("UPDATED_DESIGN_CHECKPOINT", updated))
             prior = fields.get("PRIOR_DESIGN_CHECKPOINT", "")
             if FULL_SHA_RE.fullmatch(updated) and updated.casefold() == prior.casefold():
@@ -874,7 +892,10 @@ def validate(kind: str, fields: dict[str, str]) -> list[str]:
                 errors.append("reopen_approved requires DESIGN_REVIEW_EVIDENCE")
             elif has_placeholder(design_review_evidence):
                 errors.append("DESIGN_REVIEW_EVIDENCE must not contain placeholders")
-            elif not re.search(r"\bPASS\b", design_review_evidence, re.IGNORECASE):
+            elif (
+                fields.get("DESIGN_REVIEW_STATUS", "PASS").casefold() == "pass"
+                and not re.search(r"\bPASS\b", design_review_evidence, re.IGNORECASE)
+            ):
                 errors.append("reopen_approved DESIGN_REVIEW_EVIDENCE must record PASS")
         elif updated and updated != "unchanged":
             errors.append(
@@ -884,6 +905,8 @@ def validate(kind: str, fields: dict[str, str]) -> list[str]:
             fields["DESIGN_REVIEW_EVIDENCE"]
         ):
             errors.append("DESIGN_REVIEW_EVIDENCE must not contain placeholders")
+        if decision != "reopen_approved" and "DESIGN_REVIEW_STATUS" in fields:
+            errors.append("only reopen_approved may declare DESIGN_REVIEW_STATUS")
         for name in (
             "RATIONALE",
             "AFFECTED_SCOPE",

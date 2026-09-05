@@ -25,7 +25,10 @@ class PublishedExamplesTests(unittest.TestCase):
     def test_published_contract_examples_match_their_expected_result(self) -> None:
         result = self.run_json_script("scripts/validate_examples.py")
         self.assertTrue(result["passed"])
-        self.assertEqual(len(result["cases"]), 19)
+        self.assertEqual(
+            set(result["cases"]),
+            {path.name for path in (ROOT / "examples" / "contracts").glob("*.txt")},
+        )
 
     def test_local_demo_proves_isolation_and_rejects_invalid_binding(self) -> None:
         result = self.run_json_script("scripts/run_local_demo.py")

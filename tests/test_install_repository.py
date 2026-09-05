@@ -114,12 +114,12 @@ class RepositoryInstallerTests(unittest.TestCase):
         self.assertIn(
             "Use the repository-local `$repo-agent-orchestration` Skill", agents
         )
-        self.assertIn("choose direct, delivery, or architected mode", agents)
-        self.assertIn("changes architecture, data contracts", agents)
-        self.assertIn("independent task ownership", agents)
-        self.assertIn("do not collapse it into current-task execution", agents)
-        self.assertIn("HANDOFF_READY", agents)
-        self.assertIn("it is not PROTOCOL_BLOCKED", agents)
+        self.assertEqual(agents.count(INSTALLER.BEGIN_MARKER), 1)
+        self.assertEqual(agents.count(INSTALLER.END_MARKER), 1)
+        self.assertEqual(
+            INSTALLER.managed_profile_values(agents).get("TASK_HOST_POLICY"),
+            "repository_project_local",
+        )
 
     def test_preserves_existing_agents_content_and_updates_only_managed_block(self) -> None:
         temporary, repo = self.make_repo()
@@ -172,6 +172,29 @@ class RepositoryInstallerTests(unittest.TestCase):
         self.assertEqual((repo / "AGENTS.md").read_text(encoding="utf-8"), before)
         self.assertIn("CONTINUITY_POLICY: repository_defined:docs/status.md", before)
         self.assertIn("DELIVERY_CONTROLLER_MODEL: custom-delivery/high", before)
+
+    def test_upgrade_replaces_legacy_routing_prose_but_preserves_config_and_user_rules(self) -> None:
+        temporary, repo = self.make_repo()
+        self.addCleanup(temporary.cleanup)
+        settings = self.settings(repo, "custom-executor/high")
+        INSTALLER.install_repository(repo, settings)
+        agents_path = repo / "AGENTS.md"
+        current = agents_path.read_text(encoding="utf-8")
+        expected_values = INSTALLER.managed_profile_values(current)
+        legacy_rule = "Every formal review requires an App task; stop on unavailable App routing."
+        legacy = current.replace(
+            "## Agent Orchestration Profile", f"## Agent Orchestration Profile\n\n{legacy_rule}"
+        )
+        user_rule = "\n## User-owned rule\nOnly the user may authorize deployment.\n"
+        agents_path.write_text(legacy + user_rule, encoding="utf-8")
+
+        result = INSTALLER.install_repository(repo, settings)
+        upgraded = agents_path.read_text(encoding="utf-8")
+        self.assertTrue(result["agents_changed"])
+        self.assertNotIn(legacy_rule, upgraded)
+        self.assertTrue(upgraded.endswith(user_rule))
+        self.assertEqual(INSTALLER.managed_profile_values(upgraded), expected_values)
+        self.assertIn(INSTALLER.render_block(settings), upgraded)
 
     def test_cli_upgrade_migrates_legacy_luna_default_to_app_default(self) -> None:
         temporary, repo = self.make_repo()

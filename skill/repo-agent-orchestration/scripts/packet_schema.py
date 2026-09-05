@@ -187,7 +187,7 @@ PACKET_SCHEMAS: dict[str, dict[str, tuple[str, ...] | str]] = {
             "TARGET_SETTINGS",
             "NEXT",
         ),
-        "optional": ("DESIGN_REVIEW_EVIDENCE",),
+        "optional": ("DESIGN_REVIEW_EVIDENCE", "DESIGN_REVIEW_STATUS"),
     },
 }
 

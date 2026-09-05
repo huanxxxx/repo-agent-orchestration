@@ -76,6 +76,36 @@ def write_launch_fields() -> dict[str, str]:
 
 
 class PacketConstructorTests(unittest.TestCase):
+    def test_design_review_choice_is_explicit_and_round_trips_without_model_override(self) -> None:
+        fields = {
+            "DESIGN_TASK_ID": "design-1",
+            "DELIVERY_TASK_ID": "delivery-1",
+            "PRIOR_DESIGN_CHECKPOINT": FULL_SHA,
+            "DECISION": "reopen_approved",
+            "RATIONALE": "bounded reversible contract adjustment",
+            "UPDATED_DESIGN_CHECKPOINT": "2" * 40,
+            "AFFECTED_SCOPE": "two design clauses",
+            "AUTHORITY_BOUNDARY": "design-owner decision only; no release",
+            "NEXT": "continue authorized delivery",
+            "DESIGN_REVIEW_STATUS": "not_required",
+            "DESIGN_REVIEW_EVIDENCE": "no mandated independent review; owner checked unchanged interfaces",
+        }
+        arguments = CONSTRUCTOR.task_message_args(
+            "design_decision", target_task_id="delivery-1", **fields
+        )
+        self.assertEqual(set(arguments), {"threadId", "prompt"})
+        from validate_dispatch_contract import parse_fields, validate
+
+        packet = parse_fields(arguments["prompt"])
+        self.assertEqual(validate("design_decision", packet), [])
+        self.assertEqual(packet["DESIGN_REVIEW_STATUS"], "not_required")
+        self.assertEqual(packet["TARGET_SETTINGS"], "preserve")
+        self.assertEqual(packet["DESIGN_REVIEW_EVIDENCE"], fields["DESIGN_REVIEW_EVIDENCE"])
+
+        fields.pop("DESIGN_REVIEW_STATUS")
+        with self.assertRaisesRegex(ValueError, "must record PASS"):
+            CONSTRUCTOR.task_message_args("design_decision", target_task_id="delivery-1", **fields)
+
     def test_launch_prompt_is_complete_before_task_creation(self) -> None:
         prompt = CONSTRUCTOR.launch_prompt("write", **write_launch_fields())
 

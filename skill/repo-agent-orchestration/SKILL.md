@@ -1,89 +1,64 @@
 ---
 name: repo-agent-orchestration
-description: Split long repository work into direct work, internal help, or independent peer tasks with minimal context, reports, and repo-local safety.
+description: Coordinate repository work across useful context boundaries, with clear ownership, scoped review, reliable results, and recoverable handoff. Use for multi-part delivery or long-task continuity, not every small edit.
 ---
 
 # Repository Agent Orchestration
 
-Keep product primary. Use this Skill to split context; avoid bureaucracy.
+Help finish the user's objective without overloading one conversation. Separate work when another context improves execution or judgment; keep coordination proportional to the work.
 
-Default path: choose boundary -> send minimum capsule -> peer works in its own context -> peer reports once to `REPORT_TO` -> owner accepts, archives, and classifies cleanup or sends one correction.
+## Authority and initiative
 
-Hard boundaries: repo-local paths, write ownership, read-only review, preserved settings, and separate gates for merge, push, deploy, production data, credentials, and permissions.
+The user's instructions take precedence over this Skill's workflow guidance. Host permissions and tool restrictions still apply. A role, packet, or repository profile grants no extra authority.
 
-## Start once; wake lightly
+Within the authorized objective, choose reasonable, reversible implementation details and continue without routine confirmation. Ask when missing information materially changes scope, correctness, ownership, or risk. If this Skill causes a pause or changes the requested course, cite the exact instruction and explain the concrete conflict; distinguish a real boundary from a workflow preference.
 
-At task start, read repository `AGENTS.md`, resolve mode/role/config, and run the fast route gate once per task/runtime binding. Record route, acceptance, and report destination; PASS continues in the same turn.
+Preserve exact repository/execution paths, exclusive write ownership, read-only review, other owners' changes, and destination model settings. Merge, push, publication, deployment, production data, credentials, permissions, and destructive cleanup require their own applicable authorization. A task's PASS does not grant it.
 
-On later wakes, reuse proven facts. Reload only when route identity, Skill version, or authority changed or became ambiguous. Commits do not invalidate the route; new packets live-check branch/HEAD. Consume one event, read changed hot state, act, and yield.
+## Start with the outcome
 
-Read only the needed reference: [architected.md](references/architected.md), [controller.md](references/controller.md), [contracts.md](references/contracts.md), [continuity.md](references/continuity.md), or [recovery.md](references/recovery.md).
+Read repository `AGENTS.md` and only the references needed for the current decision:
 
-For routine dispatch, use the CLI; do not inspect protocol source, enumerate schemas, load executor-only Skills, or walk implementation. Inspect deeper only for planning, acceptance, recovery, or defects.
+- [controller.md](references/controller.md): delegation, dependencies, acceptance, and reporting.
+- [architected.md](references/architected.md): a separate design authority is requested or justified by material cross-cutting risk.
+- [contracts.md](references/contracts.md): structured packets for an explicitly authorized App-task route.
+- [continuity.md](references/continuity.md): an actual handoff, recovery, or repository-defined continuity update.
+- [recovery.md](references/recovery.md): ambiguous delivery, route/ownership trouble, or resource cleanup.
 
-## Rotate context at a checkpoint
+Establish the objective, acceptance, non-goals, current evidence, and next useful step. Verify repository and execution identity before writing. Reuse stable facts; refresh changed or ambiguous facts instead of repeatedly reading all instructions, history, or schemas. Repository task size alone does not require a continuity package.
 
-A cumulative token total is only a pressure signal. At a recoverable commit, if a different slice remains or facts are going stale, follow [continuity.md](references/continuity.md) for fresh-context rotation; never rotate mid-operation.
+## Choose responsibility and transport separately
 
-Rotation replaces the owner. A confirmed, explicitly authorized successor ends the predecessor without waiting; failed optional delivery emits `HANDOFF_READY` once and retains the owner - no `PROTOCOL_BLOCKED`, retry, poll, or internal substitute.
+Use `direct` when one context can finish the bounded outcome; `delivery` when an owner coordinates useful contributions; `architected` when a distinct design authority is explicitly requested, required by repository policy, or needed to resolve material architecture/data/product tradeoffs. Mentioning architecture or changing a version does not by itself require three layers. Repository tiers retain their repository-defined meaning.
 
-## Choose authority
+Design, delivery, implementation, review, and audit are responsibilities, not mandatory App tasks. A reviewer must be independent of the implementation being judged and receive the acceptance baseline and raw evidence, not the author's preferred conclusion. Use a fresh context with only relevant inputs when independence or context pressure calls for it.
 
-Use `direct` for short current-task work, `delivery` for a frozen outcome needing independent implementation/review/recovery/parallel work, and `architected` for architecture, data contracts, core workflows, product boundaries, multiple packages, material direction choices, or an explicitly requested design authority.
+For subtasks of the current request, use available collaboration tools when delegation is authorized and can save time or improve quality. Delegate ready, separable work proactively within capacity; do not split coupled work merely to fill slots. Internal agents have their own contexts but share the owning task's authority and filesystem: give them explicit non-overlapping paths or read-only scope. Use the host's actual result, follow-up, and wait mechanisms; do not invent a one-turn lifetime.
 
-Think in task types: `direct`, `peer_write`, `peer_review`, `peer_design`, and `peer_audit`. In `delivery`, the controller owns the outcome. In `architected`, design owns direction/final consistency, delivery owns implementation, and only design may change the baseline through `DESIGN_REOPEN_REQUEST` and `DESIGN_DECISION`.
+Use an App user-owned task only when the user explicitly requests a separate task and the host supports the intended route. A durable user-visible lifecycle is different from a fresh subagent context. Keep App task ids and internal agent ids in their respective APIs. If an explicitly required capability is unavailable, preserve that requirement, explain the gap, and continue unaffected work; do not silently substitute a weaker form of independence.
 
-## Choose the lightest route
+## Delegate, act, and collect results
 
-Keep bounded current-turn slices here or in an internal subagent; inherit the path, create no worktree, and return this turn. Use a peer for separate context, independent acceptance, cross-turn waiting, model binding, recovery, design, audit, or formal review. Stable-root review needs no tree; a frozen candidate reuses its paused writer tree read-only; only long/test-running/historical review gets a detached snapshot.
+Send a small capsule: objective, necessary context/evidence, writable boundary or read-only scope, acceptance and required checks, and the result destination. Add exact Git coordinates when needed. Ordinary collaboration does not require the App packet schema.
 
-An App-created user-visible task is a peer. `create_thread` carries its complete first prompt; later messages use `send_message_to_thread`. `spawn_agent`, `send_input`, agent send/follow-up, and `wait_agent` are internal-only: they inherit path/authority, return this turn, and get no peer packet/tree/branch. Their id is never a peer `TASK_ID`; use a peer when synchronous return is unsuitable. More agents alone never justify more worktrees; different peer writers never share one.
+Complete all currently authorized, dependency-ready actions, including independent dispatches and local work. Sending a task or an informational report is not a reason to end the turn. Process a returned result when it enables acceptance or another ready action. Pause only affected work when a decision is genuinely required.
 
-## Dispatch and execute
+Wait only for an actual unfinished dependency, using the host's bounded/event wait mechanism. Collect internal-agent results before claiming completion. For durable App tasks, follow the host's initial-check and wake mechanisms; yield when no useful work remains and a supported future event will resume the owner. Do not repeatedly read/list tasks or use sleep loops merely to observe unchanged progress. Do not claim a future wake or successful delivery without evidence that the host provides it.
 
-1. Dispatch all ready, non-conflicting peers within current task-creation authority and capacity; do not await another parallelism instruction or split coupled work to fill slots. This Skill grants no missing authority.
-2. Send a small task capsule: `OBJECTIVE`, `CONTEXT`, `BOUNDARY`, `ACCEPTANCE`, `REPORT_TO`. The packet schema adds route, model, archive, and Git facts; those mechanics must not become the task itself.
-3. Require the smallest change that satisfies `OBJECTIVE`, `ACCEPTANCE`, and `REQUIRED_TESTS`. Every changed path must have a concrete acceptance justification. Once the required acceptance and tests pass, stop implementation.
-4. Give a ready writer one local branch/tree and exclusive paths. Internal subagents inherit it; that task verifies and commits the combined checkpoint. Reject projectless/foreign-project tasks. Create peers in the saved project with `environment: {type: "local"}` and the repository-local execution path, never an App-managed tree.
-5. Build the full launch prompt, then call `create_thread` once with a meaningful title, saved project, explicit `environment: {type: "local"}`, and that prompt. A returned `threadId` proves creation and initial delivery; never create `AWAIT_FORMAL_DISPATCH` or resend the launch. A host-required first check calls `wait_threads` once, then yields. Ambiguous, queued-worktree, or `clientThreadId`-only creation is phantom; reconcile next wake. Failed routing for a required peer boundary is `PROTOCOL_BLOCKED`, never `spawn_agent`; optional rotation uses `HANDOFF_READY`.
-6. For `app_default`, omit `model` and `thinking`; explicit bindings use actual task parameters only after host discovery. Reports must omit `model` and `thinking` and preserve destination settings.
-7. Use the exact execution path; the CLI proves paths match Git registry, branch, and commit. Root status is compared with its baseline, not forced clean.
-8. Before a cross-turn pause, ownership handoff, formal review, or `final`, verify and locally commit coherent owned output. Never stage another owner's files; if unsafe, report exact dirty paths and recovery action.
+## Implement and verify proportionally
 
-## Cross a required peer boundary once
+Choose the smallest change that satisfies the objective and acceptance. Read enough of the affected call chain and contracts to understand it; avoid whole-tree exploration by default. Prove the requested user-visible path before unrelated hardening or generalization.
 
-From the repository root, build a peer's complete initial prompt with the installed Skill:
+Run the repository's required acceptance checks and risk-relevant tests. Broaden or repeat only for new changes, failures, or a specific unresolved risk affecting this outcome. A review starts with the exact delta, relevant baseline, and evidence. Reuse still-valid evidence; a failed relevant check must not be hidden by a narrow test budget. Focused checks do not prove the full repository or production behavior.
 
-```text
-python .agents/skills/repo-agent-orchestration/scripts/construct_packet.py --kind <write|review|design_handoff> --live --launch -
-```
+The owner verifies the actual diff, ownership, acceptance evidence, and remaining limitations. Once acceptance passes, stop expanding implementation. Out-of-scope findings remain recommendations unless they demonstrate that the accepted result would be incorrect or unsafe; then explain the conflict and obtain the necessary scope decision.
 
-Use its output unchanged as `create_thread.prompt`. For later reports, decisions, or corrections, let the constructor inject transport fields:
+## Checkpoint, report, and hand off
 
-```text
-python .agents/skills/repo-agent-orchestration/scripts/construct_packet.py --kind <kind> --live --task-message-to <target-task-id> -
-```
+Commit coherent, verified task-owned output before a planned pause, ownership handoff, formal review, or final delivery. Internal contributors normally return their changes to the owning task for a combined commit. Never stage mixed or another owner's changes; record exact unresolved paths and recovery needs instead.
 
-Pass emitted arguments unchanged; App frames them. A launch omits its unknown self id; the returned `threadId` is authoritative. The constructor supplies other mechanics, never objective, evidence, findings, or acceptance. Do not create temporary packet files or validate twice. Validate incoming once:
+Return results to the responsible owner through the selected, authorized channel. Include the outcome, checkpoint/paths, checks, evidence limits, unresolved issues, and next decision if any. Reports preserve the recipient's model/settings. If delivery fails, retain the result and distinguish produced from delivered; use an available authorized result-retrieval path without bypassing a permission denial.
 
-```text
-python .agents/skills/repo-agent-orchestration/scripts/validate_dispatch_contract.py --kind <kind> -
-```
+At a recoverable boundary, consider fresh-context handoff when moving to a substantially independent phase or when repeated correction/rediscovery shows context drift, including repeated failure on the same slice. Do not wait for both a new topic and proven drift. Use [continuity.md](references/continuity.md); cumulative tokens alone do not measure current context health.
 
-The validator is a boundary check, not a workflow engine. Before send, correct one shape error once without changing semantics or route. A repeat error, incoming validation failure, or attempted/ambiguous delivery is `PROTOCOL_BLOCKED`.
-
-## Process one event and yield
-
-Treat each App wake as one bounded event batch. Process only its event and already-delivered facts needed for the same decision. Before continuing a peer, check current top-level status once: `idle` or `notLoaded` means no live turn despite stale `inProgress` history; `active` forbids another continuation or correction.
-
-Successful creation or later delivery ends the sender turn after at most the host-required first check. A formal report to `REPORT_TO` is required delivery, not cross-peer meddling. Do not inspect its target or another peer afterward. `wait_threads` may run once for that first check, never `wait_agent`; any result ends the turn. Resume on an event or user request; never poll.
-
-## Accept and close
-
-Freeze acceptance, threat model, and non-goals. Review the exact delta by default; full context/suite needs a reason. Corrections reuse the eligible reviewer: `fresh` means a new range/judgment, not a new task. Findings cite frozen criteria. Controller verifies diff, commit, checks, and evidence limits; focused checks do not prove the full repository, protected systems, or production behavior.
-
-In `architected`, final evidence returns to design authority. Merge, push, deploy, publish, production data, credentials, and permissions keep separate gates.
-
-After PASS, do not reopen review merely because rolling handoff moves HEAD. Keep the reviewed checkpoint distinct from the later continuity checkpoint. A `continuity_only` closeout changes no implementation, normative design/contracts, acceptance, non-goals, findings, or verdict evidence; root-write authority verifies/commits it without review.
-
-After accepted work is idle, archive and confirm it, then run `CLOSEOUT_CLEANUP`. Remove a worktree/branch only after proving identity, clean state, integration or explicit abandonment, and no recovery value; remove the registered tree before the local branch. Otherwise emit `RETAINED_WORKTREE` with exact recovery coordinates and reason. Never delete remote, unknown, dirty, or recoverable work. Final, archive, cleanup, integration, push, and deploy remain separate gates.
+After acceptance, a rolling-state update records the existing result; it does not reopen review unless it changes normative content or verdict-bearing evidence. Archive eligible App tasks, then classify every owned worktree/branch for safe removal or explicit retention under [recovery.md](references/recovery.md). Preserve unintegrated or recoverable work. Completion, integration, archive, cleanup, push, and deployment are distinct facts.
