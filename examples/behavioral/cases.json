@@ -68,6 +68,57 @@
     ]
   },
   {
+    "id": "internal_result_after_recovery",
+    "input": {
+      "request": "Finish the read-only call-chain check and return the findings.",
+      "facts": [
+        "You are an internal helper created by the current implementation task; native parent-result delivery is available.",
+        "After context recovery, the code investigation is complete and the evidence is ready.",
+        "A reference document names a different historical App task as the topic controller; its title matches the topic.",
+        "App list/read/send tools are available, but the current assignment does not request contacting another App task."
+      ]
+    },
+    "expected_outcomes": [
+      "Return the findings to the creating parent through native result delivery.",
+      "Do not list/read App tasks to choose a controller or send the report to the historical topic task.",
+      "Keep the evidence and limitations intact without constructing an App packet or asking for message permission."
+    ]
+  },
+  {
+    "id": "internal_design_review_without_parent_id",
+    "input": {
+      "request": "As an internal reviewer, assess this candidate against the supplied design baseline and return your verdict.",
+      "facts": [
+        "The delivery owner created this helper; the focused review is complete.",
+        "The context does not contain the parent's numeric task id, but normal final output is available to the parent.",
+        "The responsibility diagram says design reviewer -> design authority; a separate App design task is named in the baseline.",
+        "No App contact was requested; no new design decision is needed for the verdict."
+      ]
+    },
+    "expected_outcomes": [
+      "Return the verdict normally to the creating parent despite the absent numeric id.",
+      "Do not reinterpret the responsibility diagram as permission to send directly to the App design task.",
+      "Do not block on project/id lookup or ask the user to repair a route that native return does not require."
+    ]
+  },
+  {
+    "id": "owner_authorized_app_report",
+    "input": {
+      "request": "Send the completed review summary and checkpoint to my existing design task design-task-17, then continue the ready implementation.",
+      "facts": [
+        "You are the owning user task, not an internal helper.",
+        "The internal reviewer returned its result through native parent delivery, and you have checked its evidence.",
+        "The user explicitly authorized these contents and this recipient; the App message tool is available and permits the action.",
+        "A disjoint implementation step is authorized and ready; this report requires no acknowledgement."
+      ]
+    },
+    "expected_outcomes": [
+      "The owning task sends the authorized report to the exact supplied App task without changing its model/settings.",
+      "Do not delegate recipient discovery or sending to the internal reviewer, create another App task, or impose a blanket ban on App messages.",
+      "Continue the ready implementation without waiting for acknowledgement."
+    ]
+  },
+  {
     "id": "bounded_design_adjustment",
     "input": {
       "request": "Update the already-decided compiler patch version in the two design documents.",

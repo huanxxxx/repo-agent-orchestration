@@ -23,7 +23,7 @@ Send a concise plan, decision-relevant milestones, reopen requests, and final ev
 
 ## Writers, reviewers, and reporting
 
-Writers implement accepted outcomes. Reviewers independently judge the relevant candidate; auditors answer a bounded evidence question. They return results to the responsible owner through the selected authorized channel. A no-lateral-contact instruction does not prohibit the contracted report, but cannot override an actual permission denial.
+Writers implement accepted outcomes. Reviewers independently judge the relevant candidate; auditors answer a bounded evidence question. Internal contributors return to their creating parent. The owning user task handles any separately authorized App report; a no-lateral-contact instruction does not prohibit that contracted report, but cannot override an actual permission denial.
 
 ```text
 design reviewer -> design authority
@@ -34,7 +34,7 @@ design authority -> delivery controller: bounded decision or acceptance
 auditor -> its contracted owner
 ```
 
-These arrows describe responsibility, not runtime parentage. App packets name them `DESIGN_HANDOFF`, `DELIVERY_UPDATE`, `DESIGN_REOPEN_REQUEST`, and `DESIGN_DECISION`; ordinary internal collaboration can carry the same meaning in a small capsule without that schema.
+These arrows describe responsibility, not runtime parentage or permission to contact another App task. An internal reviewer still returns to its creating parent, even if the design authority is elsewhere; the owner handles any required authorized onward report. App packets name the exchanges `DESIGN_HANDOFF`, `DELIVERY_UPDATE`, `DESIGN_REOPEN_REQUEST`, and `DESIGN_DECISION`; internal collaboration needs no such schema.
 
 For the optional App adapter, `DESIGN_REVIEW_STATUS: PASS` records performed independent review. `not_required` records a design-owner risk decision with a concrete reason in `DESIGN_REVIEW_EVIDENCE`; it cannot waive an explicit review requirement. See [contracts.md](contracts.md).
 

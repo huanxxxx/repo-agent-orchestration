@@ -10,7 +10,7 @@ Choose responsibilities before tools. A bounded writer, independent reviewer, or
 
 Delegate all ready, separable contributions within capacity when it saves time or improves quality. Do not wait for a second instruction to parallelize already-authorized delegation. Serialize for an actual dependency, overlapping writes, acceptance coupling, or resource constraint. Sending the first assignment does not cancel the rest of the ready set.
 
-The task capsule needs objective, relevant inputs, scope, acceptance/checks, and report destination. `OWNED_PATHS` limits where work can happen; it is not permission for arbitrary changes there. Prefer narrow call-chain evidence over whole-repository reading. No packet construction, project-id lookup, or worktree creation is required merely because a subagent is used.
+The task capsule needs objective, relevant inputs, scope, acceptance/checks, and expected output. Internal results return to the creating parent; do not give a helper historical App routing fields as its reporting instructions. `OWNED_PATHS` limits where work can happen; it is not permission for arbitrary changes there. Prefer narrow call-chain evidence over whole-repository reading. No packet construction, project-id lookup, or worktree creation is required merely because a subagent is used.
 
 ## Filesystem and model choices
 
@@ -40,7 +40,7 @@ Verify actual changes and required checks. Stop expansion when acceptance passes
 
 Before a planned pause, handoff, formal review, or final, locally commit coherent owned output. Internal agents return changed paths/checks; the owner verifies and commits the combined unit. Preserve mixed/untracked work and describe any unresolved ownership precisely.
 
-Reports carry progress that changes a decision, a genuine blocker, or final evidence. Include the checkpoint, acceptance evidence, limits, and required next action. Use internal result delivery for internal agents; use the selected authorized App channel for App tasks. A failed message is not delivered, but it does not erase the completed result or stop unrelated work.
+Reports carry progress that changes a decision, a genuine blocker, or final evidence. Include the checkpoint, acceptance evidence, limits, and required next action. Collect internal results through native parent delivery. If another App task needs a report, the owning user task verifies the explicitly authorized recipient and sends it; helpers do not discover that recipient. A failed message is not delivered, but it does not erase the completed result or stop unrelated work.
 
 In `architected`, send the initial plan, material milestones, design questions, and final evidence to design. A `DECISION_REQUIRED: no` report permits continued work inside the frozen baseline. A design conflict needs a bounded reopen decision and pauses only affected scope. Final implementation evidence still needs design-consistency acceptance by the design authority.
 

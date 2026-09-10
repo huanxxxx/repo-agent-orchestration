@@ -35,11 +35,13 @@ Design, delivery, implementation, review, and audit are responsibilities, not ma
 
 For subtasks of the current request, use available collaboration tools when delegation is authorized and can save time or improve quality. Delegate ready, separable work proactively within capacity; do not split coupled work merely to fill slots. Internal agents have their own contexts but share the owning task's authority and filesystem: give them explicit non-overlapping paths or read-only scope. Use the host's actual result, follow-up, and wait mechanisms; do not invent a one-turn lifetime.
 
-Use an App user-owned task only when the user explicitly requests a separate task and the host supports the intended route. A durable user-visible lifecycle is different from a fresh subagent context. Keep App task ids and internal agent ids in their respective APIs. If an explicitly required capability is unavailable, preserve that requirement, explain the gap, and continue unaffected work; do not silently substitute a weaker form of independence.
+Internal results return to the creating parent through native final/result delivery or parent-addressed collaboration messages. This relationship survives context recovery: role labels, historical package owners, and task titles do not select a new recipient. Do not search App tasks for a "controller" or use App messages for ordinary internal reports. If the parent's address is unavailable, return a normal final result instead of guessing an App destination or blocking on id lookup.
+
+Use an App user-owned task only when the user explicitly requests a separate task and the host supports the intended route. Cross-App contact is a separate authorized action for the owning user task, not an internal reporting step. Keep App task ids and internal agent ids in their respective APIs. If an explicitly required capability is unavailable, preserve that requirement, explain the gap, and continue unaffected work; do not silently substitute a weaker form of independence.
 
 ## Delegate, act, and collect results
 
-Send a small capsule: objective, necessary context/evidence, writable boundary or read-only scope, acceptance and required checks, and the result destination. Add exact Git coordinates when needed. Ordinary collaboration does not require the App packet schema.
+Send a small capsule: objective, necessary context/evidence, writable boundary or read-only scope, acceptance and required checks, and expected output. Add exact Git coordinates when needed. Internal capsules need neither an App recipient id nor the App packet schema.
 
 Complete all currently authorized, dependency-ready actions, including independent dispatches and local work. Sending a task or an informational report is not a reason to end the turn. Process a returned result when it enables acceptance or another ready action. Pause only affected work when a decision is genuinely required.
 
@@ -57,7 +59,7 @@ The owner verifies the actual diff, ownership, acceptance evidence, and remainin
 
 Commit coherent, verified task-owned output before a planned pause, ownership handoff, formal review, or final delivery. Internal contributors normally return their changes to the owning task for a combined commit. Never stage mixed or another owner's changes; record exact unresolved paths and recovery needs instead.
 
-Return results to the responsible owner through the selected, authorized channel. Include the outcome, checkpoint/paths, checks, evidence limits, unresolved issues, and next decision if any. Reports preserve the recipient's model/settings. If delivery fails, retain the result and distinguish produced from delivered; use an available authorized result-retrieval path without bypassing a permission denial.
+Results include the outcome, checkpoint/paths, checks, evidence limits, unresolved issues, and next decision if any. The owning task collects internal results and handles any separately authorized App communication, preserving recipient model/settings. If delivery fails, retain the result and distinguish produced from delivered; use an available authorized result-retrieval path without bypassing a permission denial.
 
 At a recoverable boundary, consider fresh-context handoff when moving to a substantially independent phase or when repeated correction/rediscovery shows context drift, including repeated failure on the same slice. Do not wait for both a new topic and proven drift. Use [continuity.md](references/continuity.md); cumulative tokens alone do not measure current context health.
 
